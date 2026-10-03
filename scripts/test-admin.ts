@@ -243,7 +243,9 @@ async function main() {
 // Its fixtures and the knockout slots used are restored exactly afterwards.
 const G_MATCHES = [21, 22, 35, 36, 47, 48];
 const G_SCORES: [number, number, number][] = [[21, 1, 0], [22, 1, 0], [35, 1, 0], [36, 0, 1], [47, 1, 0], [48, 1, 0]];
-const BRACKET_MATCHES = [...G_MATCHES, 53, 54, 55, 59, 61, 65, 67, 68];
+// Fill also fills any other complete group's slots (e.g. demo Groups A and B → 53, 57), so restore every R16 tie.
+const R16 = [53, 54, 55, 56, 57, 58, 59, 60];
+const BRACKET_MATCHES = [...G_MATCHES, ...R16, 61, 65, 67, 68];
 
 async function bracketChecks(adm: Client) {
   const { data: original } = await service.from("matches").select("*").in("id", BRACKET_MATCHES);
@@ -309,7 +311,7 @@ async function bracketChecks(adm: Client) {
     expect(!!r.error, "teams can't be changed once a tie has a result", r.error?.message);
   } finally {
     // Later rounds first, so the advancement trigger never sees a started later tie.
-    const order = [67, 68, 65, 61, 55, 59, 53, 54, ...G_MATCHES];
+    const order = [67, 68, 65, 61, ...R16, ...G_MATCHES];
     for (const id of order) {
       await service.from("match_events").delete().eq("match_id", id);
       await service.from("match_actions").delete().eq("match_id", id);
@@ -331,7 +333,8 @@ async function bracketChecks(adm: Client) {
 
 // Group G's six fixtures (all 0–0 makes a four-way dead heat) and the R16 slots it feeds.
 const GROUP_G_MATCHES = [21, 22, 35, 36, 47, 48];
-const R16_FROM_G = [55, 59];
+// Fill touches every complete group's slots, so restore all R16 ties (R16 is defined above).
+const R16_FROM_G = [53, 54, 55, 56, 57, 58, 59, 60];
 
 async function qualifierChecks(adm: Client) {
   const ids = [...GROUP_G_MATCHES, ...R16_FROM_G];
@@ -392,7 +395,7 @@ async function qualifierChecks(adm: Client) {
   }
 }
 
-const UNDO_MATCHES = [18, ...G_MATCHES, 53, 54, 55, 61];
+const UNDO_MATCHES = [18, ...G_MATCHES, ...R16, 61];
 
 async function undoChecks(adm: Client) {
   const { data: original } = await service.from("matches").select("*").in("id", UNDO_MATCHES);
@@ -482,7 +485,7 @@ async function undoChecks(adm: Client) {
     u = await undo(55);
     expect(filled === t("G1") && !u.error && (await state(55)).home_team_id === null, "undo fill on a tie restores its previous teams", u.error?.message);
   } finally {
-    for (const id of [61, 55, 53, 54, ...G_MATCHES, 18]) {
+    for (const id of [61, ...R16, ...G_MATCHES, 18]) {
       await service.from("match_events").delete().eq("match_id", id);
       await service.from("match_actions").delete().eq("match_id", id);
       const m = original!.find((x) => x.id === id)!;
