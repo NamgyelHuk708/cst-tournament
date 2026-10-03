@@ -92,7 +92,8 @@ async function main() {
     expect(!g1.error && g1.data?.id === g1again.data?.id, "repeated client id returns the same goal", g1.error?.message);
     let s = await checkConsistent(GROUP_MATCH, "after goal + duplicate tap");
     expect(s.home === 1 && s.away === 0, "duplicate tap did not add a second goal", `${s.home}-${s.away}`);
-    expect(g1.data?.minute === 1, "goal minute comes from the database clock", `minute=${g1.data?.minute}`);
+    // Recorded seconds after kick-off: 1' (2' if the run was slow), never a client-supplied value.
+    expect(g1.data?.minute === 1 || g1.data?.minute === 2, "goal minute comes from the database clock", `minute=${g1.data?.minute}`);
 
     await adm.rpc("admin_add_event", { p_match: GROUP_MATCH, p_team: away, p_type: "yellow_card", p_client_id: randomUUID() });
     const g2 = await adm.rpc("admin_add_event", { p_match: GROUP_MATCH, p_team: away, p_type: "goal", p_client_id: randomUUID() });
