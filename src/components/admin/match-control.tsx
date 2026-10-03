@@ -30,7 +30,7 @@ import { Sheet } from "./sheet";
 export type PendingTap = { clientId: string; matchId: number; teamId: number; type: EventType };
 type LastAction = {
   id: number;
-  kind: "event" | "status" | "pens";
+  kind: "event" | "status" | "pens" | "final_score" | "reset" | "teams";
   event_id: number | null;
   new_status: MatchStatus | null;
 };
@@ -43,7 +43,7 @@ const EVENT_NOUN: Record<EventType, string> = {
 };
 
 const STATUS_UNDO: Record<MatchStatus, string> = {
-  scheduled: "",
+  scheduled: "Undo status change",
   first_half: "Undo kick-off",
   half_time: "Undo half time",
   second_half: "Undo second-half start",
@@ -444,6 +444,9 @@ function describeUndo(action: LastAction | null, events: MatchEvent[], shortCode
   if (!action) return null;
   if (action.kind === "status") return action.new_status ? STATUS_UNDO[action.new_status] : "Undo status change";
   if (action.kind === "pens") return "Undo penalty score";
+  if (action.kind === "final_score") return "Undo set final score";
+  if (action.kind === "reset") return "Undo reset";
+  if (action.kind === "teams") return "Undo team change";
   const ev = events.find((e) => e.id === action.event_id);
   return ev ? `Undo ${EVENT_NOUN[ev.type].toLowerCase()} · ${shortCode(ev.team_id)} ${eventMinuteLabel(ev)}` : "Undo last event";
 }

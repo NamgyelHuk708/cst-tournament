@@ -141,9 +141,6 @@ A1 and H1 are both abbreviated "BBPL" in the spreadsheet but are different organ
 - Public: **Live** (current/next match, today's matches), **Groups** (tables + fixtures per group), **Knockouts** (bracket).
 - Admin: **live match controls** (start, score/goal with scorer, own goal, cards, half-time, full-time, undo), **group match editing** (correct results and events after the fact, tie-break override), **knockout editing** (results, penalties, set or confirm teams).
 
-**Phase 4 (planned):**
-- **Set final score** for past matches: enter e.g. 3–1 and the app creates the right number of goal events with no scorer (so no tapping +Goal four times). Scorers can be added later from the event log. Must go through a database function so the score stays derived from events.
-
 **Not yet:** dark mode, desktop polish (it must still work on desktop, just not be tuned), team sheets/rosters, statistics pages.
 
 Don't build out-of-scope features. If one looks needed, raise it instead.
@@ -168,7 +165,9 @@ Don't build out-of-scope features. If one looks needed, raise it instead.
 - Match minutes and countdowns use server time (`/api/time` offset via `useServerNow`), never the device clock. When the admin starts a half, `period_started_at` must be set from database time (`now()`), not the admin's phone.
 - Times are always displayed in Asia/Thimphu via `src/lib/format.ts`.
 - **The score is derived from events by the database.** Triggers set `home_score`/`away_score` from goal and own-goal events (own goals count for the opponent); any direct write to the score columns is replaced. To change a score, add, edit or delete events. `scoreFromEvents()` in `tournament.ts` mirrors the rule for optimistic UI.
-- **Admin writes:** `admin_add_event` (idempotent: each tap sends a client-generated `client_id`; a repeat returns the original event), `admin_update_event`, `admin_delete_event`, `admin_set_status` (only valid transitions; a repeat is a no-op; halves start from database `now()`), `admin_set_pens`, `admin_undo`, `admin_upsert_player`. `match_actions` is the undo history: undo reverses the last goal, card, status change (including full time) or penalty change. Edits and deletes from the event log are confirmed actions, not part of undo.
+- **Admin writes:** `admin_add_event` (idempotent: each tap sends a client-generated `client_id`; a repeat returns the original event), `admin_update_event`, `admin_delete_event`, `admin_set_status` (only valid transitions; a repeat is a no-op; halves start from database `now()`), `admin_set_pens`, `admin_undo`, `admin_upsert_player`. `match_actions` is the undo history: undo reverses the last goal, card, status change (including full time and status corrections, with their penalty score), penalty change, set final score, reset match, or team change (choose teams / fill R16, per tie). Edits and deletes from the event log are confirmed actions, not part of undo. Set/clear qualifiers are not per-match; Clear and Set reverse each other.
+- **Corrections:** `admin_set_final_score` (adds/removes goals without a scorer; never removes named goals), `admin_add_event_at` (minute optional), `admin_correct_status`, `admin_reset_match`, `admin_set_ko_teams`, `admin_fill_round_of_16`, `admin_set_qualifier_order` / `admin_clear_qualifier_order` (only for teams level on points, GD and goals scored).
+- **Multi-step actions** (set final score, reset, undo) set `app.defer_advance` so the advancement check runs once on the final state via `apply_advancement()`; any new multi-step action that can change a knockout result must do the same.
 - Half length lives in two places that must match: `HALF_LENGTH_MINUTES` in `tournament.ts` and `public.half_length_minutes()` in the database.
 - Admin routes: `src/proxy.ts` (session refresh + redirect), `requireAdmin()` in the admin layout, and the database. All three must hold.
 - Red is only for red cards, saffron only for live. Errors and destructive confirmations use ink (`text`) with clear wording.

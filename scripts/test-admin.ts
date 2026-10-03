@@ -212,6 +212,9 @@ async function main() {
 
     // --- Phase 4: set qualifiers ------------------------------------------
     await qualifierChecks(adm);
+
+    // --- Phase 4: undo coverage ---------------------------------------------
+    await undoChecks(adm);
   } finally {
     // Restore fixtures exactly and remove test artefacts.
     await service.from("match_events").delete().in("match_id", [GROUP_MATCH, KO_MATCH]);
@@ -385,6 +388,113 @@ async function qualifierChecks(adm: Client) {
     const { data: back } = await service.from("matches").select("id, status, home_team_id, away_team_id").in("id", ids);
     expect(back!.every((b) => { const o = original!.find((x) => x.id === b.id)!; return b.status === o.status && b.home_team_id === o.home_team_id && b.away_team_id === o.away_team_id; }),
       "Group G fixtures restored exactly");
+  }
+}
+
+const UNDO_MATCHES = [18, 29, 30, 53, 54, 57, 61];
+
+async function undoChecks(adm: Client) {
+  const { data: original } = await service.from("matches").select("*").in("id", UNDO_MATCHES);
+  if (original!.some((m) => [18, 29, 30].includes(m.id) && m.status !== "scheduled")) {
+    console.log("SKIP  undo checks: fixtures already have results");
+    return;
+  }
+  const { data: teams } = await service.from("teams").select("id, slot");
+  const t = (slot: string) => teams!.find((x) => x.slot === slot)!.id;
+  const nul = null as unknown as number;
+  const sf = (id: number, h: number, a: number, hp = nul, ap = nul) =>
+    adm.rpc("admin_set_final_score", { p_match: id, p_home: h, p_away: a, p_home_pens: hp, p_away_pens: ap });
+  const undo = (id: number) => adm.rpc("admin_undo", { p_match: id });
+  const state = async (id: number) =>
+    (await service.from("matches").select("status, home_score, away_score, home_pens, away_pens, home_team_id, away_team_id").eq("id", id).single()).data!;
+  const eventIds = async (id: number) =>
+    ((await service.from("match_events").select("id").eq("match_id", id).order("id")).data ?? []).map((e) => e.id);
+
+  await service.from("matches").update({ is_demo: true }).in("id", UNDO_MATCHES);
+  try {
+    // Set final score from not started, then undo.
+    await sf(18, 3, 1);
+    let u = await undo(18);
+    let st = await state(18);
+    expect(!u.error && st.status === "scheduled" && st.home_score === 0 && (await eventIds(18)).length === 0,
+      "undo set final score returns a not-started match to not started", u.error?.message);
+
+    // Lowering a score removes goals; undo puts the same goals back.
+    await sf(18, 2, 0);
+    const before = await eventIds(18);
+    await sf(18, 1, 0);
+    u = await undo(18);
+    st = await state(18);
+    expect(!u.error && st.home_score === 2 && JSON.stringify(await eventIds(18)) === JSON.stringify(before),
+      "undo restores removed goals with their original ids", u.error?.message);
+
+    // Reset, then undo.
+    await adm.rpc("admin_reset_match", { p_match: 18 });
+    u = await undo(18);
+    st = await state(18);
+    expect(!u.error && st.status === "finished" && st.home_score === 2 && (await eventIds(18)).length === 2,
+      "undo reset brings back the result and its events", u.error?.message);
+
+    // Status correction, then undo.
+    await adm.rpc("admin_correct_status", { p_match: 18, p_status: "second_half" });
+    u = await undo(18);
+    expect(!u.error && (await state(18)).status === "finished", "undo status correction", u.error?.message);
+
+    // Choose teams, then undo.
+    await adm.rpc("admin_set_ko_teams", { p_match: 53, p_home: t("A1"), p_away: t("B4") });
+    u = await undo(53);
+    st = await state(53);
+    expect(!u.error && st.home_team_id === null && st.away_team_id === null, "undo team choice", u.error?.message);
+
+    // Bracket: DBR beats CSK on penalties, QF1 starts.
+    await adm.rpc("admin_set_ko_teams", { p_match: 53, p_home: t("A1"), p_away: t("B4") });
+    await adm.rpc("admin_set_ko_teams", { p_match: 54, p_home: t("C3"), p_away: t("D4") });
+    await sf(53, 1, 1, 4, 3);
+    await sf(54, 0, 2);
+    await adm.rpc("admin_set_status", { p_match: 61, p_status: "first_half" });
+
+    // Same winner via an intermediate state where CSK would lead: must be allowed.
+    const r = await sf(53, 0, 0, 4, 3);
+    expect(!r.error, "same winner through an intermediate state isn't blocked (1–1 → 0–0, pens 4–3)", r.error?.message);
+    u = await undo(53);
+    st = await state(53);
+    expect(!u.error && st.home_score === 1 && st.away_score === 1, "undo of that change is allowed too", u.error?.message);
+
+    // An undo that would change who plays in the started QF1 is blocked.
+    u = await undo(53);
+    expect(!!u.error && /QF1 has already started/.test(u.error.message), "undo blocked when it would change a started later tie", u.error?.message);
+    expect((await state(53)).status === "finished", "blocked undo left R16-M1 unchanged");
+
+    // Penalty scores come back when a status correction is undone.
+    await adm.rpc("admin_reset_match", { p_match: 61 });
+    await adm.rpc("admin_correct_status", { p_match: 53, p_status: "second_half" });
+    u = await undo(53);
+    st = await state(53);
+    expect(!u.error && st.status === "finished" && st.home_pens === 4 && st.away_pens === 3,
+      "undo status correction restores the penalty score", u.error?.message);
+
+    // Fill, then undo on one tie.
+    await adm.rpc("admin_set_ko_teams", { p_match: 57, p_home: nul, p_away: nul });
+    await sf(29, 2, 0);
+    await sf(30, 1, 1);
+    await adm.rpc("admin_fill_round_of_16");
+    const filled = (await state(57)).home_team_id;
+    u = await undo(57);
+    expect(filled === t("B1") && !u.error && (await state(57)).home_team_id === null, "undo fill on a tie restores its previous teams", u.error?.message);
+  } finally {
+    for (const id of [61, 57, 53, 54, 29, 30, 18]) {
+      await service.from("match_events").delete().eq("match_id", id);
+      await service.from("match_actions").delete().eq("match_id", id);
+      const m = original!.find((x) => x.id === id)!;
+      const { error } = await service.from("matches").update({
+        status: m.status, period_started_at: m.period_started_at, home_team_id: m.home_team_id, away_team_id: m.away_team_id,
+        home_pens: m.home_pens, away_pens: m.away_pens, is_demo: m.is_demo,
+      }).eq("id", id);
+      if (error) console.log(`restore ${id}: ${error.message}`);
+    }
+    const { data: back } = await service.from("matches").select("id, status, home_team_id, away_team_id, home_score").in("id", UNDO_MATCHES);
+    expect(back!.every((b) => { const o = original!.find((x) => x.id === b.id)!; return b.status === o.status && b.home_team_id === o.home_team_id && b.away_team_id === o.away_team_id && b.home_score === o.home_score; }),
+      "undo test fixtures restored exactly");
   }
 }
 

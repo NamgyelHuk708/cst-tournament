@@ -676,6 +676,10 @@ export type Database = {
         Args: { p_name: string; p_shirt: number; p_team: number }
         Returns: string
       }
+      apply_advancement: {
+        Args: { p_match: number; p_old_loser: number; p_old_winner: number }
+        Returns: undefined
+      }
       credited_goals: {
         Args: {
           p_match: Database["public"]["Tables"]["matches"]["Row"]
@@ -722,6 +726,7 @@ export type Database = {
         Returns: number
       }
       require_admin: { Args: never; Returns: undefined }
+      restore_events: { Args: { p_rows: Json }; Returns: undefined }
       slot_name: { Args: { p_slot: string }; Returns: string }
     }
     Enums: {
