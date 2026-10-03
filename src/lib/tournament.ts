@@ -54,7 +54,7 @@ export function isKnockout(match: Pick<Match, "stage">): boolean {
 // ---------------------------------------------------------------------------
 
 export type MatchClock = {
-  /** Short label for display: 23', 45+2', HT, 90+3', PENS, FT. */
+  /** Short label for display: 23', 45+2', HT, 90+3', Pens, FT. */
   label: string;
   /** True while the clock is running (a half is in progress). */
   running: boolean;
@@ -72,7 +72,7 @@ export function matchClock(match: Pick<Match, "status" | "period_started_at">, n
     case "half_time":
       return { label: "HT", running: false };
     case "penalties":
-      return { label: "PENS", running: false };
+      return { label: "Pens", running: false };
     case "finished":
       return { label: "FT", running: false };
   }

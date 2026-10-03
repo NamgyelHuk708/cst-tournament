@@ -8,8 +8,9 @@ import type { Database } from "../src/lib/supabase/database.types";
 type EventInsert = Database["public"]["Tables"]["match_events"]["Insert"];
 type EventType = Database["public"]["Enums"]["event_type"];
 
+// Chosen so no group is level on every tie-breaker: the demo shows a clear order.
 const FINISHED_SCORES: Record<number, [number, number]> = {
-  1: [2, 1], 2: [0, 0], 3: [3, 1], 4: [1, 1], 5: [2, 0], 6: [1, 2], 7: [4, 2], 8: [0, 1],
+  1: [3, 1], 2: [2, 0], 3: [3, 1], 4: [1, 1], 5: [2, 0], 6: [1, 2], 7: [4, 2], 8: [0, 1],
   9: [2, 2], 10: [3, 0], 11: [1, 0], 12: [1, 3], 13: [2, 1], 14: [0, 2], 15: [1, 1], 16: [3, 2],
 };
 const LIVE_MATCH = 17;

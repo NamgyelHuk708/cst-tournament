@@ -30,7 +30,7 @@ export function BottomNav() {
               <Link
                 href={href}
                 aria-current={active ? "page" : undefined}
-                className={`relative flex h-full flex-col items-center justify-center gap-0.5 text-[11px] font-semibold tracking-wide uppercase transition-colors ${
+                className={`relative flex h-full flex-col items-center justify-center gap-0.5 text-xs font-semibold transition-colors ${
                   active ? "text-brand" : "text-muted"
                 }`}
               >

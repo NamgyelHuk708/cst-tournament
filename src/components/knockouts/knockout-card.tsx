@@ -34,7 +34,7 @@ export function KnockoutCard({ match, featured = false }: { match: Match; featur
     >
       <header className="flex items-center gap-2 px-3.5 pt-2.5 pb-1.5">
         {featured && <TrophyIcon className="size-4 text-brand" />}
-        <span className={`font-display text-sm font-bold tracking-wide uppercase ${featured ? "text-brand" : "text-text"}`}>
+        <span className={`font-display text-sm font-bold ${featured ? "text-brand" : "text-text"}`}>
           {slotDisplayName(match.slot_label ?? "")}
         </span>
         <span className="ml-auto text-xs font-medium text-muted tabular">

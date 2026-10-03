@@ -8,8 +8,8 @@ export function AppHeader() {
         <Link href="/" className="flex min-w-0 items-center gap-2.5" aria-label="CST Silver Jubilee Football, home">
           <JubileeMark />
           <div className="min-w-0 leading-tight">
-            <p className="truncate font-display text-[17px] font-semibold tracking-wide uppercase">CST Silver Jubilee</p>
-            <p className="truncate text-[11px] font-medium tracking-[0.14em] text-white/70 uppercase">
+            <p className="truncate font-display text-[17px] font-semibold">CST Silver Jubilee</p>
+            <p className="truncate text-xs font-medium text-white/70">
               Departmental Football · 2026
             </p>
           </div>

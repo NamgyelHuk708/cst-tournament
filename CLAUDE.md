@@ -32,6 +32,7 @@ Act as a senior UI/UX designer with 20+ years of experience in sports and live-d
 3. **Live score glanceable from arm's length.** Score digits are large, high-contrast and tabular. Live state and match minute are visible without reading.
 4. **Progressive disclosure.** Show the summary first. Details (scorers, cards, full fixture list) are one tap away.
 5. **Minimal and clean.** No decoration that doesn't carry information. Use whitespace and type hierarchy before adding borders, shadows or colour.
+6. **Sentence case for all labels.** No all-caps text or `uppercase` styling ("Up next", "Qualify ↑", "Tomorrow"). Team short codes and standard abbreviations (HT, FT, QF, R16) stay as they are.
 
 **Admin UI** is used one-handed, outdoors, under time pressure: large tap targets (min 48px), destructive actions confirmable or undoable, and the current match state always visible.
 

@@ -16,7 +16,7 @@ export function GroupSwatch({ group, className = "size-2.5" }: { group: string; 
 
 export function GroupTag({ group }: { group: string }) {
   return (
-    <span className="inline-flex items-center gap-1.5 text-xs font-semibold tracking-wider text-muted uppercase">
+    <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted">
       <GroupSwatch group={group} />
       Group {group}
     </span>

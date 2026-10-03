@@ -100,7 +100,7 @@ function Section({ title, aside, children }: { title: string; aside?: string; ch
   return (
     <section>
       <div className="mb-2 flex items-baseline justify-between px-1">
-        <h2 className="text-xs font-bold tracking-[0.14em] text-muted uppercase">{title}</h2>
+        <h2 className="text-xs font-bold text-muted">{title}</h2>
         {aside && <span className="text-xs font-medium text-muted">{aside}</span>}
       </div>
       <ul className="divide-y divide-border overflow-hidden rounded-xl shadow-sm ring-1 ring-border/60">{children}</ul>

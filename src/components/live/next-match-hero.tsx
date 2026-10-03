@@ -19,11 +19,11 @@ export function NextMatchHero({ match, placeholders }: { match: Match; placehold
       <div className="h-1 bg-brand" />
       <div className="px-5 pt-4 pb-5">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-bold tracking-[0.14em] text-brand uppercase">Next match</span>
+          <span className="text-xs font-bold text-brand">Next match</span>
           {match.group_code ? (
             <GroupTag group={match.group_code} />
           ) : (
-            <span className="text-xs font-semibold tracking-wider text-muted uppercase">
+            <span className="text-xs font-semibold text-muted">
               {match.slot_label ? slotDisplayName(match.slot_label) : ""}
             </span>
           )}
@@ -34,7 +34,7 @@ export function NextMatchHero({ match, placeholders }: { match: Match; placehold
           home={home}
           away={away}
           placeholders={placeholders}
-          center={<span className="px-3 font-display text-lg font-semibold text-muted uppercase">vs</span>}
+          center={<span className="px-3 font-display text-lg font-semibold text-muted">vs</span>}
         />
 
         <div className="mt-5 rounded-xl bg-bg px-4 py-3 text-center">

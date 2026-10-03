@@ -33,7 +33,7 @@ export function LiveHero({ match }: { match: Match }) {
             className="inline-flex items-center gap-2 rounded-full bg-live py-1.5 pr-3.5 pl-3 text-live-text"
           >
             <span className="live-dot size-2 rounded-full bg-live-text" />
-            <span className="text-xs font-bold tracking-[0.12em] uppercase">{statusText}</span>
+            <span className="text-xs font-bold">{statusText}</span>
             {match.status !== "half_time" && match.status !== "penalties" && (
               <span className="font-display text-xl leading-none font-bold tabular">{clock.label}</span>
             )}
@@ -65,7 +65,7 @@ export function LiveHero({ match }: { match: Match }) {
 
 function StageTag({ match }: { match: Match }) {
   return (
-    <span className="text-xs font-semibold tracking-wider text-muted uppercase">
+    <span className="text-xs font-semibold text-muted">
       {match.slot_label ? slotDisplayName(match.slot_label) : "Knockout"}
     </span>
   );

@@ -38,7 +38,7 @@ export function KnockoutsView() {
               aria-selected={r.key === roundKey}
               aria-controls="round-panel"
               onClick={() => setSelected(r.key)}
-              className={`h-10 rounded-lg font-display text-[15px] font-bold tracking-wide uppercase transition-colors ${
+              className={`h-10 rounded-lg font-display text-[15px] font-bold transition-colors ${
                 r.key === roundKey ? "bg-brand text-white shadow-sm" : "text-muted active:bg-bg"
               }`}
             >
@@ -62,7 +62,7 @@ export function KnockoutsView() {
                   <TrophyIcon className="size-6" />
                 </span>
                 <div>
-                  <p className="text-[11px] font-semibold tracking-[0.16em] text-white/70 uppercase">Champions</p>
+                  <p className="text-[11px] font-semibold text-white/70">Champions</p>
                   <p className="font-display text-2xl leading-tight font-bold">
                     {champion.short_code} <span className="text-base font-semibold text-white/80">{champion.name}</span>
                   </p>

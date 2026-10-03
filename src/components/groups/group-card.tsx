@@ -54,7 +54,7 @@ export function GroupCard({ standings }: { standings: GroupStandings }) {
           Group {group} standings. Top {QUALIFIERS_PER_GROUP} qualify.
         </caption>
         <thead>
-          <tr className="text-[11px] font-semibold tracking-wider text-muted uppercase">
+          <tr className="text-xs font-semibold text-muted">
             <th scope="col" className="w-9 py-2 pl-4 text-left font-semibold">
               <span className="sr-only">Position</span>#
             </th>
@@ -144,7 +144,7 @@ function Row({ row, afterCut, markTie }: { row: StandingRow; afterCut: boolean; 
             </span>
           )}
           {row.qualified && (
-            <span className="ml-auto inline-flex shrink-0 items-center rounded bg-win px-1.5 py-0.5 text-[10px] leading-none font-bold tracking-wider text-white uppercase">
+            <span className="ml-auto inline-flex shrink-0 items-center rounded bg-win px-1.5 py-0.5 text-[11px] leading-none font-bold text-white">
               Q<span className="sr-only">ualified</span>
             </span>
           )}
@@ -167,7 +167,7 @@ function CutLine() {
       <td colSpan={8} className="p-0">
         <div className="flex items-center gap-2 px-4">
           <span className="h-0 flex-1 border-t-2 border-dashed border-win/60" />
-          <span className="text-[10px] font-bold tracking-[0.14em] text-win uppercase">Qualify ↑</span>
+          <span className="text-[11px] font-bold text-win">Qualify ↑</span>
         </div>
       </td>
     </tr>
