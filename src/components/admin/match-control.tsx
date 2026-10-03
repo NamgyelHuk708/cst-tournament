@@ -20,6 +20,7 @@ import {
 import { ChevronIcon } from "../icons";
 import { useServerNow, useTournament } from "../tournament-provider";
 import { ControlDock } from "./control-dock";
+import { FinalScoreSheet, MoreSheet, ResetSheet, StatusSheet } from "./correction-sheets";
 import { EventLog } from "./event-log";
 import { EventSheet } from "./event-sheet";
 import { Sheet } from "./sheet";
@@ -55,7 +56,7 @@ function errorMessage(err: unknown): string {
 }
 
 export function MatchControl({ matchId }: { matchId: number }) {
-  const { matchesById, teamsById, events, local } = useTournament();
+  const { matchesById, teamsById, events, playersById, local } = useTournament();
   const supabase = useMemo(() => createClient(), []);
   const match = matchesById.get(matchId);
 
@@ -68,6 +69,10 @@ export function MatchControl({ matchId }: { matchId: number }) {
   const [editing, setEditing] = useState<MatchEvent | null>(null);
   const [confirmStatus, setConfirmStatus] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<MatchEvent | null>(null);
+  const [adding, setAdding] = useState(false);
+  // Correction tools; errors from them are shown inside their sheet.
+  const [tool, setTool] = useState<"more" | "final" | "status" | "reset" | null>(null);
+  const [toolError, setToolError] = useState<string | null>(null);
 
   const matchEvents = useMemo(() => events.filter((e) => e.match_id === matchId), [events, matchId]);
   // Taps still in flight: shown in the score until their event arrives.
@@ -151,6 +156,27 @@ export function MatchControl({ matchId }: { matchId: number }) {
       (m) => m && local.upsertMatch(m),
     );
 
+  // Corrections: keep the sheet open on error so the admin can read the reason.
+  async function runTool<T>(fn: () => PromiseLike<{ data: T; error: unknown }>) {
+    setBusy(true);
+    setToolError(null);
+    const { data, error } = await fn();
+    setBusy(false);
+    if (error) {
+      setToolError(errorMessage(error));
+      return;
+    }
+    if (data && typeof data === "object" && "stage" in data) local.upsertMatch(data as unknown as Match);
+    setTool(null);
+    await local.refresh();
+    await loadLastAction();
+  }
+
+  const openTool = (t: typeof tool) => {
+    setToolError(null);
+    setTool(t);
+  };
+
   const undo = () =>
     run(
       () => supabase.rpc("admin_undo", { p_match: matchId }),
@@ -185,9 +211,16 @@ export function MatchControl({ matchId }: { matchId: number }) {
         <Link href="/admin" className="flex h-11 items-center gap-1 rounded-lg px-2 text-sm font-medium text-muted active:bg-card">
           <ChevronIcon className="size-4 rotate-90" /> All matches
         </Link>
-        <span className="ml-auto pr-2 text-xs text-muted">
+        <span className="ml-auto text-xs text-muted">
           {match.group_code ? `Group ${match.group_code}` : slotDisplayName(match.slot_label ?? "")} · Match {match.id}
         </span>
+        <button
+          type="button"
+          onClick={() => openTool("more")}
+          className="ml-1 h-11 rounded-lg px-3 text-sm font-semibold text-text active:bg-card"
+        >
+          Correct
+        </button>
       </div>
 
       <Scoreboard match={match} home={home} away={away} score={score} />
@@ -227,6 +260,68 @@ export function MatchControl({ matchId }: { matchId: number }) {
           else setStatus(step.to);
         }}
         onPens={setPens}
+        onAddEvent={() => setAdding(true)}
+        onSetFinal={() => openTool("final")}
+        onChangeStatus={() => openTool("status")}
+      />
+
+      {adding && (
+        <EventSheet
+          event={null}
+          match={match}
+          onClose={() => setAdding(false)}
+          onSaved={() => {
+            setAdding(false);
+            loadLastAction();
+          }}
+        />
+      )}
+
+      <MoreSheet open={tool === "more"} onClose={() => setTool(null)} onPick={openTool} eventCount={matchEvents.length} />
+      {tool === "final" && home && away && (
+        <FinalScoreSheet
+          open
+          match={{ ...match, home_score: score.home, away_score: score.away }}
+          home={home}
+          away={away}
+          events={matchEvents}
+          playersById={playersById}
+          error={toolError}
+          busy={busy}
+          onClose={() => setTool(null)}
+          onSubmit={(h, a, hp, ap) =>
+            runTool(() =>
+              supabase.rpc("admin_set_final_score", {
+                p_match: matchId,
+                p_home: h,
+                p_away: a,
+                p_home_pens: hp as number,
+                p_away_pens: ap as number,
+              }),
+            )
+          }
+        />
+      )}
+      {tool === "status" && (
+        <StatusSheet
+          open
+          match={match}
+          error={toolError}
+          busy={busy}
+          onClose={() => setTool(null)}
+          onSubmit={(s) => runTool(() => supabase.rpc("admin_correct_status", { p_match: matchId, p_status: s }))}
+        />
+      )}
+      <ResetSheet
+        open={tool === "reset"}
+        match={match}
+        home={home}
+        away={away}
+        eventCount={matchEvents.length}
+        error={toolError}
+        busy={busy}
+        onClose={() => setTool(null)}
+        onSubmit={() => runTool(() => supabase.rpc("admin_reset_match", { p_match: matchId }))}
       />
 
       {editing && (

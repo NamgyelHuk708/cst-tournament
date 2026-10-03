@@ -14,7 +14,8 @@
     "db:push": "supabase db push",
     "db:types": "supabase gen types typescript --linked --schema public > src/lib/supabase/database.types.ts",
     "verify:standings": "tsx --env-file=.env.local scripts/verify-standings.ts",
-    "test:admin": "tsx --env-file=.env.local scripts/test-admin.ts"
+    "test:admin": "tsx --env-file=.env.local scripts/test-admin.ts",
+    "test": "npm run -s test:rls && npm run -s verify:standings && npm run -s test:admin"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

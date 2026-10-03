@@ -15,14 +15,17 @@ const TYPES: { type: EventType; label: string }[] = [
 
 const NEW_PLAYER = "new";
 
-/** Add or change the details of a goal or card. Every field is optional except the team. */
+/**
+ * Add or change the details of a goal or card. Every field is optional except the team.
+ * With `event` null it creates a new event (corrections to a started or finished match).
+ */
 export function EventSheet({
   event,
   match,
   onClose,
   onSaved,
 }: {
-  event: MatchEvent;
+  event: MatchEvent | null;
   match: Match;
   onClose: () => void;
   onSaved: () => void;
@@ -33,14 +36,17 @@ export function EventSheet({
   const teamOn = (side: Side) => (side === "home" ? match.home_team_id : match.away_team_id)!;
   const flip = (side: Side): Side => (side === "home" ? "away" : "home");
 
-  const [type, setType] = useState<EventType>(event.type);
+  const [type, setType] = useState<EventType>(event?.type ?? "goal");
   // "Credited" side: who the goal counts for, or who got the card.
-  const [credited, setCredited] = useState<Side>(event.type === "own_goal" ? flip(sideOf(event.team_id)) : sideOf(event.team_id));
-  const [playerId, setPlayerId] = useState<string | null>(event.player_id);
+  const [credited, setCredited] = useState<Side>(
+    !event ? "home" : event.type === "own_goal" ? flip(sideOf(event.team_id)) : sideOf(event.team_id),
+  );
+  const [playerId, setPlayerId] = useState<string | null>(event?.player_id ?? null);
   const [newName, setNewName] = useState("");
   const [newShirt, setNewShirt] = useState("");
-  const [minute, setMinute] = useState(event.minute);
-  const [added, setAdded] = useState(event.added_time ?? 0);
+  const [minute, setMinute] = useState<number | null>(event ? event.minute : null);
+  const [added, setAdded] = useState(event?.added_time ?? 0);
+  const [clientId] = useState(() => crypto.randomUUID());
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -55,7 +61,7 @@ export function EventSheet({
   const effectivePlayer = selectedValid ? playerId : null;
 
   const code = (side: Side) => teamsById.get(teamOn(side))?.short_code ?? "";
-  const title = event.player_id ? "Edit event" : isGoal ? "Add scorer" : "Edit card";
+  const title = !event ? "Add goal or card" : event.player_id ? "Edit event" : isGoal ? "Add scorer" : "Edit card";
 
   async function save() {
     setSaving(true);
@@ -83,14 +89,26 @@ export function EventSheet({
       local.upsertPlayer({ id: pid, team_id: playerTeamId, name, shirt_number: shirt });
     }
 
-    const res = await supabase.rpc("admin_update_event", {
-      p_event: event.id,
-      p_type: type,
-      p_team: playerTeamId,
-      p_player: pid as string,
-      p_minute: minute,
-      p_added_time: added,
-    });
+    // Nullable arguments: the generated types don't express SQL nulls.
+    const nullable = <T,>(v: T | null) => v as T;
+    const res = event
+      ? await supabase.rpc("admin_update_event", {
+          p_event: event.id,
+          p_type: type,
+          p_team: playerTeamId,
+          p_player: nullable(pid),
+          p_minute: nullable(minute),
+          p_added_time: minute == null ? 0 : added,
+        })
+      : await supabase.rpc("admin_add_event_at", {
+          p_match: match.id,
+          p_team: playerTeamId,
+          p_type: type,
+          p_player: nullable(pid),
+          p_minute: nullable(minute),
+          p_added_time: minute == null ? 0 : added,
+          p_client_id: clientId,
+        });
     setSaving(false);
     if (res.error || !res.data) {
       setError(res.error?.message ?? "Couldn't save. Try again.");
@@ -179,12 +197,32 @@ export function EventSheet({
         </Field>
 
         <Field label="Minute">
-          <div className="flex items-center gap-3">
-            <Stepper value={minute} min={1} max={HALF_LENGTH_MINUTES * 2} onChange={setMinute} label="Minute" />
-            <span className="text-lg font-semibold text-muted">+</span>
-            <Stepper value={added} min={0} max={30} onChange={setAdded} label="Added time" />
-          </div>
-          <p className="mt-1.5 text-xs text-muted">Second number is stoppage time, e.g. 45 + 2.</p>
+          {minute == null ? (
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-muted">Not known</span>
+              <button
+                type="button"
+                onClick={() => setMinute(HALF_LENGTH_MINUTES)}
+                className="h-11 rounded-full bg-bg px-4 text-sm font-medium ring-1 ring-border"
+              >
+                Add minute
+              </button>
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center gap-3">
+                <Stepper value={minute} min={1} max={HALF_LENGTH_MINUTES * 2} onChange={setMinute} label="Minute" />
+                <span className="text-lg font-semibold text-muted">+</span>
+                <Stepper value={added} min={0} max={30} onChange={setAdded} label="Added time" />
+              </div>
+              <p className="mt-1.5 flex items-center justify-between text-xs text-muted">
+                Second number is stoppage time, e.g. 45 + 2.
+                <button type="button" onClick={() => setMinute(null)} className="h-9 px-2 font-medium text-text underline-offset-2 active:underline">
+                  Not known
+                </button>
+              </p>
+            </>
+          )}
         </Field>
 
         {error && (

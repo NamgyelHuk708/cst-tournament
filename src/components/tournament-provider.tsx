@@ -40,6 +40,8 @@ type TournamentContextValue = Snapshot & {
 const TournamentContext = createContext<TournamentContextValue | null>(null);
 
 const POLL_INTERVAL_MS = 15_000;
+// After a burst of changes, refetch once so a dropped or throttled Realtime message can't leave the page stale.
+const RECONCILE_DELAY_MS = 1_500;
 const RESUBSCRIBE_DELAYS_MS = [2_000, 5_000, 10_000, 30_000];
 
 function upsert<T extends { id: unknown }>(list: T[], row: T): T[] {
@@ -105,6 +107,18 @@ export function TournamentProvider({
     let attempt = 0;
     let disposed = false;
     let everConnected = false;
+    let reconcileTimer: ReturnType<typeof setTimeout> | null = null;
+    const reconcileSoon = () => {
+      if (reconcileTimer) clearTimeout(reconcileTimer);
+      reconcileTimer = setTimeout(() => {
+        reconcileTimer = null;
+        refresh();
+      }, RECONCILE_DELAY_MS);
+    };
+    const apply = (fn: (d: Snapshot) => Snapshot) => {
+      setData(fn);
+      reconcileSoon();
+    };
 
     const startPolling = () => {
       if (!pollTimer) pollTimer = setInterval(refresh, POLL_INTERVAL_MS);
@@ -119,16 +133,16 @@ export function TournamentProvider({
       const current: RealtimeChannel = supabase
         .channel(`tournament-${Date.now()}`)
         .on<Match>("postgres_changes", { event: "*", schema: "public", table: "matches" }, (p) =>
-          setData((d) => ({ ...d, matches: applyChange(d.matches, p) })),
+          apply((d) => ({ ...d, matches: applyChange(d.matches, p) })),
         )
         .on<MatchEvent>("postgres_changes", { event: "*", schema: "public", table: "match_events" }, (p) =>
-          setData((d) => ({ ...d, events: applyChange(d.events, p) })),
+          apply((d) => ({ ...d, events: applyChange(d.events, p) })),
         )
         .on<Team>("postgres_changes", { event: "*", schema: "public", table: "teams" }, (p) =>
-          setData((d) => ({ ...d, teams: applyChange(d.teams, p) })),
+          apply((d) => ({ ...d, teams: applyChange(d.teams, p) })),
         )
         .on<Player>("postgres_changes", { event: "*", schema: "public", table: "players" }, (p) =>
-          setData((d) => ({ ...d, players: applyChange(d.players, p) })),
+          apply((d) => ({ ...d, players: applyChange(d.players, p) })),
         )
         .subscribe((status) => {
           // Ignore callbacks from channels we have already replaced (removing one fires CLOSED).
@@ -188,6 +202,7 @@ export function TournamentProvider({
     return () => {
       disposed = true;
       clearTimeout(firstMeasure);
+      if (reconcileTimer) clearTimeout(reconcileTimer);
       stopPolling();
       if (retryTimer) clearTimeout(retryTimer);
       if (channel) supabase.removeChannel(channel);

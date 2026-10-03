@@ -53,7 +53,7 @@ function Section({ title, matches, now, empty }: { title: string; matches: Match
   );
 }
 
-function AdminMatchRow({ match, now }: { match: Match; now: number }) {
+export function AdminMatchRow({ match, now, hideGroup = false }: { match: Match; now: number; hideGroup?: boolean }) {
   const { teamsById } = useTournament();
   const home = match.home_team_id != null ? teamsById.get(match.home_team_id) : undefined;
   const away = match.away_team_id != null ? teamsById.get(match.away_team_id) : undefined;
@@ -79,14 +79,14 @@ function AdminMatchRow({ match, now }: { match: Match; now: number }) {
       </span>
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-1.5 text-xs text-muted">
-          {match.group_code ? (
+          {hideGroup ? null : match.group_code ? (
             <>
               <GroupSwatch group={match.group_code} className="size-2" /> Group {match.group_code}
             </>
           ) : (
             slotDisplayName(match.slot_label ?? "")
           )}
-          <span aria-hidden="true">·</span> Match {match.id}
+          {!hideGroup && <span aria-hidden="true">·</span>} Match {match.id}
         </span>
         <span className="mt-0.5 flex items-baseline gap-2 font-display text-xl font-bold tracking-wide">
           {home?.short_code ?? "TBD"}

@@ -18,19 +18,31 @@ export function Sheet({
   children: React.ReactNode;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
+  // Closing from code (open became false) must not call onClose: the parent already
+  // changed state, possibly to open a different sheet.
+  const closingFromCode = useRef(false);
 
   useEffect(() => {
     const dialog = ref.current;
     if (!dialog) return;
     if (open && !dialog.open) dialog.showModal();
-    if (!open && dialog.open) dialog.close();
+    if (!open && dialog.open) {
+      closingFromCode.current = true;
+      dialog.close();
+    }
   }, [open]);
 
   return (
     <dialog
       ref={ref}
       aria-label={title}
-      onClose={onClose}
+      onClose={() => {
+        if (closingFromCode.current) {
+          closingFromCode.current = false;
+          return;
+        }
+        onClose();
+      }}
       onClick={(e) => {
         if (e.target === ref.current) onClose();
       }}

@@ -25,7 +25,7 @@ function EventLine({ event, align }: { event: DisplayEvent; align: "left" | "rig
         {name}
         {event.type === "own_goal" && event.playerName && <span className="text-muted"> (OG)</span>}
       </span>
-      <span className="shrink-0 font-medium text-muted tabular">{eventMinuteLabel(event)}</span>
+      {event.minute != null && <span className="shrink-0 font-medium text-muted tabular">{eventMinuteLabel(event)}</span>}
     </li>
   );
 }

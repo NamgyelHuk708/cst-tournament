@@ -378,9 +378,20 @@ export function eventsForMatch(match: Match, events: MatchEvent[], playersById: 
         playerName: e.player_id ? playersById.get(e.player_id)?.name ?? null : null,
       };
     })
-    .sort((a, b) => a.minute - b.minute || (a.added_time ?? 0) - (b.added_time ?? 0) || a.id - b.id);
+    .sort(compareEventTime);
 }
 
+/** Chronological order; goals with an unknown minute (entered via Set final score) go last. */
+export function compareEventTime(
+  a: Pick<MatchEvent, "minute" | "added_time" | "id">,
+  b: Pick<MatchEvent, "minute" | "added_time" | "id">,
+): number {
+  if (a.minute == null || b.minute == null) return (a.minute == null ? 1 : 0) - (b.minute == null ? 1 : 0) || a.id - b.id;
+  return a.minute - b.minute || (a.added_time ?? 0) - (b.added_time ?? 0) || a.id - b.id;
+}
+
+/** "67'", "45+2'", or "–" when the minute isn't known. */
 export function eventMinuteLabel(e: Pick<MatchEvent, "minute" | "added_time">): string {
+  if (e.minute == null) return "–";
   return e.added_time ? `${e.minute}+${e.added_time}'` : `${e.minute}'`;
 }

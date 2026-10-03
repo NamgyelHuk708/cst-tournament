@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { signOut } from "@/app/admin/actions";
 import { ConnectionPill } from "../connection-pill";
+import { AdminTabs } from "./admin-tabs";
 
 // Ink, not maroon: the admin area is a tool, visibly separate from the fan site.
 export function AdminHeader() {
@@ -22,6 +23,7 @@ export function AdminHeader() {
           </form>
         </div>
       </div>
+      <AdminTabs />
     </header>
   );
 }

@@ -2,6 +2,7 @@
 
 import { isLive, type EventType, type Match, type StatusStep, type Team } from "@/lib/tournament";
 import { BallIcon, CardIcon } from "../icons";
+import { useServerNow } from "../tournament-provider";
 import type { PendingTap } from "./match-control";
 
 type Props = {
@@ -21,13 +22,24 @@ type Props = {
   onUndo: () => void;
   onStep: () => void;
   onPens: (home: number, away: number) => void;
+  onAddEvent: () => void;
+  onSetFinal: () => void;
+  onChangeStatus: () => void;
 };
+
+const PRIMARY = "h-13 w-full rounded-xl bg-text text-base font-semibold text-white active:opacity-90 disabled:opacity-50";
+const SECONDARY = "h-13 w-full rounded-xl bg-card text-base font-semibold text-text ring-1 ring-border active:bg-bg disabled:opacity-50";
+const PAST_MATCH_MS = 2 * 60 * 60 * 1000;
 
 /** Everything the score keeper touches, in the bottom half of the screen. */
 export function ControlDock(props: Props) {
   const { match, home, away, step, busy, undoLabel, error, failed, toast } = props;
   const inPlay = match.status === "first_half" || match.status === "second_half";
   const live = isLive(match);
+  const now = useServerNow(60_000);
+  // Long past kick-off and never started: most likely a result being entered afterwards.
+  const pastMatch = match.status === "scheduled" && now - Date.parse(match.kickoff_at) > PAST_MATCH_MS;
+  const teamsSet = !!home && !!away;
 
   return (
     <div className="fixed inset-x-0 bottom-0 z-20">
@@ -69,7 +81,43 @@ export function ControlDock(props: Props) {
             {undoLabel ?? "Nothing to undo"}
           </button>
 
-          {match.status === "penalties" ? (
+          {match.status === "scheduled" ? (
+            <div className="space-y-2">
+              {pastMatch ? (
+                <>
+                  <button type="button" onClick={props.onSetFinal} disabled={busy || !teamsSet} className={PRIMARY}>
+                    Set final score
+                  </button>
+                  <button type="button" onClick={props.onStep} disabled={busy || !teamsSet} className={SECONDARY}>
+                    Start match
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button type="button" onClick={props.onStep} disabled={busy || !teamsSet} className={PRIMARY}>
+                    Start match
+                  </button>
+                  <button type="button" onClick={props.onSetFinal} disabled={busy || !teamsSet} className={SECONDARY}>
+                    Set final score
+                  </button>
+                </>
+              )}
+            </div>
+          ) : match.status === "finished" ? (
+            <div className="space-y-2">
+              <button type="button" onClick={props.onAddEvent} disabled={busy} className={PRIMARY}>
+                Add goal or card
+              </button>
+              <div className="grid grid-cols-2 gap-2">
+                <button type="button" onClick={props.onSetFinal} disabled={busy} className={SECONDARY}>
+                  Set final score
+                </button>
+                <button type="button" onClick={props.onChangeStatus} disabled={busy} className={SECONDARY}>
+                  Change status
+                </button>
+              </div>
+            </div>
+          ) : match.status === "penalties" ? (
             <PenaltyControls match={match} home={home} away={away} busy={busy} onPens={props.onPens} />
           ) : (
             <div className="grid grid-cols-2 gap-3">
@@ -110,7 +158,7 @@ export function ControlDock(props: Props) {
             </div>
           )}
 
-          {step ? (
+          {match.status === "scheduled" || match.status === "finished" ? null : step ? (
             <button
               type="button"
               onClick={props.onStep}
@@ -128,10 +176,11 @@ export function ControlDock(props: Props) {
               Full time. Use undo to reopen the match.
             </p>
           )}
-          {!inPlay && match.status !== "finished" && match.status !== "penalties" && (
-            <p className="mt-2 text-center text-xs text-muted">
-              {match.status === "scheduled" ? "Start the match to record goals and cards." : "Goals can be recorded once play restarts."}
-            </p>
+          {match.status === "half_time" && (
+            <p className="mt-2 text-center text-xs text-muted">Goals can be recorded once play restarts.</p>
+          )}
+          {match.status === "scheduled" && !teamsSet && (
+            <p className="mt-2 text-center text-xs text-muted">Choose both teams before entering a result.</p>
           )}
         </div>
       </div>

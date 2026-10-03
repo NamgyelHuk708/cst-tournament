@@ -146,6 +146,44 @@ async function main() {
     expect(final!.status === "scheduled" && final!.period_started_at === null && final!.home_score === 0 && leftover === 0,
       "match back to its original state after undoing everything", JSON.stringify(final));
 
+    // --- Phase 4: corrections and Set final score -------------------------
+    const sf = async (h: number, a: number, hp: number | null = null, ap: number | null = null, id = GROUP_MATCH) =>
+      adm.rpc("admin_set_final_score", { p_match: id, p_home: h, p_away: a, p_home_pens: hp as number, p_away_pens: ap as number });
+    r = await sf(3, 1);
+    s = await checkConsistent(GROUP_MATCH, "set final score 3-1");
+    const { data: sfEvents } = await service.from("match_events").select("id, minute, player_id").eq("match_id", GROUP_MATCH);
+    expect(!r.error && r.data?.status === "finished" && s.home === 3 && s.away === 1, "set final score 3–1 finishes the match", r.error?.message);
+    expect(sfEvents!.length === 4 && sfEvents!.every((e) => e.minute === null && e.player_id === null), "created goals have no scorer and no minute");
+
+    // Add a scorer afterwards to one of the home goals.
+    const { data: homeGoal } = await service.from("match_events").select("id").eq("match_id", GROUP_MATCH).eq("team_id", home).limit(1).single();
+    const scorer = await adm.rpc("admin_upsert_player", { p_team: home, p_name: `Test Player ${tag}`, p_shirt: 9 });
+    const named = await adm.rpc("admin_update_event", {
+      p_event: homeGoal!.id, p_type: "goal", p_team: home, p_player: scorer.data!, p_minute: 12, p_added_time: 0,
+    });
+    expect(!named.error, "scorer added afterwards", named.error?.message);
+
+    r = await sf(1, 1);
+    s = await checkConsistent(GROUP_MATCH, "set final score 1-1");
+    const { count: namedLeft } = await service.from("match_events").select("*", { count: "exact", head: true }).eq("id", homeGoal!.id);
+    expect(!r.error && s.home === 1 && namedLeft === 1, "lowering the score removes only goals without a scorer", r.error?.message);
+    r = await sf(0, 1);
+    expect(!!r.error && /named scorer/.test(r.error.message), "cannot go below the named goals", r.error?.message);
+    await checkConsistent(GROUP_MATCH, "after refused change");
+
+    r = await adm.rpc("admin_correct_status", { p_match: GROUP_MATCH, p_status: "second_half" });
+    expect(!r.error && r.data?.status === "second_half", "finished match can be reopened", r.error?.message);
+    r = await adm.rpc("admin_correct_status", { p_match: GROUP_MATCH, p_status: "scheduled" });
+    expect(!!r.error, "cannot set not started while events exist", r.error?.message);
+    const late = await adm.rpc("admin_add_event_at", {
+      p_match: GROUP_MATCH, p_team: away, p_type: "yellow_card", p_player: null as unknown as string, p_minute: 70, p_added_time: 0, p_client_id: randomUUID(),
+    });
+    expect(!late.error && late.data?.minute === 70, "card added with an explicit minute", late.error?.message);
+    r = await adm.rpc("admin_reset_match", { p_match: GROUP_MATCH });
+    const { count: afterReset } = await service.from("match_events").select("*", { count: "exact", head: true }).eq("match_id", GROUP_MATCH);
+    expect(!r.error && r.data?.status === "scheduled" && afterReset === 0 && r.data?.home_score === 0, "reset match clears events and status", r.error?.message);
+    await service.from("players").delete().eq("name", `Test Player ${tag}`);
+
     // --- Knockout: penalties ------------------------------------------------
     const { data: teams } = await service.from("teams").select("id, slot").in("slot", ["A1", "B4"]);
     await service.from("matches").update({ home_team_id: teams!.find((t) => t.slot === "A1")!.id, away_team_id: teams!.find((t) => t.slot === "B4")!.id }).eq("id", KO_MATCH);

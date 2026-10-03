@@ -1,6 +1,6 @@
 "use client";
 
-import { eventMinuteLabel, type EventType, type Match, type MatchEvent } from "@/lib/tournament";
+import { compareEventTime, eventMinuteLabel, type EventType, type Match, type MatchEvent } from "@/lib/tournament";
 import { BallIcon, CardIcon } from "../icons";
 import { useTournament } from "../tournament-provider";
 
@@ -24,9 +24,11 @@ export function EventLog({
   onDelete: (e: MatchEvent) => void;
 }) {
   const { teamsById, playersById } = useTournament();
-  const ordered = [...events].sort(
-    (a, b) => b.minute - a.minute || (b.added_time ?? 0) - (a.added_time ?? 0) || b.id - a.id,
-  );
+  // Newest first; unknown-minute goals (from Set final score) at the bottom.
+  const ordered = [...events].sort((a, b) => {
+    if (a.minute == null || b.minute == null) return compareEventTime(a, b);
+    return -compareEventTime(a, b);
+  });
 
   return (
     // Bottom padding leaves room for the fixed control dock.
@@ -46,7 +48,9 @@ export function EventLog({
               e.type === "own_goal" ? (e.team_id === match.home_team_id ? match.away_team_id : match.home_team_id) : e.team_id;
             return (
               <li key={e.id} className="flex min-h-14 items-center gap-3 py-1.5 pr-1.5 pl-4">
-                <span className="w-11 shrink-0 font-display text-base font-bold tabular">{eventMinuteLabel(e)}</span>
+                <span className={`w-11 shrink-0 font-display text-base tabular ${e.minute == null ? "text-muted" : "font-bold"}`}>
+                  {e.minute == null ? <span aria-label="Minute not known">–</span> : eventMinuteLabel(e)}
+                </span>
                 <span className="grid w-4 shrink-0 place-items-center">
                   {e.type === "yellow_card" ? <CardIcon colour="yellow" /> : e.type === "red_card" ? <CardIcon colour="red" /> : <BallIcon />}
                 </span>
