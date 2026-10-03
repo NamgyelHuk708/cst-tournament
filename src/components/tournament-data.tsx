@@ -2,8 +2,6 @@ import { connection } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { fetchSnapshot } from "@/lib/snapshot";
 import type { Snapshot } from "@/lib/tournament";
-import { AppHeader } from "./app-header";
-import { BottomNav } from "./bottom-nav";
 import { TournamentProvider } from "./tournament-provider";
 
 // Loads the snapshot once per request; the client provider keeps it live from there.
@@ -30,7 +28,6 @@ async function load(): Promise<{ snapshot: Snapshot; renderedAt: number } | null
 function LoadError() {
   return (
     <>
-      <AppHeader />
       <main className="mx-auto max-w-xl px-4 pt-10">
         <div className="rounded-2xl bg-card p-6 text-center shadow-sm">
           <p className="font-display text-2xl font-semibold">Scores are taking a moment</p>
@@ -46,7 +43,6 @@ function LoadError() {
           </a>
         </div>
       </main>
-      <BottomNav />
     </>
   );
 }

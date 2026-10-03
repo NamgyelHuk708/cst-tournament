@@ -21,3 +21,14 @@ export function PageSkeleton() {
     </div>
   );
 }
+
+export function ListSkeleton() {
+  return (
+    <div aria-busy="true" aria-label="Loading" className="space-y-2 pt-2">
+      <div className="skeleton h-3 w-20 rounded" />
+      {[0, 1, 2, 3, 4].map((i) => (
+        <div key={i} className="skeleton h-16 rounded-xl" />
+      ))}
+    </div>
+  );
+}

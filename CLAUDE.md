@@ -15,7 +15,7 @@ The admin is the only writer. Everything fans see comes from what the admin ente
 - **Supabase**: Postgres (data), Realtime (live updates to fans), Auth (admin login)
 - **Vercel** for hosting
 
-One app, no separate backend. Admin writes go through Server Actions or Route Handlers in the same app. Postgres Row Level Security lets anyone read and only the authenticated admin write. Standings are derived from match results, never typed in by hand (the one exception is the tie-break override, see Tournament rules).
+One app, no separate backend. Admin writes are calls from the browser (signed in as the admin) to `admin_*` database functions (RPCs), so the goal tap has no extra server hop. Those functions run as the caller, so Row Level Security applies, and each also checks `is_admin()`. Anyone can read; only the authenticated admin can write. Sign-in and sign-out are Server Actions. Standings are derived from match results, never typed in by hand (the one exception is the tie-break override, see Tournament rules).
 
 ## Design role
 
@@ -141,6 +141,9 @@ A1 and H1 are both abbreviated "BBPL" in the spreadsheet but are different organ
 - Public: **Live** (current/next match, today's matches), **Groups** (tables + fixtures per group), **Knockouts** (bracket).
 - Admin: **live match controls** (start, score/goal with scorer, own goal, cards, half-time, full-time, undo), **group match editing** (correct results and events after the fact, tie-break override), **knockout editing** (results, penalties, set or confirm teams).
 
+**Phase 4 (planned):**
+- **Set final score** for past matches: enter e.g. 3–1 and the app creates the right number of goal events with no scorer (so no tapping +Goal four times). Scorers can be added later from the event log. Must go through a database function so the score stays derived from events.
+
 **Not yet:** dark mode, desktop polish (it must still work on desktop, just not be tuned), team sheets/rosters, statistics pages.
 
 Don't build out-of-scope features. If one looks needed, raise it instead.
@@ -153,6 +156,7 @@ Don't build out-of-scope features. If one looks needed, raise it instead.
 - The admin is whoever is in `public.admins`. The seed adds the auth user whose email is in `scripts/lib/config.ts`.
 - The service role key is only used in `scripts/`. App code uses `src/lib/supabase/{client,server}.ts` (publishable key + session).
 - `match_events.team_id` is in two foreign keys, so embed teams explicitly: `team:teams!match_events_team_id_fkey(...)`, `player:players(...)`.
+- `npm run test:admin` runs database-level admin checks (access, idempotency, undo of every status, penalties, score consistency) with temporary users that it deletes afterwards.
 - `npm run verify:standings` checks `computeStandings()` against the `group_standings` view. The view exists only for this check; the app never reads it.
 
 ## App architecture
@@ -161,6 +165,11 @@ Don't build out-of-scope features. If one looks needed, raise it instead.
 - The root layout loads one snapshot (`src/lib/snapshot.ts`) and `TournamentProvider` keeps it live: one Realtime channel, polling every 15s while disconnected, refresh on wake.
 - Match minutes and countdowns use server time (`/api/time` offset via `useServerNow`), never the device clock. When the admin starts a half, `period_started_at` must be set from database time (`now()`), not the admin's phone.
 - Times are always displayed in Asia/Thimphu via `src/lib/format.ts`.
+- **The score is derived from events by the database.** Triggers set `home_score`/`away_score` from goal and own-goal events (own goals count for the opponent); any direct write to the score columns is replaced. To change a score, add, edit or delete events. `scoreFromEvents()` in `tournament.ts` mirrors the rule for optimistic UI.
+- **Admin writes:** `admin_add_event` (idempotent: each tap sends a client-generated `client_id`; a repeat returns the original event), `admin_update_event`, `admin_delete_event`, `admin_set_status` (only valid transitions; a repeat is a no-op; halves start from database `now()`), `admin_set_pens`, `admin_undo`, `admin_upsert_player`. `match_actions` is the undo history: undo reverses the last goal, card, status change (including full time) or penalty change. Edits and deletes from the event log are confirmed actions, not part of undo.
+- Half length lives in two places that must match: `HALF_LENGTH_MINUTES` in `tournament.ts` and `public.half_length_minutes()` in the database.
+- Admin routes: `src/proxy.ts` (session refresh + redirect), `requireAdmin()` in the admin layout, and the database. All three must hold.
+- Red is only for red cards, saffron only for live. Errors and destructive confirmations use ink (`text`) with clear wording.
 
 ## Working rules
 

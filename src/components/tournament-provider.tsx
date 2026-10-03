@@ -27,6 +27,14 @@ type TournamentContextValue = Snapshot & {
   clockOffset: number | null;
   /** Server time when the page was rendered; "now" until the clock is measured. */
   renderedAt: number;
+  /** Apply rows returned by an admin write immediately, without waiting for Realtime. */
+  local: {
+    upsertMatch: (row: Match) => void;
+    upsertEvent: (row: MatchEvent) => void;
+    removeEvent: (id: number) => void;
+    upsertPlayer: (row: Player) => void;
+    refresh: () => Promise<void>;
+  };
 };
 
 const TournamentContext = createContext<TournamentContextValue | null>(null);
@@ -189,6 +197,17 @@ export function TournamentProvider({
     };
   }, [supabase, refresh, measureClock]);
 
+  const local = useMemo<TournamentContextValue["local"]>(
+    () => ({
+      upsertMatch: (row) => setData((d) => ({ ...d, matches: upsert(d.matches, row) })),
+      upsertEvent: (row) => setData((d) => ({ ...d, events: upsert(d.events, row) })),
+      removeEvent: (id) => setData((d) => ({ ...d, events: d.events.filter((e) => e.id !== id) })),
+      upsertPlayer: (row) => setData((d) => ({ ...d, players: upsert(d.players, row) })),
+      refresh,
+    }),
+    [refresh],
+  );
+
   const value = useMemo<TournamentContextValue>(
     () => ({
       ...data,
@@ -199,8 +218,9 @@ export function TournamentProvider({
       connection,
       clockOffset,
       renderedAt,
+      local,
     }),
-    [data, connection, clockOffset, renderedAt],
+    [data, connection, clockOffset, renderedAt, local],
   );
 
   return <TournamentContext.Provider value={value}>{children}</TournamentContext.Provider>;

@@ -29,9 +29,67 @@ export type Database = {
         }
         Relationships: []
       }
+      match_actions: {
+        Row: {
+          created_at: string
+          event_id: number | null
+          id: number
+          kind: string
+          match_id: number
+          new_status: Database["public"]["Enums"]["match_status"] | null
+          prev_away_pens: number | null
+          prev_home_pens: number | null
+          prev_period_started_at: string | null
+          prev_status: Database["public"]["Enums"]["match_status"] | null
+          undone_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_id?: number | null
+          id?: never
+          kind: string
+          match_id: number
+          new_status?: Database["public"]["Enums"]["match_status"] | null
+          prev_away_pens?: number | null
+          prev_home_pens?: number | null
+          prev_period_started_at?: string | null
+          prev_status?: Database["public"]["Enums"]["match_status"] | null
+          undone_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_id?: number | null
+          id?: never
+          kind?: string
+          match_id?: number
+          new_status?: Database["public"]["Enums"]["match_status"] | null
+          prev_away_pens?: number | null
+          prev_home_pens?: number | null
+          prev_period_started_at?: string | null
+          prev_status?: Database["public"]["Enums"]["match_status"] | null
+          undone_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "match_actions_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "match_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_actions_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       match_events: {
         Row: {
           added_time: number | null
+          client_id: string | null
           created_at: string
           id: number
           is_demo: boolean
@@ -43,6 +101,7 @@ export type Database = {
         }
         Insert: {
           added_time?: number | null
+          client_id?: string | null
           created_at?: string
           id?: never
           is_demo?: boolean
@@ -54,6 +113,7 @@ export type Database = {
         }
         Update: {
           added_time?: number | null
+          client_id?: string | null
           created_at?: string
           id?: never
           is_demo?: boolean
@@ -305,7 +365,145 @@ export type Database = {
       }
     }
     Functions: {
+      admin_add_event: {
+        Args: {
+          p_client_id: string
+          p_match: number
+          p_team: number
+          p_type: Database["public"]["Enums"]["event_type"]
+        }
+        Returns: {
+          added_time: number | null
+          client_id: string | null
+          created_at: string
+          id: number
+          is_demo: boolean
+          match_id: number
+          minute: number
+          player_id: string | null
+          team_id: number
+          type: Database["public"]["Enums"]["event_type"]
+        }
+        SetofOptions: {
+          from: "*"
+          to: "match_events"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      admin_delete_event: { Args: { p_event: number }; Returns: undefined }
+      admin_set_pens: {
+        Args: { p_away: number; p_home: number; p_match: number }
+        Returns: {
+          away_pens: number | null
+          away_score: number
+          away_source: Database["public"]["Enums"]["slot_source"] | null
+          away_source_group: string | null
+          away_source_match: number | null
+          away_team_id: number | null
+          group_code: string | null
+          home_pens: number | null
+          home_score: number
+          home_source: Database["public"]["Enums"]["slot_source"] | null
+          home_source_group: string | null
+          home_source_match: number | null
+          home_team_id: number | null
+          id: number
+          is_demo: boolean
+          kickoff_at: string
+          notes: string | null
+          period_started_at: string | null
+          slot_label: string | null
+          stage: Database["public"]["Enums"]["match_stage"]
+          status: Database["public"]["Enums"]["match_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "matches"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      admin_set_status: {
+        Args: {
+          p_match: number
+          p_status: Database["public"]["Enums"]["match_status"]
+        }
+        Returns: {
+          away_pens: number | null
+          away_score: number
+          away_source: Database["public"]["Enums"]["slot_source"] | null
+          away_source_group: string | null
+          away_source_match: number | null
+          away_team_id: number | null
+          group_code: string | null
+          home_pens: number | null
+          home_score: number
+          home_source: Database["public"]["Enums"]["slot_source"] | null
+          home_source_group: string | null
+          home_source_match: number | null
+          home_team_id: number | null
+          id: number
+          is_demo: boolean
+          kickoff_at: string
+          notes: string | null
+          period_started_at: string | null
+          slot_label: string | null
+          stage: Database["public"]["Enums"]["match_stage"]
+          status: Database["public"]["Enums"]["match_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "matches"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      admin_undo: { Args: { p_match: number }; Returns: Json }
+      admin_update_event: {
+        Args: {
+          p_added_time: number
+          p_event: number
+          p_minute: number
+          p_player: string
+          p_team: number
+          p_type: Database["public"]["Enums"]["event_type"]
+        }
+        Returns: {
+          added_time: number | null
+          client_id: string | null
+          created_at: string
+          id: number
+          is_demo: boolean
+          match_id: number
+          minute: number
+          player_id: string | null
+          team_id: number
+          type: Database["public"]["Enums"]["event_type"]
+        }
+        SetofOptions: {
+          from: "*"
+          to: "match_events"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      admin_upsert_player: {
+        Args: { p_name: string; p_shirt: number; p_team: number }
+        Returns: string
+      }
+      current_match_minute: {
+        Args: {
+          p_started: string
+          p_status: Database["public"]["Enums"]["match_status"]
+        }
+        Returns: Record<string, unknown>
+      }
+      half_length_minutes: { Args: never; Returns: number }
       is_admin: { Args: never; Returns: boolean }
+      require_admin: { Args: never; Returns: undefined }
     }
     Enums: {
       event_type: "goal" | "own_goal" | "yellow_card" | "red_card"

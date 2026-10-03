@@ -1,10 +1,5 @@
 import type { Metadata, Viewport } from "next";
 import { Barlow, Barlow_Condensed } from "next/font/google";
-import { Suspense } from "react";
-import { AppHeader } from "@/components/app-header";
-import { BottomNav } from "@/components/bottom-nav";
-import { TournamentData } from "@/components/tournament-data";
-import { PageSkeleton } from "@/components/skeletons";
 import "./globals.css";
 
 const barlow = Barlow({
@@ -34,27 +29,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${barlow.variable} ${barlowCondensed.variable} antialiased`}>
-      <body className="min-h-dvh bg-bg font-sans text-text">
-        <Suspense
-          fallback={
-            <>
-              <AppHeader />
-              <main className="mx-auto max-w-xl px-4 pt-4 pb-[calc(var(--nav-height)+env(safe-area-inset-bottom)+1.5rem)]">
-                <PageSkeleton />
-              </main>
-              <BottomNav />
-            </>
-          }
-        >
-          <TournamentData>
-            <AppHeader />
-            <main className="mx-auto max-w-xl px-4 pt-4 pb-[calc(var(--nav-height)+env(safe-area-inset-bottom)+1.5rem)]">
-              {children}
-            </main>
-            <BottomNav />
-          </TournamentData>
-        </Suspense>
-      </body>
+      <body className="min-h-dvh bg-bg font-sans text-text">{children}</body>
     </html>
   );
 }

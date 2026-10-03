@@ -9,9 +9,10 @@ export type Team = Pick<Tables["teams"]["Row"], "id" | "slot" | "group_code" | "
 export type Match = Tables["matches"]["Row"];
 export type MatchEvent = Pick<
   Tables["match_events"]["Row"],
-  "id" | "match_id" | "type" | "team_id" | "player_id" | "minute" | "added_time"
+  "id" | "match_id" | "type" | "team_id" | "player_id" | "minute" | "added_time" | "client_id"
 >;
-export type Player = Pick<Tables["players"]["Row"], "id" | "team_id" | "name">;
+export type Player = Pick<Tables["players"]["Row"], "id" | "team_id" | "name" | "shirt_number">;
+export type EventType = Enums["event_type"];
 export type MatchStatus = Enums["match_status"];
 export type MatchStage = Enums["match_stage"];
 export type Side = "home" | "away";
@@ -104,6 +105,47 @@ export function matchOutcome(match: Match): Outcome | null {
     return { winner: match.home_pens > match.away_pens ? "home" : "away", decidedOnPenalties: true };
   }
   return { winner: null, decidedOnPenalties: false };
+}
+
+/**
+ * Score from goal events: the same rule the database trigger applies
+ * (a goal counts for its team, an own goal for the opponent).
+ */
+export function scoreFromEvents(
+  match: Pick<Match, "id" | "home_team_id" | "away_team_id">,
+  events: Pick<MatchEvent, "match_id" | "type" | "team_id">[],
+): { home: number; away: number } {
+  let home = 0;
+  let away = 0;
+  for (const e of events) {
+    if (e.match_id !== match.id) continue;
+    if ((e.type === "goal" && e.team_id === match.home_team_id) || (e.type === "own_goal" && e.team_id === match.away_team_id)) home++;
+    if ((e.type === "goal" && e.team_id === match.away_team_id) || (e.type === "own_goal" && e.team_id === match.home_team_id)) away++;
+  }
+  return { home, away };
+}
+
+export type StatusStep = { to: MatchStatus; label: string; confirm: boolean } | null;
+
+/** The next status the admin can move a match to, mirroring admin_set_status in the database. */
+export function nextStatusStep(match: Match): StatusStep {
+  const level = match.home_score === match.away_score;
+  switch (match.status) {
+    case "scheduled":
+      return { to: "first_half", label: "Start match", confirm: false };
+    case "first_half":
+      return { to: "half_time", label: "Half time", confirm: false };
+    case "half_time":
+      return { to: "second_half", label: "Start second half", confirm: false };
+    case "second_half":
+      return isKnockout(match) && level
+        ? { to: "penalties", label: "Full time: go to penalties", confirm: true }
+        : { to: "finished", label: "Full time", confirm: true };
+    case "penalties":
+      return { to: "finished", label: "End shoot-out", confirm: true };
+    case "finished":
+      return null;
+  }
 }
 
 export function teamIdOn(match: Match, side: Side): number | null {

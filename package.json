@@ -13,14 +13,16 @@
     "test:rls": "tsx --env-file=.env.local scripts/test-rls.ts",
     "db:push": "supabase db push",
     "db:types": "supabase gen types typescript --linked --schema public > src/lib/supabase/database.types.ts",
-    "verify:standings": "tsx --env-file=.env.local scripts/verify-standings.ts"
+    "verify:standings": "tsx --env-file=.env.local scripts/verify-standings.ts",
+    "test:admin": "tsx --env-file=.env.local scripts/test-admin.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.117.2",
     "next": "16.3.8",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "server-only": "^0.0.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

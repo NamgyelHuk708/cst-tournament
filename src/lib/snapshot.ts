@@ -7,8 +7,8 @@ export async function fetchSnapshot(supabase: SupabaseClient<Database>): Promise
   const [teams, matches, events, players] = await Promise.all([
     supabase.from("teams").select("id, slot, group_code, short_code, name, tiebreak_rank").order("slot"),
     supabase.from("matches").select("*").order("kickoff_at").order("id"),
-    supabase.from("match_events").select("id, match_id, type, team_id, player_id, minute, added_time"),
-    supabase.from("players").select("id, team_id, name"),
+    supabase.from("match_events").select("id, match_id, type, team_id, player_id, minute, added_time, client_id"),
+    supabase.from("players").select("id, team_id, name, shirt_number"),
   ]);
   const error = teams.error ?? matches.error ?? events.error ?? players.error;
   if (error) throw new Error(`Could not load tournament data: ${error.message}`);

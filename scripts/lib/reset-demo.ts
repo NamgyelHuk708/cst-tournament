@@ -3,6 +3,12 @@ import { admin, check } from "./admin-client";
 // Removes demo events and players and returns demo matches to scheduled.
 // Only rows flagged is_demo are touched, so real results are never cleared.
 export async function resetDemo() {
+  // Undo history for demo matches would otherwise replay stale status changes after a reset.
+  const demoMatches = check(await admin.from("matches").select("id").eq("is_demo", true), "Load demo matches");
+  check(
+    await admin.from("match_actions").delete().in("match_id", demoMatches.map((m) => m.id)),
+    "Delete demo undo history",
+  );
   const events = check(
     await admin.from("match_events").delete().eq("is_demo", true).select("id"),
     "Delete demo events",
