@@ -152,6 +152,14 @@ Don't build out-of-scope features. If one looks needed, raise it instead.
 - The admin is whoever is in `public.admins`. The seed adds the auth user whose email is in `scripts/lib/config.ts`.
 - The service role key is only used in `scripts/`. App code uses `src/lib/supabase/{client,server}.ts` (publishable key + session).
 - `match_events.team_id` is in two foreign keys, so embed teams explicitly: `team:teams!match_events_team_id_fkey(...)`, `player:players(...)`.
+- `npm run verify:standings` checks `computeStandings()` against the `group_standings` view. The view exists only for this check; the app never reads it.
+
+## App architecture
+
+- All tournament logic lives in `src/lib/tournament.ts` (pure, shared by server, client and scripts): standings, qualification, knockout resolution (`resolveSide`), outcomes incl. penalties, match clock. Half length is `HALF_LENGTH_MINUTES` (45, to be confirmed with organisers).
+- The root layout loads one snapshot (`src/lib/snapshot.ts`) and `TournamentProvider` keeps it live: one Realtime channel, polling every 15s while disconnected, refresh on wake.
+- Match minutes and countdowns use server time (`/api/time` offset via `useServerNow`), never the device clock. When the admin starts a half, `period_started_at` must be set from database time (`now()`), not the admin's phone.
+- Times are always displayed in Asia/Thimphu via `src/lib/format.ts`.
 
 ## Working rules
 

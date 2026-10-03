@@ -1,26 +1,122 @@
 @import "tailwindcss";
 
+/* Palette (light mode). Dark mode will redefine these variables only. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: #f3f5f7;
+  --card: #ffffff;
+  --text: #1b2230;
+  --muted: #5e6878;
+  --border: #dce1e7;
+  --brand: #7a1f2b;
+  --accent: #8e99a6;
+  --live: #e39b13;
+  --live-text: #4a2f00;
+  --win: #2e7a4c;
+  --card-yellow: #f2c230;
+  --card-red: #d33a3a;
+
+  /* Tints derived from the fixed palette (no new hues). */
+  --brand-deep: color-mix(in srgb, var(--brand) 82%, black);
+  --live-soft: color-mix(in srgb, var(--live) 12%, var(--card));
+  --win-soft: color-mix(in srgb, var(--win) 10%, var(--card));
+
+  --group-a: #2f6db5;
+  --group-b: #138a8a;
+  --group-c: #6b8e23;
+  --group-d: #b07a1a;
+  --group-e: #7a4fb0;
+  --group-f: #b85c38;
+  --group-g: #5a6b80;
+  --group-h: #b0457e;
+
+  --nav-height: 4rem;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-bg: var(--bg);
+  --color-card: var(--card);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-brand: var(--brand);
+  --color-brand-deep: var(--brand-deep);
+  --color-accent: var(--accent);
+  --color-live: var(--live);
+  --color-live-text: var(--live-text);
+  --color-live-soft: var(--live-soft);
+  --color-win: var(--win);
+  --color-win-soft: var(--win-soft);
+  --color-card-yellow: var(--card-yellow);
+  --color-card-red: var(--card-red);
+
+  --color-group-a: var(--group-a);
+  --color-group-b: var(--group-b);
+  --color-group-c: var(--group-c);
+  --color-group-d: var(--group-d);
+  --color-group-e: var(--group-e);
+  --color-group-f: var(--group-f);
+  --color-group-g: var(--group-g);
+  --color-group-h: var(--group-h);
+
+  --font-sans: var(--font-barlow), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-barlow-condensed), var(--font-barlow), ui-sans-serif, sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* Scores, minutes and tables: digits must not shift width as they change. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes live-pulse {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--live) 70%, transparent); }
+  70% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--live) 0%, transparent); }
+  100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--live) 0%, transparent); }
+}
+
+.live-dot {
+  animation: live-pulse 1.8s ease-out infinite;
+}
+
+/* Brief highlight when a score changes. */
+@keyframes score-flash {
+  0% { background-color: var(--live-soft); }
+  100% { background-color: transparent; }
+}
+
+.score-flash {
+  animation: score-flash 1.6s ease-out;
+}
+
+@keyframes shimmer {
+  100% { transform: translateX(100%); }
+}
+
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--border) 60%, transparent);
+}
+
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.6), transparent);
+  animation: shimmer 1.4s infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .live-dot, .score-flash, .skeleton::after {
+    animation: none;
+  }
 }

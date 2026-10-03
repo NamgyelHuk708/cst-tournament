@@ -12,7 +12,8 @@
     "reset:demo": "tsx --env-file=.env.local scripts/reset-demo.ts",
     "test:rls": "tsx --env-file=.env.local scripts/test-rls.ts",
     "db:push": "supabase db push",
-    "db:types": "supabase gen types typescript --linked --schema public > src/lib/supabase/database.types.ts"
+    "db:types": "supabase gen types typescript --linked --schema public > src/lib/supabase/database.types.ts",
+    "verify:standings": "tsx --env-file=.env.local scripts/verify-standings.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
