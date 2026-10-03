@@ -5,6 +5,8 @@ import { randomUUID, randomBytes } from "node:crypto";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "../src/lib/supabase/database.types";
 import { admin as service } from "./lib/admin-client";
+import { fetchSnapshot } from "../src/lib/snapshot";
+import { computeStandings } from "../src/lib/tournament";
 
 type Client = SupabaseClient<Database>;
 const URL_ = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -207,6 +209,9 @@ async function main() {
 
     // --- Phase 4: fill Round of 16 and advancement ------------------------
     await bracketChecks(adm);
+
+    // --- Phase 4: set qualifiers ------------------------------------------
+    await qualifierChecks(adm);
   } finally {
     // Restore fixtures exactly and remove test artefacts.
     await service.from("match_events").delete().in("match_id", [GROUP_MATCH, KO_MATCH]);
@@ -317,6 +322,69 @@ async function bracketChecks(adm: Client) {
       return a.status === o.status && a.home_team_id === o.home_team_id && a.away_team_id === o.away_team_id && a.home_score === o.home_score;
     });
     expect(restored, "bracket fixtures restored exactly");
+  }
+}
+
+// Group G's six fixtures (all 0–0 makes a four-way dead heat) and the R16 slots it feeds.
+const GROUP_G_MATCHES = [21, 22, 35, 36, 47, 48];
+const R16_FROM_G = [55, 59];
+
+async function qualifierChecks(adm: Client) {
+  const ids = [...GROUP_G_MATCHES, ...R16_FROM_G];
+  const { data: original } = await service.from("matches").select("*").in("id", ids);
+  if (original!.some((m) => GROUP_G_MATCHES.includes(m.id) && m.status !== "scheduled")) {
+    console.log("SKIP  qualifier checks: Group G already has results");
+    return;
+  }
+  const { data: gTeams } = await service.from("teams").select("id, slot, short_code, tiebreak_rank").eq("group_code", "G").order("slot");
+  await service.from("matches").update({ is_demo: true }).in("id", ids);
+  try {
+    for (const id of GROUP_G_MATCHES) {
+      await adm.rpc("admin_set_final_score", { p_match: id, p_home: 0, p_away: 0, p_home_pens: null as unknown as number, p_away_pens: null as unknown as number });
+    }
+    let fill = await adm.rpc("admin_fill_round_of_16");
+    const gSlot = (fill.data as { slot: string; side: string; outcome: string; reason: string }[]).find((r) => r.slot === "R16-M4" && r.side === "home");
+    expect(gSlot?.outcome === "skipped" && gSlot.reason === "Group G needs a decision", "dead heat: fill skips Group G until decided", gSlot?.reason);
+
+    const { data: other } = await service.from("teams").select("id").eq("slot", "B1").single();
+    let r = await adm.rpc("admin_set_qualifier_order", { p_group: "G", p_team_ids: [gTeams![0].id, other!.id] });
+    expect(!!r.error, "order rejected for a team outside the group", r.error?.message);
+    const { data: bTeams } = await service.from("teams").select("id").in("slot", ["B1", "B2"]);
+    r = await adm.rpc("admin_set_qualifier_order", { p_group: "B", p_team_ids: bTeams!.map((t) => t.id) });
+    expect(!!r.error && /not level/.test(r.error.message), "order rejected for teams the rules already separate", r.error?.message);
+
+    // Decide: G4 (BEA), G2 (BOB), G3 (COK), G1 (RIC).
+    const order = ["G4", "G2", "G3", "G1"].map((slot) => gTeams!.find((t) => t.slot === slot)!.id);
+    r = await adm.rpc("admin_set_qualifier_order", { p_group: "G", p_team_ids: order });
+    const { data: view } = await service.from("group_standings").select("team_id, position").eq("group_code", "G").order("position");
+    const snap = await fetchSnapshot(service);
+    const app = computeStandings(snap.teams, snap.matches).G.rows.map((x) => x.team.id);
+    expect(!r.error && JSON.stringify(view!.map((v) => v.team_id)) === JSON.stringify(order) && JSON.stringify(app) === JSON.stringify(order),
+      "set order decides positions, identically in the database and the app", r.error?.message);
+    expect(computeStandings(snap.teams, snap.matches).G.rows.every((x) => x.orderedByOverride && !x.tiedUnresolved), "rows marked as ordered by the admin");
+
+    fill = await adm.rpc("admin_fill_round_of_16");
+    const { data: m55 } = await service.from("matches").select("home_team_id").eq("id", 55).single();
+    const { data: m59 } = await service.from("matches").select("away_team_id").eq("id", 59).single();
+    expect(m55!.home_team_id === order[0] && m59!.away_team_id === order[1], "fill uses the decided order (BEA wins G, BOB runner-up)");
+
+    r = await adm.rpc("admin_clear_qualifier_order", { p_group: "G" });
+    const after = await fetchSnapshot(service);
+    expect(!r.error && computeStandings(after.teams, after.matches).G.rows.every((x) => x.tiedUnresolved), "clear returns Group G to a dead heat", r.error?.message);
+  } finally {
+    for (const id of [...R16_FROM_G, ...GROUP_G_MATCHES]) {
+      await service.from("match_events").delete().eq("match_id", id);
+      await service.from("match_actions").delete().eq("match_id", id);
+      const m = original!.find((x) => x.id === id)!;
+      await service.from("matches").update({
+        status: m.status, period_started_at: m.period_started_at, home_team_id: m.home_team_id, away_team_id: m.away_team_id,
+        home_pens: m.home_pens, away_pens: m.away_pens, is_demo: m.is_demo,
+      }).eq("id", id);
+    }
+    for (const t of gTeams!) await service.from("teams").update({ tiebreak_rank: t.tiebreak_rank }).eq("id", t.id);
+    const { data: back } = await service.from("matches").select("id, status, home_team_id, away_team_id").in("id", ids);
+    expect(back!.every((b) => { const o = original!.find((x) => x.id === b.id)!; return b.status === o.status && b.home_team_id === o.home_team_id && b.away_team_id === o.away_team_id; }),
+      "Group G fixtures restored exactly");
   }
 }
 

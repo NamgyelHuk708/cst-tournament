@@ -239,7 +239,6 @@ export function computeStandings(teams: Team[], matches: Match[]): Record<GroupC
     table.forEach((row, i) => {
       row.position = i + 1;
       row.qualifying = matchesPlayed > 0 && row.position <= QUALIFIERS_PER_GROUP;
-      row.qualified = complete && row.qualifying;
       const neighbours = [table[i - 1], table[i + 1]].filter(Boolean);
       const overridden = (n: StandingRow) =>
         row.team.tiebreak_rank != null && n.team.tiebreak_rank != null && row.team.tiebreak_rank !== n.team.tiebreak_rank;
@@ -247,9 +246,41 @@ export function computeStandings(teams: Team[], matches: Match[]): Record<GroupC
       row.tiedUnresolved = row.played > 0 && neighbours.some((n) => tiedOnRecord(row, n) && !overridden(n));
     });
 
+    // Qualified only once the group is complete and no undecided dead heat straddles the cut.
+    table.forEach((row) => (row.qualified = complete && row.qualifying));
+    for (const cluster of levelClusters(table)) {
+      const straddles =
+        cluster.some((r) => r.tiedUnresolved) &&
+        cluster.some((r) => r.position <= QUALIFIERS_PER_GROUP) &&
+        cluster.some((r) => r.position > QUALIFIERS_PER_GROUP);
+      if (straddles) cluster.forEach((r) => (r.qualified = false));
+    }
+
     result[group] = { group, rows: table, matchesPlayed, matchesTotal: fixtures.length, complete };
   }
   return result;
+}
+
+/** Runs of 2+ teams level on points, goal difference and goals scored, in table order. */
+export function levelClusters(rows: StandingRow[]): StandingRow[][] {
+  const clusters: StandingRow[][] = [];
+  for (const row of rows) {
+    const last = clusters[clusters.length - 1];
+    if (last && tiedOnRecord(last[0], row)) last.push(row);
+    else clusters.push([row]);
+  }
+  return clusters.filter((c) => c.length > 1);
+}
+
+/**
+ * Dead heats the admin must settle with "Set qualifiers": the group is complete and
+ * teams level on every rule (with no order set) include 1st or 2nd place.
+ */
+export function decisionsNeeded(g: GroupStandings): StandingRow[][] {
+  if (!g.complete) return [];
+  return levelClusters(g.rows).filter(
+    (c) => c.some((r) => r.tiedUnresolved) && c.some((r) => r.position <= QUALIFIERS_PER_GROUP),
+  );
 }
 
 function record(row: StandingRow, scored: number, conceded: number) {

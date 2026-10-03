@@ -423,6 +423,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      admin_clear_qualifier_order: {
+        Args: { p_group: string }
+        Returns: undefined
+      }
       admin_correct_status: {
         Args: {
           p_match: number
@@ -598,6 +602,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      admin_set_qualifier_order: {
+        Args: { p_group: string; p_team_ids: number[] }
+        Returns: undefined
       }
       admin_set_status: {
         Args: {
