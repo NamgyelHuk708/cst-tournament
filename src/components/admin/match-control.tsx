@@ -21,6 +21,8 @@ import { ChevronIcon } from "../icons";
 import { useServerNow, useTournament } from "../tournament-provider";
 import { ControlDock } from "./control-dock";
 import { FinalScoreSheet, MoreSheet, ResetSheet, StatusSheet } from "./correction-sheets";
+import { TeamsSheet } from "./teams-sheet";
+import { useResolvedSides } from "../use-resolved-sides";
 import { EventLog } from "./event-log";
 import { EventSheet } from "./event-sheet";
 import { Sheet } from "./sheet";
@@ -56,7 +58,7 @@ function errorMessage(err: unknown): string {
 }
 
 export function MatchControl({ matchId }: { matchId: number }) {
-  const { matchesById, teamsById, events, playersById, local } = useTournament();
+  const { matches, matchesById, teamsById, teams, events, playersById, local } = useTournament();
   const supabase = useMemo(() => createClient(), []);
   const match = matchesById.get(matchId);
 
@@ -65,16 +67,40 @@ export function MatchControl({ matchId }: { matchId: number }) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [lastAction, setLastAction] = useState<LastAction | null>(null);
-  const [toast, setToast] = useState<{ eventId: number; text: string } | null>(null);
+  const [toast, setToast] = useState<{ eventId?: number; text: string } | null>(null);
   const [editing, setEditing] = useState<MatchEvent | null>(null);
   const [confirmStatus, setConfirmStatus] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<MatchEvent | null>(null);
   const [adding, setAdding] = useState(false);
   // Correction tools; errors from them are shown inside their sheet.
-  const [tool, setTool] = useState<"more" | "final" | "status" | "reset" | null>(null);
+  const [tool, setTool] = useState<"more" | "final" | "status" | "reset" | "teams" | null>(null);
   const [toolError, setToolError] = useState<string | null>(null);
 
   const matchEvents = useMemo(() => events.filter((e) => e.match_id === matchId), [events, matchId]);
+
+  // Ties fed by this one. When a result moves a team into one of them, say so.
+  const dependents = matches.filter((m) => m.home_source_match === matchId || m.away_source_match === matchId);
+  const bracketSignature = dependents.map((d) => `${d.id}:${d.home_team_id ?? ""}:${d.away_team_id ?? ""}`).join("|");
+  const [prevSignature, setPrevSignature] = useState(bracketSignature);
+  if (bracketSignature !== prevSignature) {
+    setPrevSignature(bracketSignature);
+    const before = new Map(prevSignature.split("|").filter(Boolean).map((s) => [s.split(":")[0], s.split(":")]));
+    const notes: string[] = [];
+    for (const d of dependents) {
+      const old = before.get(String(d.id));
+      (["home", "away"] as const).forEach((side, i) => {
+        if (d[`${side}_source_match`] !== matchId) return;
+        const oldId = old?.[i + 1] ? Number(old[i + 1]) : null;
+        const newId = d[`${side}_team_id`];
+        if (oldId === newId) return;
+        const code = (id: number | null) => (id != null ? teamsById.get(id)?.short_code : undefined);
+        const into = d.slot_label === "3RD" ? "the 3rd place match" : d.slot_label === "FINAL" ? "the final" : d.slot_label;
+        if (newId != null) notes.push(`${code(newId)} goes through to ${into}${oldId != null ? ` in place of ${code(oldId)}` : ""}.`);
+        else if (oldId != null) notes.push(`${code(oldId)} removed from ${into} until this tie has a winner.`);
+      });
+    }
+    if (notes.length) setToast({ text: notes.join(" ") });
+  }
   // Taps still in flight: shown in the score until their event arrives.
   const inFlight = pending.filter((p) => !matchEvents.some((e) => e.client_id === p.clientId));
 
@@ -97,6 +123,7 @@ export function MatchControl({ matchId }: { matchId: number }) {
   }, [loadLastAction, match?.updated_at]);
 
   useKeepAwake();
+  const sides = useResolvedSidesSafe(match);
 
   useEffect(() => {
     if (!toast) return;
@@ -263,7 +290,25 @@ export function MatchControl({ matchId }: { matchId: number }) {
         onAddEvent={() => setAdding(true)}
         onSetFinal={() => openTool("final")}
         onChangeStatus={() => openTool("status")}
+        onChooseTeams={match.stage !== "group" ? () => openTool("teams") : undefined}
       />
+
+      {tool === "teams" && sides && (
+        <TeamsSheet
+          open
+          match={match}
+          teams={teams}
+          sides={sides}
+          error={toolError}
+          busy={busy}
+          onClose={() => setTool(null)}
+          onSubmit={(h, a) =>
+            runTool(() =>
+              supabase.rpc("admin_set_ko_teams", { p_match: matchId, p_home: h as number, p_away: a as number }),
+            )
+          }
+        />
+      )}
 
       {adding && (
         <EventSheet
@@ -286,6 +331,9 @@ export function MatchControl({ matchId }: { matchId: number }) {
           away={away}
           events={matchEvents}
           playersById={playersById}
+          startedLaterTies={dependents
+            .filter((d) => d.status !== "scheduled" || events.some((e) => e.match_id === d.id))
+            .map((d) => d.slot_label ?? "")}
           error={toolError}
           busy={busy}
           onClose={() => setTool(null)}
@@ -498,4 +546,11 @@ function useKeepAwake() {
       lock?.release().catch(() => {});
     };
   }, []);
+}
+
+/** Resolved sides for a match that may not have loaded yet (hooks can't be called conditionally). */
+function useResolvedSidesSafe(match: Match | undefined) {
+  const fallback = useTournament().matches[0];
+  const sides = useResolvedSides(match ?? fallback);
+  return match ? sides : null;
 }

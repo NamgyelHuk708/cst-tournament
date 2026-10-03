@@ -14,7 +14,7 @@ type Props = {
   undoLabel: string | null;
   error: string | null;
   failed: { tap: PendingTap; message: string } | null;
-  toast: { eventId: number; text: string } | null;
+  toast: { eventId?: number; text: string } | null;
   onTap: (teamId: number, type: EventType) => void;
   onRetry: () => void;
   onDismissError: () => void;
@@ -25,6 +25,8 @@ type Props = {
   onAddEvent: () => void;
   onSetFinal: () => void;
   onChangeStatus: () => void;
+  /** Knockout ties only. */
+  onChooseTeams?: () => void;
 };
 
 const PRIMARY = "h-13 w-full rounded-xl bg-text text-base font-semibold text-white active:opacity-90 disabled:opacity-50";
@@ -60,11 +62,13 @@ export function ControlDock(props: Props) {
         )}
         {toast && !error && !failed && (
           <div role="status" className="mb-2 flex items-center gap-3 rounded-xl bg-text px-4 py-2 text-sm text-white shadow-lg">
-            <BallIcon className="size-4" />
-            <span className="flex-1 font-medium">{toast.text}</span>
-            <button type="button" onClick={props.onAddScorer} className="h-10 rounded-lg bg-white/15 px-3 font-semibold">
-              Add scorer
-            </button>
+            {toast.eventId != null && <BallIcon className="size-4 shrink-0" />}
+            <span className="flex-1 py-1 font-medium">{toast.text}</span>
+            {toast.eventId != null && (
+              <button type="button" onClick={props.onAddScorer} className="h-10 shrink-0 rounded-lg bg-white/15 px-3 font-semibold">
+                Add scorer
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -83,6 +87,11 @@ export function ControlDock(props: Props) {
 
           {match.status === "scheduled" ? (
             <div className="space-y-2">
+              {props.onChooseTeams && (
+                <button type="button" onClick={props.onChooseTeams} disabled={busy} className={teamsSet ? SECONDARY : PRIMARY}>
+                  {teamsSet ? "Change teams" : "Choose teams"}
+                </button>
+              )}
               {pastMatch ? (
                 <>
                   <button type="button" onClick={props.onSetFinal} disabled={busy || !teamsSet} className={PRIMARY}>

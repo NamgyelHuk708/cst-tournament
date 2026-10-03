@@ -157,7 +157,9 @@ Don't build out-of-scope features. If one looks needed, raise it instead.
 - The service role key is only used in `scripts/`. App code uses `src/lib/supabase/{client,server}.ts` (publishable key + session).
 - `match_events.team_id` is in two foreign keys, so embed teams explicitly: `team:teams!match_events_team_id_fkey(...)`, `player:players(...)`.
 - `npm run test:admin` runs database-level admin checks (access, idempotency, undo of every status, penalties, score consistency) with temporary users that it deletes afterwards.
-- `npm run verify:standings` checks `computeStandings()` against the `group_standings` view. The view exists only for this check; the app never reads it.
+- `npm test` runs `test:rls`, `verify:standings` and `test:admin`. Run it before saying any phase is done.
+- **Standings rules live in two places and must always change together:** `computeStandings()` in `src/lib/tournament.ts` (everything the app shows) and the `group_standings` view in the database (used by `admin_fill_round_of_16` via `group_position_team`, and by `verify:standings`). The app never reads the view. `npm run verify:standings` fails if the two disagree.
+- Knockout advancement is a database trigger (`advance_knockout`): when a result changes who wins a tie, the next tie's slot (and the 3rd place match for SF losers) updates if that tie hasn't started; if it has, the change is refused with "Reset <tie> first". Every write path is covered because it runs on the matches table.
 
 ## App architecture
 

@@ -460,6 +460,7 @@ export type Database = {
         }
       }
       admin_delete_event: { Args: { p_event: number }; Returns: undefined }
+      admin_fill_round_of_16: { Args: never; Returns: Json }
       admin_reset_match: {
         Args: { p_match: number }
         Returns: {
@@ -501,6 +502,39 @@ export type Database = {
           p_home_pens: number
           p_match: number
         }
+        Returns: {
+          away_pens: number | null
+          away_score: number
+          away_source: Database["public"]["Enums"]["slot_source"] | null
+          away_source_group: string | null
+          away_source_match: number | null
+          away_team_id: number | null
+          group_code: string | null
+          home_pens: number | null
+          home_score: number
+          home_source: Database["public"]["Enums"]["slot_source"] | null
+          home_source_group: string | null
+          home_source_match: number | null
+          home_team_id: number | null
+          id: number
+          is_demo: boolean
+          kickoff_at: string
+          notes: string | null
+          period_started_at: string | null
+          slot_label: string | null
+          stage: Database["public"]["Enums"]["match_stage"]
+          status: Database["public"]["Enums"]["match_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "matches"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      admin_set_ko_teams: {
+        Args: { p_away: number; p_home: number; p_match: number }
         Returns: {
           away_pens: number | null
           away_score: number
@@ -665,9 +699,22 @@ export type Database = {
         }
         Returns: Record<string, unknown>
       }
+      group_complete: { Args: { p_group: string }; Returns: boolean }
+      group_position_team: {
+        Args: { p_group: string; p_position: number }
+        Returns: number
+      }
       half_length_minutes: { Args: never; Returns: number }
       is_admin: { Args: never; Returns: boolean }
+      match_result_team: {
+        Args: {
+          m: Database["public"]["Tables"]["matches"]["Row"]
+          p_want: string
+        }
+        Returns: number
+      }
       require_admin: { Args: never; Returns: undefined }
+      slot_name: { Args: { p_slot: string }; Returns: string }
     }
     Enums: {
       event_type: "goal" | "own_goal" | "yellow_card" | "red_card"

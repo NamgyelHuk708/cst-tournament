@@ -226,7 +226,7 @@ export function EventSheet({
         </Field>
 
         {error && (
-          <p role="alert" className="rounded-xl bg-bg px-4 py-3 text-sm font-medium">
+          <p role="alert" className="rounded-xl border-l-4 border-text bg-card px-4 py-3 text-sm font-medium ring-1 ring-border">
             {error}
           </p>
         )}

@@ -347,6 +347,50 @@ export function resolveSide(
   return { team, placeholder, projected, projectionFinal: projected != null };
 }
 
+export type FillPlan = {
+  match: Match;
+  side: Side;
+  placeholder: string;
+  team: Team | null;
+  current: Team | null;
+  outcome: "filled" | "unchanged" | "skipped";
+  reason: string | null;
+};
+
+/**
+ * What "Fill Round of 16" will do, slot by slot. Mirrors admin_fill_round_of_16 in the database:
+ * only complete groups, never a dead heat, never a tie that has started.
+ */
+export function previewFillRound16(
+  matches: Match[],
+  events: Pick<MatchEvent, "match_id">[],
+  standings: Record<GroupCode, GroupStandings>,
+  teamsById: Map<number, Team>,
+): FillPlan[] {
+  const plans: FillPlan[] = [];
+  const r16 = matches.filter((m) => m.stage === "round_of_16").sort((a, b) => (a.slot_label ?? "").localeCompare(b.slot_label ?? ""));
+  for (const match of r16) {
+    const started = match.status !== "scheduled" || events.some((e) => e.match_id === match.id);
+    for (const side of ["home", "away"] as const) {
+      const group = (side === "home" ? match.home_source_group : match.away_source_group) as GroupCode;
+      const position = (side === "home" ? match.home_source : match.away_source) === "group_winner" ? 1 : 2;
+      const currentId = teamIdOn(match, side);
+      const current = currentId != null ? teamsById.get(currentId) ?? null : null;
+      const g = standings[group];
+      const row = g.rows[position - 1];
+      const placeholder = `${position === 1 ? "Winner" : "Runner-up"} Group ${group}`;
+      let plan: Omit<FillPlan, "match" | "side" | "placeholder" | "current">;
+      if (!g.complete) plan = { team: null, outcome: "skipped", reason: `Group ${group} not complete` };
+      else if (!row || row.tiedUnresolved) plan = { team: null, outcome: "skipped", reason: `Group ${group} needs a decision` };
+      else if (row.team.id === currentId) plan = { team: row.team, outcome: "unchanged", reason: null };
+      else if (started) plan = { team: row.team, outcome: "skipped", reason: `${match.slot_label} has already started` };
+      else plan = { team: row.team, outcome: "filled", reason: null };
+      plans.push({ match, side, placeholder, current, ...plan });
+    }
+  }
+  return plans;
+}
+
 /** The first knockout round that still has unfinished matches (or the last round). */
 export function currentRound(matches: Match[]): KnockoutRound["key"] {
   const bySlot = new Map(matches.filter((m) => m.slot_label).map((m) => [m.slot_label!, m]));

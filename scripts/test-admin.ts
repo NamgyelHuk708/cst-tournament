@@ -201,6 +201,11 @@ async function main() {
     for (let i = 0; i < 5; i++) await adm.rpc("admin_undo", { p_match: KO_MATCH });
     const { data: ko2 } = await service.from("matches").select("status, home_pens, away_pens, period_started_at").eq("id", KO_MATCH).single();
     expect(ko2!.status === "scheduled" && ko2!.home_pens === null && ko2!.period_started_at === null, "knockout fully undone", JSON.stringify(ko2));
+    const koOriginal = original!.find((m) => m.id === KO_MATCH)!;
+    await service.from("matches").update({ home_team_id: koOriginal.home_team_id, away_team_id: koOriginal.away_team_id }).eq("id", KO_MATCH);
+
+    // --- Phase 4: fill Round of 16 and advancement ------------------------
+    await bracketChecks(adm);
   } finally {
     // Restore fixtures exactly and remove test artefacts.
     await service.from("match_events").delete().in("match_id", [GROUP_MATCH, KO_MATCH]);
@@ -223,6 +228,95 @@ async function main() {
 
   console.log(failures ? `\n${failures} check(s) failed.` : "\nAll admin checks passed.");
   process.exit(failures ? 1 : 0);
+}
+
+// Group B's two remaining fixtures, the R16/QF/SF/final slots used, restored exactly afterwards.
+const BRACKET_MATCHES = [29, 30, 53, 54, 57, 61, 65, 67, 68];
+
+async function bracketChecks(adm: Client) {
+  const { data: original } = await service.from("matches").select("*").in("id", BRACKET_MATCHES);
+  for (const id of [29, 30]) {
+    const m = original!.find((x) => x.id === id)!;
+    if (m.status !== "scheduled") throw new Error(`Match ${id} is not scheduled; refusing to test on it.`);
+  }
+  const { data: teams } = await service.from("teams").select("id, slot");
+  const t = (slot: string) => teams!.find((x) => x.slot === slot)!.id;
+  const team = async (id: number, side: "home" | "away") =>
+    (await service.from("matches").select("home_team_id, away_team_id").eq("id", id).single()).data![`${side}_team_id`];
+  const sf = (id: number, h: number, a: number, hp: number | null = null, ap: number | null = null) =>
+    adm.rpc("admin_set_final_score", { p_match: id, p_home: h, p_away: a, p_home_pens: hp as number, p_away_pens: ap as number });
+
+  await service.from("matches").update({ is_demo: true }).in("id", BRACKET_MATCHES);
+  try {
+    // Complete Group B: BPC 2-0 ZIM, ICP 1-1 CSK → BPC 1st, CSK 2nd.
+    await sf(29, 2, 0);
+    await sf(30, 1, 1);
+    const fill = await adm.rpc("admin_fill_round_of_16");
+    const report = (fill.data ?? []) as { slot: string; side: string; outcome: string; reason: string | null }[];
+    const m5 = report.find((r) => r.slot === "R16-M5" && r.side === "home");
+    const m1a = report.find((r) => r.slot === "R16-M1" && r.side === "away");
+    const m1h = report.find((r) => r.slot === "R16-M1" && r.side === "home");
+    expect(!fill.error && m5?.outcome === "filled" && (await team(57, "home")) === t("B1"), "fill puts Winner Group B (BPC) into R16-M5", fill.error?.message);
+    expect(m1a?.outcome === "filled" && (await team(53, "away")) === t("B4"), "fill puts Runner-up Group B (CSK) into R16-M1");
+    expect(m1h?.outcome === "skipped" && m1h.reason === "Group A not complete" && (await team(53, "home")) === null,
+      "incomplete groups are skipped with a reason", m1h?.reason ?? "");
+
+    // Teams can still be changed by hand.
+    let r = await adm.rpc("admin_set_ko_teams", { p_match: 53, p_home: t("A1"), p_away: t("B4") });
+    expect(!r.error, "admin chooses R16-M1 teams by hand", r.error?.message);
+    await adm.rpc("admin_set_ko_teams", { p_match: 54, p_home: t("C3"), p_away: t("D4") });
+
+    // Penalties decide R16-M1; both winners advance into QF1.
+    r = await sf(53, 1, 1, 4, 3);
+    expect(!r.error && (await team(61, "home")) === t("A1"), "penalty winner (DBR, 4–3) advances to QF1", r.error?.message);
+    await sf(54, 0, 2);
+    expect((await team(61, "away")) === t("D4"), "R16-M2 winner (DLJ) advances to QF1");
+
+    // Earlier result changes while QF1 hasn't started: the slot follows.
+    r = await sf(53, 1, 1, 2, 4);
+    expect(!r.error && (await team(61, "home")) === t("B4"), "changed penalty result updates QF1 automatically (CSK in)", r.error?.message);
+
+    // Once QF1 has started, the earlier result can't change who plays in it.
+    await adm.rpc("admin_set_status", { p_match: 61, p_status: "first_half" });
+    r = await sf(53, 2, 1);
+    expect(!!r.error && /QF1 has already started/.test(r.error.message) && (await team(61, "home")) === t("B4"),
+      "change blocked while QF1 is in play; QF1 untouched", r.error?.message);
+    const { data: m53 } = await service.from("matches").select("home_score, away_score, home_pens").eq("id", 53).single();
+    expect(m53!.home_score === 1 && m53!.home_pens === 2, "blocked change left R16-M1 as it was");
+    const undoBlocked = await adm.rpc("admin_reset_match", { p_match: 53 });
+    expect(!!undoBlocked.error, "resetting R16-M1 is blocked too while QF1 is in play", undoBlocked.error?.message);
+
+    // Reset QF1, then the change goes through.
+    await adm.rpc("admin_reset_match", { p_match: 61 });
+    r = await sf(53, 2, 1);
+    expect(!r.error && (await team(61, "home")) === t("A1"), "after resetting QF1 the change is allowed and DBR goes through", r.error?.message);
+
+    // Semi-final: winner to the final, loser to the 3rd place match.
+    await adm.rpc("admin_set_ko_teams", { p_match: 65, p_home: t("A1"), p_away: t("D4") });
+    await sf(65, 0, 3);
+    expect((await team(67, "home")) === t("D4") && (await team(68, "home")) === t("A1"), "SF1: winner to the final, loser to 3rd place");
+    r = await adm.rpc("admin_set_ko_teams", { p_match: 65, p_home: t("A1"), p_away: t("B1") });
+    expect(!!r.error, "teams can't be changed once a tie has a result", r.error?.message);
+  } finally {
+    // Later rounds first, so the advancement trigger never sees a started later tie.
+    const order = [67, 68, 65, 61, 57, 53, 54, 29, 30];
+    for (const id of order) {
+      await service.from("match_events").delete().eq("match_id", id);
+      await service.from("match_actions").delete().eq("match_id", id);
+      const m = original!.find((x) => x.id === id)!;
+      const { error } = await service.from("matches").update({
+        status: m.status, period_started_at: m.period_started_at, home_team_id: m.home_team_id, away_team_id: m.away_team_id,
+        home_pens: m.home_pens, away_pens: m.away_pens, is_demo: m.is_demo,
+      }).eq("id", id);
+      if (error) console.log(`restore ${id}: ${error.message}`);
+    }
+    const { data: after } = await service.from("matches").select("id, status, home_team_id, away_team_id, home_score, away_score").in("id", BRACKET_MATCHES);
+    const restored = after!.every((a) => {
+      const o = original!.find((x) => x.id === a.id)!;
+      return a.status === o.status && a.home_team_id === o.home_team_id && a.away_team_id === o.away_team_id && a.home_score === o.home_score;
+    });
+    expect(restored, "bracket fixtures restored exactly");
+  }
 }
 
 main().catch((err) => {

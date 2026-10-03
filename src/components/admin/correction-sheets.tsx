@@ -99,6 +99,7 @@ export function FinalScoreSheet({
   playersById,
   error,
   busy,
+  startedLaterTies,
   onClose,
   onSubmit,
 }: {
@@ -110,6 +111,8 @@ export function FinalScoreSheet({
   playersById: Map<string, Player>;
   error: string | null;
   busy: boolean;
+  /** Later ties fed by this one that have already started (their slot labels). */
+  startedLaterTies: string[];
   onClose: () => void;
   onSubmit: (home: number, away: number, homePens: number | null, awayPens: number | null) => void;
 }) {
@@ -122,6 +125,12 @@ export function FinalScoreSheet({
   const plans = [planSide(match, events, home.id, away.id, home.short_code, h), planSide(match, events, away.id, home.id, away.short_code, a)];
   const blocked = plans.find((p) => p.blocked);
   const pensInvalid = needsPens && hp === ap;
+  // Who goes through now and with the new score (knockouts only).
+  const winnerOf = (hs: number, as: number, hpens: number | null, apens: number | null) =>
+    hs !== as ? (hs > as ? "home" : "away") : hpens != null && apens != null && hpens !== apens ? (hpens > apens ? "home" : "away") : null;
+  const currentWinner = match.status === "finished" ? winnerOf(match.home_score, match.away_score, match.home_pens, match.away_pens) : null;
+  const newWinner = winnerOf(h, a, needsPens ? hp : null, needsPens ? ap : null);
+  const laterTie = isKnockout(match) && currentWinner !== newWinner ? startedLaterTies[0] : undefined;
   const unchanged =
     plans.every((p) => p.add === 0 && p.remove === 0) &&
     match.status === "finished" &&
@@ -160,7 +169,12 @@ export function FinalScoreSheet({
       )}
 
       <div className="mt-4 rounded-xl px-4 py-3 text-sm ring-1 ring-border" aria-live="polite">
-        {blocked ? (
+        {laterTie ? (
+          <p className="font-medium">
+            {laterTie} has already started, so this result can&apos;t change who plays in it. Reset {laterTie} first, then change
+            this result.
+          </p>
+        ) : blocked ? (
           <p className="font-medium">
             {blocked.code} has {blocked.named.length} goal{blocked.named.length > 1 ? "s" : ""} with a named scorer, so the score
             can&apos;t go below {blocked.named.length}. Delete the ones that should go from the event log first.
@@ -183,7 +197,7 @@ export function FinalScoreSheet({
       </div>
 
       {error && (
-        <p role="alert" className="mt-3 rounded-xl bg-bg px-4 py-3 text-sm font-medium">
+        <p role="alert" className="mt-3 rounded-xl border-l-4 border-text bg-card px-4 py-3 text-sm font-medium ring-1 ring-border">
           {error}
         </p>
       )}
@@ -194,7 +208,7 @@ export function FinalScoreSheet({
         </button>
         <button
           type="button"
-          disabled={busy || !!blocked || pensInvalid || unchanged}
+          disabled={busy || !!blocked || pensInvalid || unchanged || !!laterTie}
           onClick={() => onSubmit(h, a, needsPens ? hp : null, needsPens ? ap : null)}
           className={BTN_PRIMARY}
         >
@@ -267,7 +281,7 @@ export function StatusSheet({
         <p className="mt-3 text-sm text-muted">The match clock restarts from the start of this half.</p>
       )}
       {error && (
-        <p role="alert" className="mt-3 rounded-xl bg-bg px-4 py-3 text-sm font-medium">
+        <p role="alert" className="mt-3 rounded-xl border-l-4 border-text bg-card px-4 py-3 text-sm font-medium ring-1 ring-border">
           {error}
         </p>
       )}
@@ -320,7 +334,7 @@ export function ResetSheet({
         The teams stay as they are.
       </p>
       {error && (
-        <p role="alert" className="mt-3 rounded-xl bg-bg px-4 py-3 text-sm font-medium">
+        <p role="alert" className="mt-3 rounded-xl border-l-4 border-text bg-card px-4 py-3 text-sm font-medium ring-1 ring-border">
           {error}
         </p>
       )}
