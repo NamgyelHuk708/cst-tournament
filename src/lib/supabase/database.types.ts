@@ -711,6 +711,8 @@ export type Database = {
         }
         Returns: Record<string, unknown>
       }
+      demo_prepare_knockouts: { Args: never; Returns: number }
+      demo_reset_knockouts: { Args: never; Returns: number }
       group_complete: { Args: { p_group: string }; Returns: boolean }
       group_position_team: {
         Args: { p_group: string; p_position: number }
@@ -718,6 +720,7 @@ export type Database = {
       }
       half_length_minutes: { Args: never; Returns: number }
       is_admin: { Args: never; Returns: boolean }
+      knockouts_have_real_results: { Args: never; Returns: boolean }
       match_result_team: {
         Args: {
           m: Database["public"]["Tables"]["matches"]["Row"]

@@ -239,12 +239,15 @@ async function main() {
   process.exit(failures ? 1 : 0);
 }
 
-// Group B's two remaining fixtures, the R16/QF/SF/final slots used, restored exactly afterwards.
-const BRACKET_MATCHES = [29, 30, 53, 54, 57, 61, 65, 67, 68];
+// Group G has no demo results, so the tests complete it themselves (clear order: RIC, BOB, COK, BEA).
+// Its fixtures and the knockout slots used are restored exactly afterwards.
+const G_MATCHES = [21, 22, 35, 36, 47, 48];
+const G_SCORES: [number, number, number][] = [[21, 1, 0], [22, 1, 0], [35, 1, 0], [36, 0, 1], [47, 1, 0], [48, 1, 0]];
+const BRACKET_MATCHES = [...G_MATCHES, 53, 54, 55, 59, 61, 65, 67, 68];
 
 async function bracketChecks(adm: Client) {
   const { data: original } = await service.from("matches").select("*").in("id", BRACKET_MATCHES);
-  for (const id of [29, 30]) {
+  for (const id of G_MATCHES) {
     const m = original!.find((x) => x.id === id)!;
     if (m.status !== "scheduled") throw new Error(`Match ${id} is not scheduled; refusing to test on it.`);
   }
@@ -257,18 +260,16 @@ async function bracketChecks(adm: Client) {
 
   await service.from("matches").update({ is_demo: true }).in("id", BRACKET_MATCHES);
   try {
-    // Complete Group B: BPC 2-0 ZIM, ICP 1-1 CSK → BPC 1st, CSK 2nd.
-    await sf(29, 2, 0);
-    await sf(30, 1, 1);
+    for (const [id, h, a] of G_SCORES) await sf(id, h, a);
     const fill = await adm.rpc("admin_fill_round_of_16");
     const report = (fill.data ?? []) as { slot: string; side: string; outcome: string; reason: string | null }[];
-    const m5 = report.find((r) => r.slot === "R16-M5" && r.side === "home");
-    const m1a = report.find((r) => r.slot === "R16-M1" && r.side === "away");
-    const m1h = report.find((r) => r.slot === "R16-M1" && r.side === "home");
-    expect(!fill.error && m5?.outcome === "filled" && (await team(57, "home")) === t("B1"), "fill puts Winner Group B (BPC) into R16-M5", fill.error?.message);
-    expect(m1a?.outcome === "filled" && (await team(53, "away")) === t("B4"), "fill puts Runner-up Group B (CSK) into R16-M1");
-    expect(m1h?.outcome === "skipped" && m1h.reason === "Group A not complete" && (await team(53, "home")) === null,
-      "incomplete groups are skipped with a reason", m1h?.reason ?? "");
+    const m4 = report.find((r) => r.slot === "R16-M4" && r.side === "home");
+    const m8 = report.find((r) => r.slot === "R16-M8" && r.side === "away");
+    const m2 = report.find((r) => r.slot === "R16-M2" && r.side === "home");
+    expect(!fill.error && m4?.outcome === "filled" && (await team(55, "home")) === t("G1"), "fill puts Winner Group G (RIC) into R16-M4", fill.error?.message);
+    expect(m8?.outcome === "filled" && (await team(59, "away")) === t("G2"), "fill puts Runner-up Group G (BOB) into R16-M8");
+    expect(m2?.outcome === "skipped" && m2.reason === "Group C not complete" && (await team(54, "home")) === null,
+      "incomplete groups are skipped with a reason", m2?.reason ?? "");
 
     // Teams can still be changed by hand.
     let r = await adm.rpc("admin_set_ko_teams", { p_match: 53, p_home: t("A1"), p_away: t("B4") });
@@ -308,7 +309,7 @@ async function bracketChecks(adm: Client) {
     expect(!!r.error, "teams can't be changed once a tie has a result", r.error?.message);
   } finally {
     // Later rounds first, so the advancement trigger never sees a started later tie.
-    const order = [67, 68, 65, 61, 57, 53, 54, 29, 30];
+    const order = [67, 68, 65, 61, 55, 59, 53, 54, ...G_MATCHES];
     for (const id of order) {
       await service.from("match_events").delete().eq("match_id", id);
       await service.from("match_actions").delete().eq("match_id", id);
@@ -391,11 +392,11 @@ async function qualifierChecks(adm: Client) {
   }
 }
 
-const UNDO_MATCHES = [18, 29, 30, 53, 54, 57, 61];
+const UNDO_MATCHES = [18, ...G_MATCHES, 53, 54, 55, 61];
 
 async function undoChecks(adm: Client) {
   const { data: original } = await service.from("matches").select("*").in("id", UNDO_MATCHES);
-  if (original!.some((m) => [18, 29, 30].includes(m.id) && m.status !== "scheduled")) {
+  if (original!.some((m) => [18, ...G_MATCHES].includes(m.id) && m.status !== "scheduled")) {
     console.log("SKIP  undo checks: fixtures already have results");
     return;
   }
@@ -474,15 +475,14 @@ async function undoChecks(adm: Client) {
       "undo status correction restores the penalty score", u.error?.message);
 
     // Fill, then undo on one tie.
-    await adm.rpc("admin_set_ko_teams", { p_match: 57, p_home: nul, p_away: nul });
-    await sf(29, 2, 0);
-    await sf(30, 1, 1);
+    await adm.rpc("admin_set_ko_teams", { p_match: 55, p_home: nul, p_away: nul });
+    for (const [id, h, a] of G_SCORES) await sf(id, h, a);
     await adm.rpc("admin_fill_round_of_16");
-    const filled = (await state(57)).home_team_id;
-    u = await undo(57);
-    expect(filled === t("B1") && !u.error && (await state(57)).home_team_id === null, "undo fill on a tie restores its previous teams", u.error?.message);
+    const filled = (await state(55)).home_team_id;
+    u = await undo(55);
+    expect(filled === t("G1") && !u.error && (await state(55)).home_team_id === null, "undo fill on a tie restores its previous teams", u.error?.message);
   } finally {
-    for (const id of [61, 57, 53, 54, 29, 30, 18]) {
+    for (const id of [61, 55, 53, 54, ...G_MATCHES, 18]) {
       await service.from("match_events").delete().eq("match_id", id);
       await service.from("match_actions").delete().eq("match_id", id);
       const m = original!.find((x) => x.id === id)!;

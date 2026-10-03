@@ -1,4 +1,6 @@
-// Demo data: matches 1–16 finished, match 17 live in the second half at 2–1.
+// Demo data: matches 1–16 finished, Groups A and B completed (clear standings, so
+// Fill Round of 16 fills R16-M1 = DBR v CSK and R16-M5 = BPC v THS), match 17 live
+// in the second half at 2–1, and the knockout stage marked as demo.
 // Clears previous demo data first, so it can be run repeatedly. Every row it
 // writes is flagged is_demo. Matches that already have real results are skipped.
 import { admin, check } from "./lib/admin-client";
@@ -12,6 +14,10 @@ type EventType = Database["public"]["Enums"]["event_type"];
 const FINISHED_SCORES: Record<number, [number, number]> = {
   1: [3, 1], 2: [2, 0], 3: [3, 1], 4: [1, 1], 5: [2, 0], 6: [1, 2], 7: [4, 2], 8: [0, 1],
   9: [2, 2], 10: [3, 0], 11: [1, 0], 12: [1, 3], 13: [2, 1], 14: [0, 2], 15: [1, 1], 16: [3, 2],
+  // Rest of Group A → DBR 10 pts, THS 8, PTX 5, BFA 2, IMM 1.
+  25: [2, 0], 26: [0, 1], 33: [1, 1], 37: [1, 1], 38: [1, 2], 45: [3, 1], 46: [0, 0],
+  // Rest of Group B → BPC 7 pts, CSK 6, ICP 2, ZIM 1.
+  29: [2, 0], 30: [0, 1],
 };
 const LIVE_MATCH = 17;
 const LIVE_SCORE: [number, number] = [2, 1];
@@ -34,7 +40,9 @@ function rng(seed: number) {
 
 async function main() {
   const cleared = await resetDemo();
-  console.log(`Cleared previous demo data (${cleared.matches} matches).`);
+  console.log(`Cleared previous demo data (${cleared.matches} matches, knockout stage cleared).`);
+  const prepared = await admin.rpc("demo_prepare_knockouts");
+  if (prepared.error) throw new Error(prepared.error.message);
 
   const ids = [...Object.keys(FINISHED_SCORES).map(Number), LIVE_MATCH];
   const matches = check(
@@ -112,7 +120,7 @@ async function main() {
   }
 
   check(await admin.from("match_events").insert(events), "Insert demo events");
-  console.log(`Demo data loaded: ${targets.length} matches, ${events.length} events.`);
+  console.log(`Demo data loaded: ${targets.length} matches, ${events.length} events; ${prepared.data} knockout ties ready for the demo.`);
 }
 
 main().catch((err) => {

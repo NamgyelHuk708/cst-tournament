@@ -1,8 +1,13 @@
 import { admin, check } from "./admin-client";
 
 // Removes demo events and players and returns demo matches to scheduled.
-// Only rows flagged is_demo are touched, so real results are never cleared.
+// Only rows flagged is_demo are touched, so real group results are never cleared.
+// The knockout stage is cleared completely (teams, results, penalties, advanced winners,
+// undo history), but only if it has no real results; otherwise this refuses and explains.
 export async function resetDemo() {
+  const knockouts = await admin.rpc("demo_reset_knockouts");
+  if (knockouts.error) throw new Error(knockouts.error.message);
+
   // Undo history for demo matches would otherwise replay stale status changes after a reset.
   const demoMatches = check(await admin.from("matches").select("id").eq("is_demo", true), "Load demo matches");
   check(
@@ -33,5 +38,5 @@ export async function resetDemo() {
       .select("id"),
     "Reset demo matches",
   );
-  return { events: events.length, players: players.length, matches: matches.length };
+  return { events: events.length, players: players.length, matches: matches.length, knockouts: knockouts.data ?? 0 };
 }
