@@ -11,7 +11,9 @@ import { computeStandings } from "../src/lib/tournament";
 type Client = SupabaseClient<Database>;
 const URL_ = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const GROUP_MATCH = 18;
+// A group fixture the tests borrow temporarily (flagged demo, restored exactly). Use one that is
+// still far off: the last group match. Move it if this fixture has been played.
+const GROUP_MATCH = 52;
 const KO_MATCH = 53;
 
 let failures = 0;
@@ -395,11 +397,11 @@ async function qualifierChecks(adm: Client) {
   }
 }
 
-const UNDO_MATCHES = [18, ...G_MATCHES, ...R16, 61];
+const UNDO_MATCHES = [GROUP_MATCH, ...G_MATCHES, ...R16, 61];
 
 async function undoChecks(adm: Client) {
   const { data: original } = await service.from("matches").select("*").in("id", UNDO_MATCHES);
-  if (original!.some((m) => [18, ...G_MATCHES].includes(m.id) && m.status !== "scheduled")) {
+  if (original!.some((m) => [GROUP_MATCH, ...G_MATCHES].includes(m.id) && m.status !== "scheduled")) {
     console.log("SKIP  undo checks: fixtures already have results");
     return;
   }
@@ -417,32 +419,32 @@ async function undoChecks(adm: Client) {
   await service.from("matches").update({ is_demo: true }).in("id", UNDO_MATCHES);
   try {
     // Set final score from not started, then undo.
-    await sf(18, 3, 1);
-    let u = await undo(18);
-    let st = await state(18);
-    expect(!u.error && st.status === "scheduled" && st.home_score === 0 && (await eventIds(18)).length === 0,
+    await sf(GROUP_MATCH, 3, 1);
+    let u = await undo(GROUP_MATCH);
+    let st = await state(GROUP_MATCH);
+    expect(!u.error && st.status === "scheduled" && st.home_score === 0 && (await eventIds(GROUP_MATCH)).length === 0,
       "undo set final score returns a not-started match to not started", u.error?.message);
 
     // Lowering a score removes goals; undo puts the same goals back.
-    await sf(18, 2, 0);
-    const before = await eventIds(18);
-    await sf(18, 1, 0);
-    u = await undo(18);
-    st = await state(18);
-    expect(!u.error && st.home_score === 2 && JSON.stringify(await eventIds(18)) === JSON.stringify(before),
+    await sf(GROUP_MATCH, 2, 0);
+    const before = await eventIds(GROUP_MATCH);
+    await sf(GROUP_MATCH, 1, 0);
+    u = await undo(GROUP_MATCH);
+    st = await state(GROUP_MATCH);
+    expect(!u.error && st.home_score === 2 && JSON.stringify(await eventIds(GROUP_MATCH)) === JSON.stringify(before),
       "undo restores removed goals with their original ids", u.error?.message);
 
     // Reset, then undo.
-    await adm.rpc("admin_reset_match", { p_match: 18 });
-    u = await undo(18);
-    st = await state(18);
-    expect(!u.error && st.status === "finished" && st.home_score === 2 && (await eventIds(18)).length === 2,
+    await adm.rpc("admin_reset_match", { p_match: GROUP_MATCH });
+    u = await undo(GROUP_MATCH);
+    st = await state(GROUP_MATCH);
+    expect(!u.error && st.status === "finished" && st.home_score === 2 && (await eventIds(GROUP_MATCH)).length === 2,
       "undo reset brings back the result and its events", u.error?.message);
 
     // Status correction, then undo.
-    await adm.rpc("admin_correct_status", { p_match: 18, p_status: "second_half" });
-    u = await undo(18);
-    expect(!u.error && (await state(18)).status === "finished", "undo status correction", u.error?.message);
+    await adm.rpc("admin_correct_status", { p_match: GROUP_MATCH, p_status: "second_half" });
+    u = await undo(GROUP_MATCH);
+    expect(!u.error && (await state(GROUP_MATCH)).status === "finished", "undo status correction", u.error?.message);
 
     // Choose teams, then undo.
     await adm.rpc("admin_set_ko_teams", { p_match: 53, p_home: t("A1"), p_away: t("B4") });
@@ -485,7 +487,7 @@ async function undoChecks(adm: Client) {
     u = await undo(55);
     expect(filled === t("G1") && !u.error && (await state(55)).home_team_id === null, "undo fill on a tie restores its previous teams", u.error?.message);
   } finally {
-    for (const id of [61, ...R16, ...G_MATCHES, 18]) {
+    for (const id of [61, ...R16, ...G_MATCHES, GROUP_MATCH]) {
       await service.from("match_events").delete().eq("match_id", id);
       await service.from("match_actions").delete().eq("match_id", id);
       const m = original!.find((x) => x.id === id)!;

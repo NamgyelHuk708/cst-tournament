@@ -1,22 +1,18 @@
 # CST Silver Jubilee Departmental Football Tournament — Live Dashboard
 
-## Current status (4 Oct 2026, before the stakeholder demo)
+## Current status (4 Oct 2026, after the stakeholder demo)
 
-**Done:** Phases 1–5. Public Live/Groups/Knockouts with Realtime; admin login, live controls, corrections (set final score, change status, reset), knockout teams, fill R16, auto-advancement, set qualifiers, undo for all of these; demo data and full rehearsal. All migrations are applied. `npm test` (101 checks), lint and build pass. Nothing is pushed or deployed.
+**Done:** Phases 1–5 and the demo. Demo data has been cleared. Real results for matches 1–13 are loaded from `data/real-results.json` with `npm run seed:results` (same database function as the admin's Set final score: goals with no scorer or minute, not demo data). `npm test` (101 checks), lint and build pass. Nothing is pushed or deployed.
 
-**Demo commands** (laptop and phones on the same Wi-Fi):
-- Before: `npm run seed:demo` (shortly before starting: match 17's clock runs from seeding), then `npm run demo` (builds and serves on port 3000 for the whole network).
-- Phone address: `http://<laptop-ip>:3000`, admin at `/admin/login`. Find the IP with `hostname -I` (first address).
-- Optional check: `npm run rehearsal -- http://<laptop-ip>:3000 375`, then `npm run seed:demo` again (the rehearsal changes demo data).
-- After: `npm run reset:demo`.
+**Loading more results:** add them to `data/real-results.json` (match number, home and away short codes, score), then `npm run seed:results`. It checks every team code against the schedule and writes nothing if one is wrong; it skips any match that already has events, so it is safe to rerun. Scorers can be added later in the admin.
 
-**Know before presenting:**
-- Demo data: matches 1–17, all of Groups A and B, and the whole knockout stage. Fill R16 gives R16-M1 DBR v CSK and R16-M5 BPC v THS. Editing any other fixture (e.g. Group C–H matches from 18 onwards) creates real data that reset:demo won't clear; use Reset match or Undo on it.
-- Supabase is in Sydney: ~0.5 s per round trip from Bhutan. First page loads take 2–3 s and admin sign-in 3–5 s; open each page once before presenting.
-- Some networks block database ports 5432/6543. The app is unaffected (HTTPS only), but `npm run db:push` needs a network that allows them.
-- `reset:demo` doesn't clear a qualifier order set with "Set qualifiers"; use Clear in the admin if you set one during the demo.
+**Pending decision:** matches 18 (FIF 2–1 TCC) and 19 (DLJ 1–1 570) have non-demo results entered through the admin on 4 Oct before their kick-offs (all events at 1'). They look like demo taps on real fixtures. They are counted in Group D until removed (admin → match → Correct → Reset match) or confirmed.
 
-**Open items:** `design/DESIGN.md` and `design/screens/` were never provided. Half length (45 min) to be confirmed with the organisers. Dark mode, desktop polish and stats are out of scope.
+**Demo commands** (only if a demo is needed again; it will put demo data over matches 1–17): `npm run seed:demo`, `npm run demo` (serves on port 3000 to the Wi-Fi; phones open `http://<laptop-ip>:3000`, IP from `hostname -I`), afterwards `npm run reset:demo`. Note: seed:demo skips matches that already have real results.
+
+**Tests borrow fixtures:** `test:admin` temporarily uses match 52 and all of Group G and the knockout stage (flagged demo, restored exactly). Once any of those are played, move the test fixtures to unplayed ones or the tests will refuse to run.
+
+**Open items:** `design/DESIGN.md` and `design/screens/` were never provided. Half length (45 min) to be confirmed with the organisers. Supabase is in Sydney (~0.5 s per round trip from Bhutan). Some networks block database ports 5432/6543 (needed only for `npm run db:push`).
 
 ## Purpose
 

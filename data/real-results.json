@@ -1,0 +1,18 @@
+{
+  "description": "Real results of played matches. Loaded with `npm run seed:results`. Scores are home–away in schedule order; team codes are checked against the schedule before anything is written.",
+  "results": [
+    { "match": 1, "home": "THS", "away": "IMM", "score": [4, 2], "fixture": "Thromde Sherig v Immigration" },
+    { "match": 2, "home": "FIF", "away": "DLJ", "score": [2, 9], "fixture": "FI FC v Druk Larjung" },
+    { "match": 3, "home": "BBP", "away": "PTD", "score": [2, 12], "fixture": "Bhutan Board Product Limited (BBPL) v PTDP" },
+    { "match": 4, "home": "ZIM", "away": "ICP", "score": [2, 4], "fixture": "Zimdra FC v ICP, Phuentsholing" },
+    { "match": 5, "home": "BSM", "away": "DGP", "score": [2, 1], "fixture": "BSMPL v DGPC United" },
+    { "match": 6, "home": "570", "away": "TCC", "score": [7, 4], "fixture": "570 MW v TCC" },
+    { "match": 7, "home": "BPC", "away": "CSK", "score": [3, 5], "fixture": "BPC v CST Kangtsey" },
+    { "match": 8, "home": "TML", "away": "BLT", "score": [11, 0], "fixture": "Tashi Metals v Bhutan Lottery" },
+    { "match": 9, "home": "PTX", "away": "BFA", "score": [8, 1], "fixture": "Pling Taxi v BFAL" },
+    { "match": 10, "home": "OGU", "away": "DFA", "score": [5, 2], "fixture": "OG United v DFAL" },
+    { "match": 11, "home": "BCC", "away": "STC", "score": [9, 1], "fixture": "BCCL v STCBL" },
+    { "match": 12, "home": "GCB", "away": "PHO", "score": [2, 1], "fixture": "GCBS v Pling Hospital" },
+    { "match": 13, "home": "DBR", "away": "BFA", "score": [7, 0], "fixture": "BBPL (Bhutan Brewary / Druk Beer) v BFAL" }
+  ]
+}
