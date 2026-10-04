@@ -15,7 +15,10 @@
     "db:types": "supabase gen types typescript --linked --schema public > src/lib/supabase/database.types.ts",
     "verify:standings": "tsx --env-file=.env.local scripts/verify-standings.ts",
     "test:admin": "tsx --env-file=.env.local scripts/test-admin.ts",
-    "test": "npm run -s test:rls && npm run -s verify:standings && npm run -s test:admin"
+    "test": "npm run -s test:rls && npm run -s verify:standings && npm run -s test:admin",
+    "dev:lan": "next dev -H 0.0.0.0 -p 3000",
+    "demo": "next build && next start -H 0.0.0.0 -p 3000",
+    "rehearsal": "tsx --env-file=.env.local scripts/rehearsal.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
@@ -33,6 +36,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.3.8",
     "exceljs": "^4.4.0",
+    "playwright": "^1.54.2",
     "supabase": "^2.119.0",
     "tailwindcss": "^4",
     "tsx": "^4.23.15",

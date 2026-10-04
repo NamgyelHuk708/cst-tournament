@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { uuid } from "@/lib/uuid";
 import {
   eventMinuteLabel,
   isKnockout,
@@ -160,7 +161,7 @@ export function MatchControl({ matchId }: { matchId: number }) {
 
   function tap(teamId: number, type: EventType) {
     navigator.vibrate?.(15);
-    sendTap({ clientId: crypto.randomUUID(), matchId, teamId, type });
+    sendTap({ clientId: uuid(), matchId, teamId, type });
   }
 
   async function run<T>(fn: () => PromiseLike<{ data: T; error: unknown }>, after?: (data: T) => void) {

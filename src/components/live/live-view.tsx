@@ -9,14 +9,18 @@ import { LiveHero } from "./live-hero";
 import { NextMatchHero } from "./next-match-hero";
 
 const UP_NEXT_COUNT = 3;
+// A match still "not started" this long after kick-off is a result nobody has entered yet, not "up next".
+const STALE_AFTER_MS = 3 * 60 * 60 * 1000;
 
 export function LiveView() {
   const { matches } = useTournament();
   const now = useServerNow(60_000);
 
   const live = matches.filter(isLive);
-  const scheduled = matches.filter((m) => m.status === "scheduled"); // already in kick-off order
-  const finished = matches.filter(isFinished);
+  // Already in kick-off order.
+  const scheduled = matches.filter((m) => m.status === "scheduled" && Date.parse(m.kickoff_at) > now - STALE_AFTER_MS);
+  // Only results that have actually been played (kick-off in the past).
+  const finished = matches.filter((m) => isFinished(m) && Date.parse(m.kickoff_at) <= now);
 
   // Results: today's, or the most recent matchday's if nothing has finished today.
   const today = dayKey(now);

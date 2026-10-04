@@ -5,9 +5,10 @@ import type { Snapshot } from "@/lib/tournament";
 import { TournamentProvider } from "./tournament-provider";
 
 // Loads the snapshot once per request; the client provider keeps it live from there.
-export async function TournamentData({ children }: { children: React.ReactNode }) {
+// `gate` (e.g. the admin check) runs in parallel with the load; if it redirects, nothing renders.
+export async function TournamentData({ children, gate }: { children: React.ReactNode; gate?: () => Promise<void> }) {
   await connection();
-  const loaded = await load();
+  const [loaded] = await Promise.all([load(), gate?.()]);
   if (!loaded) return <LoadError />;
   return (
     <TournamentProvider initial={loaded.snapshot} renderedAt={loaded.renderedAt}>

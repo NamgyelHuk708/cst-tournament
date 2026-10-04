@@ -31,6 +31,8 @@ export type Snapshot = {
 /** Length of one half in minutes. To be confirmed with the organisers. */
 export const HALF_LENGTH_MINUTES = 45;
 export const POINTS_FOR_WIN = 3;
+/** Stoppage minutes shown as a number; beyond this the clock reads "45+'" / "90+'". */
+export const MAX_STOPPAGE_SHOWN = 15;
 export const POINTS_FOR_DRAW = 1;
 export const QUALIFIERS_PER_GROUP = 2;
 export const GROUP_CODES = ["A", "B", "C", "D", "E", "F", "G", "H"] as const;
@@ -86,7 +88,9 @@ export function matchClock(match: Pick<Match, "status" | "period_started_at">, n
 
   const elapsed = Math.max(0, Math.floor((now - Date.parse(match.period_started_at)) / 60_000));
   const minute = halfStart + elapsed + 1;
-  const label = minute > halfEnd ? `${halfEnd}+${minute - halfEnd}'` : `${minute}'`;
+  const stoppage = minute - halfEnd;
+  // Beyond realistic stoppage time (e.g. a half left running) show "90+'" rather than a silly number.
+  const label = stoppage > MAX_STOPPAGE_SHOWN ? `${halfEnd}+'` : stoppage > 0 ? `${halfEnd}+${stoppage}'` : `${minute}'`;
   return { label, running: true };
 }
 

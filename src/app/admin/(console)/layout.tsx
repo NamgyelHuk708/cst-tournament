@@ -24,10 +24,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   );
 }
 
-async function Gate({ children }: { children: React.ReactNode }) {
-  await requireAdmin();
+function Gate({ children }: { children: React.ReactNode }) {
   return (
-    <TournamentData>
+    <TournamentData gate={requireAdmin}>
       <AdminHeader />
       {children}
     </TournamentData>

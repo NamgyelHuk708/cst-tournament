@@ -1,5 +1,23 @@
 # CST Silver Jubilee Departmental Football Tournament — Live Dashboard
 
+## Current status (4 Oct 2026, before the stakeholder demo)
+
+**Done:** Phases 1–5. Public Live/Groups/Knockouts with Realtime; admin login, live controls, corrections (set final score, change status, reset), knockout teams, fill R16, auto-advancement, set qualifiers, undo for all of these; demo data and full rehearsal. All migrations are applied. `npm test` (101 checks), lint and build pass. Nothing is pushed or deployed.
+
+**Demo commands** (laptop and phones on the same Wi-Fi):
+- Before: `npm run seed:demo` (shortly before starting: match 17's clock runs from seeding), then `npm run demo` (builds and serves on port 3000 for the whole network).
+- Phone address: `http://<laptop-ip>:3000`, admin at `/admin/login`. Find the IP with `hostname -I` (first address).
+- Optional check: `npm run rehearsal -- http://<laptop-ip>:3000 375`, then `npm run seed:demo` again (the rehearsal changes demo data).
+- After: `npm run reset:demo`.
+
+**Know before presenting:**
+- Demo data: matches 1–17, all of Groups A and B, and the whole knockout stage. Fill R16 gives R16-M1 DBR v CSK and R16-M5 BPC v THS. Editing any other fixture (e.g. Group C–H matches from 18 onwards) creates real data that reset:demo won't clear; use Reset match or Undo on it.
+- Supabase is in Sydney: ~0.5 s per round trip from Bhutan. First page loads take 2–3 s and admin sign-in 3–5 s; open each page once before presenting.
+- Some networks block database ports 5432/6543. The app is unaffected (HTTPS only), but `npm run db:push` needs a network that allows them.
+- `reset:demo` doesn't clear a qualifier order set with "Set qualifiers"; use Clear in the admin if you set one during the demo.
+
+**Open items:** `design/DESIGN.md` and `design/screens/` were never provided. Half length (45 min) to be confirmed with the organisers. Dark mode, desktop polish and stats are out of scope.
+
 ## Purpose
 
 A live score dashboard for the CST Silver Jubilee Departmental Football Tournament (CST Artificial Turf, 26 Sep – 31 Oct 2026).

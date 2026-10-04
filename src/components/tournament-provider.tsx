@@ -106,7 +106,6 @@ export function TournamentProvider({
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
     let attempt = 0;
     let disposed = false;
-    let everConnected = false;
     let reconcileTimer: ReturnType<typeof setTimeout> | null = null;
     const reconcileSoon = () => {
       if (reconcileTimer) clearTimeout(reconcileTimer);
@@ -151,9 +150,9 @@ export function TournamentProvider({
             attempt = 0;
             stopPolling();
             setConnection("live");
-            // Catch anything that changed while we were (re)connecting.
-            if (everConnected) refresh();
-            everConnected = true;
+            // Catch anything that changed between the server snapshot (or a dropped
+            // connection) and this subscription; on a slow network that gap is seconds.
+            refresh();
           } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
             setConnection("reconnecting");
             startPolling();

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { uuid } from "@/lib/uuid";
 import { HALF_LENGTH_MINUTES, type EventType, type Match, type MatchEvent, type Side } from "@/lib/tournament";
 import { useTournament } from "../tournament-provider";
 import { Sheet } from "./sheet";
@@ -46,7 +47,7 @@ export function EventSheet({
   const [newShirt, setNewShirt] = useState("");
   const [minute, setMinute] = useState<number | null>(event ? event.minute : null);
   const [added, setAdded] = useState(event?.added_time ?? 0);
-  const [clientId] = useState(() => crypto.randomUUID());
+  const [clientId] = useState(() => uuid());
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
