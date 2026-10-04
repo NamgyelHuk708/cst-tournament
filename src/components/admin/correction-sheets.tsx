@@ -10,7 +10,7 @@ import {
   type Player,
   type Team,
 } from "@/lib/tournament";
-import { Sheet } from "./sheet";
+import { Sheet } from "../sheet";
 
 const BTN_SECONDARY = "h-14 rounded-xl font-semibold ring-1 ring-border active:bg-bg";
 const BTN_PRIMARY = "h-14 rounded-xl bg-text font-semibold text-white active:opacity-90 disabled:opacity-40";

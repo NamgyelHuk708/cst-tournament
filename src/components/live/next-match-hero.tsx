@@ -3,6 +3,7 @@
 import { countdownParts, formatTime, relativeDay } from "@/lib/format";
 import { slotDisplayName, type Match } from "@/lib/tournament";
 import { GroupTag } from "../group-tag";
+import { MatchDetailsHint, OpenMatchOverlay } from "../match-sheet/open-overlay";
 import { useServerNow, useTournament } from "../tournament-provider";
 import { Matchup } from "./live-hero";
 
@@ -15,7 +16,7 @@ export function NextMatchHero({ match, placeholders }: { match: Match; placehold
   const msToKickoff = Date.parse(match.kickoff_at) - now;
 
   return (
-    <article aria-label="Next match" className="overflow-hidden rounded-2xl bg-card shadow-[0_1px_2px_rgb(27_34_48/0.06),0_8px_24px_-12px_rgb(27_34_48/0.18)]">
+    <article aria-label="Next match" className="relative overflow-hidden rounded-2xl bg-card shadow-[0_1px_2px_rgb(27_34_48/0.06),0_8px_24px_-12px_rgb(27_34_48/0.18)]">
       <div className="h-1 bg-brand" />
       <div className="px-5 pt-4 pb-5">
         <div className="flex items-center justify-between">
@@ -44,6 +45,8 @@ export function NextMatchHero({ match, placeholders }: { match: Match; placehold
           <Countdown ms={msToKickoff} />
         </div>
       </div>
+      <MatchDetailsHint />
+      <OpenMatchOverlay matchId={match.id} label={`Match details: ${home?.short_code ?? "TBD"} v ${away?.short_code ?? "TBD"}`} />
     </article>
   );
 }

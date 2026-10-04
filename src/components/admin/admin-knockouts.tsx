@@ -14,7 +14,7 @@ import {
 } from "@/lib/tournament";
 import { KnockoutCard } from "../knockouts/knockout-card";
 import { useTournament } from "../tournament-provider";
-import { Sheet } from "./sheet";
+import { Sheet } from "../sheet";
 
 export function AdminKnockouts() {
   const { matches, events, standings, teamsById, matchesById, local } = useTournament();

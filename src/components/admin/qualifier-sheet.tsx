@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { QUALIFIERS_PER_GROUP, type StandingRow } from "@/lib/tournament";
-import { Sheet } from "./sheet";
+import { Sheet } from "../sheet";
 
 const ordinal = (n: number) => `${n}${n === 1 ? "st" : n === 2 ? "nd" : n === 3 ? "rd" : "th"}`;
 

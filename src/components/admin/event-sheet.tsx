@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { uuid } from "@/lib/uuid";
 import { HALF_LENGTH_MINUTES, type EventType, type Match, type MatchEvent, type Side } from "@/lib/tournament";
 import { useTournament } from "../tournament-provider";
-import { Sheet } from "./sheet";
+import { Sheet } from "../sheet";
 
 const TYPES: { type: EventType; label: string }[] = [
   { type: "goal", label: "Goal" },

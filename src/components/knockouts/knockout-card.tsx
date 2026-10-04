@@ -11,8 +11,10 @@ import {
   type ResolvedSide,
   type Side,
 } from "@/lib/tournament";
-import { CheckIcon, TrophyIcon } from "../icons";
+import { CheckIcon, ChevronIcon, TrophyIcon } from "../icons";
 import { GroupSwatch } from "../group-tag";
+import { useMatchSheet } from "../match-sheet/context";
+import { OpenMatchOverlay } from "../match-sheet/open-overlay";
 import { useServerNow, useTournament } from "../tournament-provider";
 import { useResolvedSides } from "../use-resolved-sides";
 import { useFlashOnChange } from "../use-flash";
@@ -25,12 +27,13 @@ export function KnockoutCard({ match, featured = false }: { match: Match; featur
   const live = isLive(match);
   const started = live || isFinished(match);
   const hasPens = match.home_pens != null && match.away_pens != null;
+  const openSheet = useMatchSheet();
   const winnerTeam = outcome?.winner ? teamsById.get((outcome.winner === "home" ? match.home_team_id : match.away_team_id) ?? -1) : undefined;
 
   return (
     <article
       aria-label={slotDisplayName(match.slot_label ?? "")}
-      className={`overflow-hidden rounded-xl bg-card shadow-sm ${featured ? "ring-2 ring-accent" : "ring-1 ring-border/60"}`}
+      className={`relative overflow-hidden rounded-xl bg-card shadow-sm ${featured ? "ring-2 ring-accent" : "ring-1 ring-border/60"}`}
     >
       <header className="flex items-center gap-2 px-3.5 pt-2.5 pb-1.5">
         {featured && <TrophyIcon className="size-4 text-brand" />}
@@ -49,6 +52,7 @@ export function KnockoutCard({ match, featured = false }: { match: Match; featur
             `${formatDay(match.kickoff_at)} · ${formatTime(match.kickoff_at)}`
           )}
         </span>
+        {openSheet && <ChevronIcon className="-mr-1 size-4 shrink-0 -rotate-90 text-muted" />}
       </header>
 
       <div className="space-y-0.5 px-3.5 pb-3">
@@ -61,6 +65,7 @@ export function KnockoutCard({ match, featured = false }: { match: Match; featur
           {winnerTeam.short_code} win {Math.max(match.home_pens!, match.away_pens!)}–{Math.min(match.home_pens!, match.away_pens!)} on penalties
         </p>
       )}
+      <OpenMatchOverlay matchId={match.id} label={`Match details: ${slotDisplayName(match.slot_label ?? "")}`} />
     </article>
   );
 }

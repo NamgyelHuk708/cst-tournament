@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { GROUP_CODES, type Match, type ResolvedSide, type Team } from "@/lib/tournament";
-import { Sheet } from "./sheet";
+import { Sheet } from "../sheet";
 
 /** Choose the two teams of a knockout tie. Suggestions come from the bracket; any team can be picked. */
 export function TeamsSheet({

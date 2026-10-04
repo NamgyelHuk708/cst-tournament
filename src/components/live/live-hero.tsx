@@ -3,6 +3,7 @@
 import { eventsForMatch, matchClock, slotDisplayName, type Match, type Team } from "@/lib/tournament";
 import { EventColumns } from "../event-list";
 import { GroupTag } from "../group-tag";
+import { MatchDetailsHint, OpenMatchOverlay } from "../match-sheet/open-overlay";
 import { useServerNow, useTournament } from "../tournament-provider";
 import { useFlashOnChange } from "../use-flash";
 
@@ -18,7 +19,7 @@ export function LiveHero({ match }: { match: Match }) {
     match.status === "half_time" ? "Half-time" : match.status === "penalties" ? "Penalties" : "Live";
 
   return (
-    <article aria-label="Live match" className="overflow-hidden rounded-2xl bg-card shadow-[0_1px_2px_rgb(27_34_48/0.06),0_8px_24px_-12px_rgb(27_34_48/0.18)]">
+    <article aria-label="Live match" className="relative overflow-hidden rounded-2xl bg-card shadow-[0_1px_2px_rgb(27_34_48/0.06),0_8px_24px_-12px_rgb(27_34_48/0.18)]">
       <div className="h-1 bg-live" />
       <div className="px-5 pt-4 pb-5">
         <div className="flex items-center justify-between">
@@ -59,6 +60,8 @@ export function LiveHero({ match }: { match: Match }) {
           </div>
         )}
       </div>
+      <MatchDetailsHint />
+      <OpenMatchOverlay matchId={match.id} label={`Match details: ${home?.short_code ?? "TBD"} v ${away?.short_code ?? "TBD"}`} />
     </article>
   );
 }

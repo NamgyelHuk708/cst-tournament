@@ -26,7 +26,7 @@ import { TeamsSheet } from "./teams-sheet";
 import { useResolvedSides } from "../use-resolved-sides";
 import { EventLog } from "./event-log";
 import { EventSheet } from "./event-sheet";
-import { Sheet } from "./sheet";
+import { Sheet } from "../sheet";
 
 export type PendingTap = { clientId: string; matchId: number; teamId: number; type: EventType };
 type LastAction = {

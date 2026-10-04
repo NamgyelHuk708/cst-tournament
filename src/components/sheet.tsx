@@ -10,11 +10,14 @@ export function Sheet({
   open,
   onClose,
   title,
+  hideTitle = false,
   children,
 }: {
   open: boolean;
   onClose: () => void;
   title: string;
+  /** For sheets whose content has its own heading: the title is still read by screen readers. */
+  hideTitle?: boolean;
   children: React.ReactNode;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
@@ -51,8 +54,8 @@ export function Sheet({
       {open && (
         <div className="px-5 pt-3 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] has-[.sticky]:pb-0">
           <div aria-hidden="true" className="mx-auto mb-3 h-1 w-10 rounded-full bg-border" />
-          <h2 className="font-display text-xl font-bold">{title}</h2>
-          <div className="mt-4">{children}</div>
+          <h2 className={hideTitle ? "sr-only" : "font-display text-xl font-bold"}>{title}</h2>
+          <div className={hideTitle ? "" : "mt-4"}>{children}</div>
         </div>
       )}
     </dialog>

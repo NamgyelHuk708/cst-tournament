@@ -13,6 +13,7 @@ import {
   type Team,
 } from "@/lib/tournament";
 import { EventColumns } from "./event-list";
+import { useMatchSheet } from "./match-sheet/context";
 import { ChevronIcon } from "./icons";
 import { useServerNow, useTournament } from "./tournament-provider";
 import { useFlashOnChange } from "./use-flash";
@@ -33,6 +34,7 @@ export function MatchRow({ match, showDay = false, placeholders }: Props) {
   const { teamsById, events, playersById } = useTournament();
   const [open, setOpen] = useState(false);
   const detailsId = useId();
+  const openSheet = useMatchSheet();
 
   const matchEvents = eventsForMatch(match, events, playersById);
   const started = isFinished(match) || isLive(match);
@@ -51,7 +53,9 @@ export function MatchRow({ match, showDay = false, placeholders }: Props) {
         <TeamLine team={away} placeholder={placeholders?.away} score={started ? match.away_score : null}
           pens={match.away_pens} state={lineState(outcome?.winner, "away")} />
       </div>
-      {expandable ? (
+      {openSheet ? (
+        <ChevronIcon className="size-4 shrink-0 -rotate-90 text-muted" />
+      ) : expandable ? (
         <ChevronIcon open={open} className="size-4 shrink-0 text-muted" />
       ) : (
         <span className="w-4 shrink-0" />
@@ -61,7 +65,16 @@ export function MatchRow({ match, showDay = false, placeholders }: Props) {
 
   return (
     <li className="bg-card">
-      {expandable ? (
+      {openSheet ? (
+        <button
+          type="button"
+          onClick={() => openSheet(match.id)}
+          aria-haspopup="dialog"
+          className="flex min-h-[60px] w-full items-center gap-3 px-4 py-2.5 text-left active:bg-bg"
+        >
+          {body}
+        </button>
+      ) : expandable ? (
         <button
           type="button"
           onClick={() => setOpen((o) => !o)}
@@ -74,7 +87,7 @@ export function MatchRow({ match, showDay = false, placeholders }: Props) {
       ) : (
         <div className="flex min-h-[60px] items-center gap-3 px-4 py-2.5">{body}</div>
       )}
-      {expandable && open && (
+      {!openSheet && expandable && open && (
         <div id={detailsId} className="border-t border-dashed border-border px-4 py-3">
           <EventColumns events={matchEvents} size="sm" />
         </div>

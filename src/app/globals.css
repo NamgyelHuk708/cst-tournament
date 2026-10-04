@@ -19,6 +19,9 @@
   --brand-deep: color-mix(in srgb, var(--brand) 82%, black);
   --live-soft: color-mix(in srgb, var(--live) 12%, var(--card));
   --win-soft: color-mix(in srgb, var(--win) 10%, var(--card));
+  /* Lineups pitch: the palette's turf green, with darker mowing stripes. */
+  --pitch: var(--win);
+  --pitch-stripe: color-mix(in srgb, var(--win) 88%, black);
 
   --group-a: #2f6db5;
   --group-b: #138a8a;
@@ -46,6 +49,8 @@
   --color-live-soft: var(--live-soft);
   --color-win: var(--win);
   --color-win-soft: var(--win-soft);
+  --color-pitch: var(--pitch);
+  --color-pitch-stripe: var(--pitch-stripe);
   --color-card-yellow: var(--card-yellow);
   --color-card-red: var(--card-red);
 
