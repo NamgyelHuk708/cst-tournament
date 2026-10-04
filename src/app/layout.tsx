@@ -14,9 +14,35 @@ const barlowCondensed = Barlow_Condensed({
   weight: ["500", "600", "700"],
 });
 
+const TITLE = "CST Silver Jubilee Football — live scores";
+const DESCRIPTION = "Live scores, group tables and knockouts";
+
+// Absolute base for share-image URLs: NEXT_PUBLIC_SITE_URL if set, else the Vercel
+// production domain, else localhost (local runs only).
+function siteUrl(): URL {
+  if (process.env.NEXT_PUBLIC_SITE_URL) return new URL(process.env.NEXT_PUBLIC_SITE_URL);
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) return new URL(`https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`);
+  return new URL("http://localhost:3000");
+}
+
+// Share images, favicon and app icons come from the files in src/app
+// (opengraph-image.jpg, twitter-image.jpg, favicon.ico, icon.png, apple-icon.png).
 export const metadata: Metadata = {
-  title: "CST Silver Jubilee Football",
-  description: "Live scores, group tables and the knockout bracket for the CST Silver Jubilee Departmental Football Tournament.",
+  metadataBase: siteUrl(),
+  title: TITLE,
+  description: DESCRIPTION,
+  applicationName: "CST Silver Jubilee Football",
+  openGraph: {
+    title: TITLE,
+    description: DESCRIPTION,
+    siteName: "CST Silver Jubilee Football",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: TITLE,
+    description: DESCRIPTION,
+  },
 };
 
 export const viewport: Viewport = {

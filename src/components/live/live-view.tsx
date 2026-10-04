@@ -5,6 +5,7 @@ import { isFinished, isLive, type Match } from "@/lib/tournament";
 import { MatchRow } from "../match-row";
 import { useServerNow, useTournament } from "../tournament-provider";
 import { useResolvedSides } from "../use-resolved-sides";
+import { BannerHero, BannerStrip } from "./live-banner";
 import { LiveHero } from "./live-hero";
 import { NextMatchHero } from "./next-match-hero";
 
@@ -38,13 +39,17 @@ export function LiveView() {
     <div className="space-y-7">
       <h1 className="sr-only">Live</h1>
 
-      {hero ? (
-        <LiveHero match={hero} />
-      ) : next ? (
-        <NextHero match={next} />
-      ) : (
-        <EmptyHero finishedCount={finished.length} />
-      )}
+      {/* Banner and hero card read as one block; the banner shrinks to a strip while a match is live. */}
+      <div className="space-y-3">
+        {hero ? <BannerStrip /> : <BannerHero />}
+        {hero ? (
+          <LiveHero match={hero} />
+        ) : next ? (
+          <NextHero match={next} />
+        ) : (
+          <EmptyHero finishedCount={finished.length} />
+        )}
+      </div>
 
       {otherLive.length > 0 && (
         <Section title="Also live">
