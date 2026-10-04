@@ -16,6 +16,7 @@
     { "match": 13, "home": "DBR", "away": "BFA", "score": [7, 0], "fixture": "BBPL (Bhutan Brewary / Druk Beer) v BFAL" },
     { "match": 14, "home": "BBP", "away": "BLT", "score": [2, 4], "fixture": "Bhutan Board Product Limited (BBPL) v Bhutan Lottery" },
     { "match": 15, "home": "BPC", "away": "ICP", "score": [1, 17], "fixture": "BPC v ICP, Phuentsholing" },
-    { "match": 16, "home": "CSK", "away": "ZIM", "score": [6, 6], "fixture": "CST Kangtsey v Zimdra FC" }
+    { "match": 16, "home": "CSK", "away": "ZIM", "score": [6, 6], "fixture": "CST Kangtsey v Zimdra FC" },
+    { "match": 17, "home": "CSU", "away": "PEL", "score": [2, 3], "fixture": "CST United v Pelden Warriors" }
   ]
 }
