@@ -5,6 +5,7 @@ import { isFinished, isLive, type Match } from "@/lib/tournament";
 import { MatchRow } from "../match-row";
 import { useServerNow, useTournament } from "../tournament-provider";
 import { useResolvedSides } from "../use-resolved-sides";
+import { IntroLiveSignal } from "../intro/intro-gate";
 import { BannerHero, BannerStrip } from "./live-banner";
 import { LiveHero } from "./live-hero";
 import { NextMatchHero } from "./next-match-hero";
@@ -38,6 +39,8 @@ export function LiveView() {
   return (
     <div className="space-y-7">
       <h1 className="sr-only">Live</h1>
+      {/* Lets the intro (in the layout) skip or cut short when a match is live. */}
+      <IntroLiveSignal live={live.length > 0} />
 
       {/* Banner and hero card read as one block; the banner shrinks to a strip while a match is live. */}
       <div className="space-y-3">

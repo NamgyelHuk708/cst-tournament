@@ -5,6 +5,7 @@
 Outputs
   src/assets/banner-hero.webp     Live page banner: emblem + title + trees, sides trimmed
   src/assets/banner-strip.webp    Slim strip shown while a match is live: emblem + "CST Silver Jubilee"
+  src/assets/intro-emblem.webp    The emblem alone (circular, transparent) for the intro animation
   src/app/opengraph-image.jpg     1200x630 share preview, centred on emblem and title
   src/app/twitter-image.jpg       same image for Twitter / X
   src/app/favicon.ico             16/32/48, emblem on a maroon tile
@@ -88,6 +89,10 @@ region = region.resize((1200, round(region.height * 1200 / region.width)), Image
 bg.paste(region, (0, (630 - region.height) // 2), feather(region, 28).split()[3])
 bg.save(ROOT / "src/app/opengraph-image.jpg", quality=85, optimize=True, progressive=True)
 bg.save(ROOT / "src/app/twitter-image.jpg", quality=85, optimize=True, progressive=True)
+
+# Intro animation: the emblem alone, circular, transparent (never recoloured or redrawn).
+# 2x the source crop, so it stays smooth at ~200 px on high-density screens.
+emblem(460, 0.004).save(ROOT / "src/assets/intro-emblem.webp", quality=92, method=6, lossless=False)
 
 # Favicon: emblem on a maroon tile (bare silver vanishes on light tab bars at 16 px).
 def favicon_tile(size: int) -> Image.Image:

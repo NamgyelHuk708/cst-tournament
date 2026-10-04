@@ -25,7 +25,7 @@ export function AppHeader() {
 /** "25" in a silver ring: the jubilee mark. */
 function JubileeMark() {
   return (
-    <span className="grid size-9 shrink-0 place-items-center rounded-full border-2 border-accent bg-brand-deep font-display text-[15px] font-bold text-white tabular">
+    <span data-intro-target className="grid size-9 shrink-0 place-items-center rounded-full border-2 border-accent bg-brand-deep font-display text-[15px] font-bold text-white tabular">
       25
     </span>
   );
