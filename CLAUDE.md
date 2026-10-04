@@ -2,6 +2,8 @@
 
 ## Current status (4 Oct 2026, after the stakeholder demo)
 
+**The database is live with real tournament data.** Never run `seed`, `seed:demo`, `reset:demo`, `seed:results`, `npm test`, `npm run rehearsal` or the Playwright tests (they all write to the database) without asking first; verify changes with `npm run lint` and `npm run build`. Deployment: Vercel from `main` only, region `syd1`; see `DEPLOY.md`. The deployed app needs only `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` (and optionally `NEXT_PUBLIC_SITE_URL`), never the service role key. No Co-Authored-By or "Generated with" lines in commits.
+
 **Done:** Phases 1–5 and the demo. Demo data has been cleared. Real results for matches 1–13 are loaded from `data/real-results.json` with `npm run seed:results` (same database function as the admin's Set final score: goals with no scorer or minute, not demo data). `npm test` (101 checks), lint and build pass. Nothing is pushed or deployed.
 
 **Loading more results:** add them to `data/real-results.json` (match number, home and away short codes, score), then `npm run seed:results`. It checks every team code against the schedule and writes nothing if one is wrong; it skips any match that already has events, so it is safe to rerun. Scorers can be added later in the admin.

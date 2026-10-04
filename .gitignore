@@ -39,3 +39,13 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local tool settings (Claude Code permissions etc.)
+/.claude/
+
+# test output
+/test-results/
+/playwright-report/
+
+# throwaway local scripts
+/scripts/.*.tmp.ts
