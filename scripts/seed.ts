@@ -1,7 +1,6 @@
 // Loads all teams and matches from the Match Schedule sheet, and registers the admin.
 // Safe to run repeatedly: upserts fixture fields only, never touches scores or status.
 import { admin, check } from "./lib/admin-client";
-import { ADMIN_EMAIL } from "./lib/config";
 import { readSchedule } from "./lib/schedule";
 
 async function main() {
@@ -52,18 +51,25 @@ async function main() {
   console.log(`Group matches: ${Object.entries(perGroup).map(([g, n]) => `${g}=${n}`).join(" ")}`);
 }
 
+// The admin's email is not kept in the repo. Set ADMIN_EMAIL (e.g. in .env.local) to register
+// that Auth user as the admin; without it the existing admin row is left as it is.
 async function registerAdmin() {
+  const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
+  if (!adminEmail) {
+    console.log("ADMIN_EMAIL not set; admin left unchanged.");
+    return;
+  }
   for (let page = 1; ; page++) {
     const { users } = check(await admin.auth.admin.listUsers({ page, perPage: 200 }), "List auth users");
-    const user = users.find((u) => u.email?.toLowerCase() === ADMIN_EMAIL);
+    const user = users.find((u) => u.email?.toLowerCase() === adminEmail);
     if (user) {
       check(await admin.from("admins").upsert({ user_id: user.id }, { onConflict: "user_id" }), "Upsert admin");
-      console.log(`Admin registered: ${ADMIN_EMAIL}`);
+      console.log(`Admin registered: ${adminEmail}`);
       return;
     }
     if (users.length < 200) break;
   }
-  console.warn(`WARNING: no auth user with email ${ADMIN_EMAIL}; admin not registered.`);
+  console.warn(`WARNING: no auth user with email ${adminEmail}; admin not registered.`);
 }
 
 main().catch((err) => {

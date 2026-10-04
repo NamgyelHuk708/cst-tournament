@@ -1,9 +1,6 @@
 export const SCHEDULE_FILE = "data/CST_Silver_Jubilee_Football_Tournament_Schedule.xlsx";
 export const SCHEDULE_SHEET = "Match Schedule";
 
-// The single admin. Looked up in auth.users by the seed script; not used in any policy.
-export const ADMIN_EMAIL = "namgyel299@gmail.com";
-
 // Asia/Thimphu is UTC+6 all year (no DST).
 export const THIMPHU_OFFSET = "+06:00";
 

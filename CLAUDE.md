@@ -168,7 +168,7 @@ Don't build out-of-scope features. If one looks needed, raise it instead.
 - `npm run db:push` applies `supabase/migrations`. Every schema change goes through a new migration; no dashboard edits. Then run `npm run db:types` to regenerate `src/lib/supabase/database.types.ts`.
 - `npm run seed` (fixtures + admin row, idempotent), `npm run seed:demo`, `npm run reset:demo`, `npm run test:rls` (publishable-key read/write/realtime check).
 - Demo data is flagged `is_demo` on matches, players and events. Never clear anything that isn't flagged.
-- The admin is whoever is in `public.admins`. The seed adds the auth user whose email is in `scripts/lib/config.ts`.
+- The admin is whoever is in `public.admins` (by Auth user id). The admin's email is not kept in the repo: the seed registers the Auth user whose email is in the `ADMIN_EMAIL` env var, if set. To change the admin's email and password while keeping the same user id, run `npm run admin:update` in a terminal (interactive; writes to Supabase Auth only).
 - The service role key is only used in `scripts/`. App code uses `src/lib/supabase/{client,server}.ts` (publishable key + session).
 - `match_events.team_id` is in two foreign keys, so embed teams explicitly: `team:teams!match_events_team_id_fkey(...)`, `player:players(...)`.
 - `npm run test:admin` runs database-level admin checks (access, idempotency, undo of every status, penalties, score consistency) with temporary users that it deletes afterwards.
