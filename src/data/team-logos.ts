@@ -16,6 +16,7 @@ export const TEAM_LOGOS: Readonly<Record<string, string>> = {
   "GCB": "e71afca938",
   "PHO": "c473633976",
   "STC": "2a5bea6b62",
+  "FIF": "c38251008e",
   "TCC": "82b16bb568",
   "DLJ": "6f1cfb0181",
   "MDP": "8b2f51c76c",

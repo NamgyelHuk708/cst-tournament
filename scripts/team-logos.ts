@@ -35,9 +35,7 @@ const ALIASES: Record<string, string> = {
  * Teams shown with their code badge even though a file exists (the file isn't usable yet).
  * To switch one back to its logo: delete its line, then run npm run logos.
  */
-const USE_CODE_BADGE = new Set<string>([
-  "FIF", // sponsor banner, not the club crest
-]);
+const USE_CODE_BADGE = new Set<string>([]);
 
 /**
  * Part of a file to use, in source pixels, for files with more than the logo in them.
@@ -49,6 +47,7 @@ const CROPS: Record<string, Crop> = {
   "570": DRUK_GREEN_SWIRL,
   DLJ: DRUK_GREEN_SWIRL,
   DGP: DRUK_GREEN_SWIRL,
+  FIF: { left: 248, top: 16, width: 87, height: 87 }, // the crest between the BNB and T-Bank logos
 };
 
 type Kind = "light" | "dark" | "clear" | null;
