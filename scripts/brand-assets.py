@@ -4,7 +4,7 @@
 
 Sources
   design/banner-v2.png        the site banner (1990x1342, CST 25th Foundation Day artwork)
-  design/jubilee-logo.png     optional: the jubilee "25" emblem with a transparent background
+  design/jubilee-logo.png     the official Silver Jubilee logo (transparent background)
 
 Outputs
   src/assets/banner-phone.webp    Live page banner on phones: the three logos, "College of Science and
@@ -13,7 +13,8 @@ Outputs
   src/assets/banner-wide.webp     Live page banner on wider screens: more of the artwork (2:1)
   src/app/opengraph-image.jpg     1200x630 share preview, centred on the logos and title
   src/app/twitter-image.jpg       same image for Twitter / X
-  src/assets/intro-emblem.webp    only if design/jubilee-logo.png exists: the emblem for the intro animation
+  src/assets/intro-emblem.webp    from design/jubilee-logo.png: the emblem for the intro animation (600 px)
+  src/assets/intro-emblem-mask.webp   its shape only (200 px), which masks the intro's shimmer
   src/app/favicon.ico             16/32/48: the "25" mark on a rounded teal tile, tuned per size
   src/app/icon.png                512, the "25" mark on full-bleed teal
   src/app/apple-icon.png          180, same (iOS rounds the corners itself)
@@ -64,12 +65,20 @@ og.save(ROOT / "src/app/twitter-image.jpg", quality=85, optimize=True, progressi
 # Intro animation emblem: only from a proper logo file, never cropped from the banner.
 logo_file = ROOT / "design/jubilee-logo.png"
 if logo_file.exists():
+    # The file already has a transparent background, so nothing is removed: the white highlights
+    # in the silver "25" and the ribbon stay as they are. Only the empty margins are trimmed.
     logo = Image.open(logo_file).convert("RGBA")
-    logo = logo.crop(logo.getbbox())
-    side = max(logo.size)
+    logo = logo.crop(logo.getchannel("A").getbbox())
+    side = round(max(logo.size) * 1.01)  # a hair of room so antialiased edges aren't cut
     square = Image.new("RGBA", (side, side), (0, 0, 0, 0))
     square.paste(logo, ((side - logo.width) // 2, (side - logo.height) // 2), logo)
-    square.resize((460, 460), Image.LANCZOS).save(ROOT / "src/assets/intro-emblem.webp", quality=92, method=6)
+    # Shown at 200 CSS px in the intro: 600 px covers 3x screens, so the ring text stays sharp.
+    square.resize((600, 600), Image.LANCZOS).save(ROOT / "src/assets/intro-emblem.webp", quality=88, alpha_quality=95, method=6)
+    # The logo's shape only (white where opaque), small: masks the intro's shimmer to the logo.
+    shape = square.getchannel("A").resize((200, 200), Image.LANCZOS)
+    mask = Image.new("RGBA", shape.size, (255, 255, 255, 0))
+    mask.putalpha(shape)
+    mask.save(ROOT / "src/assets/intro-emblem-mask.webp", lossless=True, method=6)
     print("Intro emblem written from design/jubilee-logo.png.")
 else:
     print("design/jubilee-logo.png not found: intro emblem left as it is.")

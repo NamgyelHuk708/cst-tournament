@@ -7,6 +7,7 @@ import Image from "next/image";
 import { LazyMotion, animate, domAnimation, m, useReducedMotion, type Easing } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import emblem from "@/assets/intro-emblem.webp";
+import emblemMask from "@/assets/intro-emblem-mask.webp";
 
 const FIGURE = "#135463"; // brand teal (--brand)
 const INK = "#1B2230";
@@ -296,15 +297,21 @@ function Emblem({ exitTo, exiting }: { exitTo: { x: number; y: number; scale: nu
         style={{ ...centred, boxShadow: "inset 0 0 0 6px #d4d9df, inset 0 0 0 8px #8aa9b1, 0 0 26px rgb(138 169 177 / 0.5)" }}
         {...ring}
       />
-      <m.div className="absolute overflow-hidden rounded-full" style={centred} {...(exiting ? { initial: reveal.initial, ...exit } : reveal)}>
-        {/* the real emblem, circular cut-out (scripts/brand-assets.py), never recoloured */}
+      <m.div className="absolute" style={centred} {...(exiting ? { initial: reveal.initial, ...exit } : reveal)}>
+        {/* the official Silver Jubilee logo (design/jubilee-logo.png via scripts/brand-assets.py), never recoloured */}
         <Image src={emblem} alt="" width={LOGO} height={LOGO} loading="eager" className="h-full w-full" />
-        <m.div
+        {/* The shimmer is masked by the logo's own shape, so it never crosses the transparent parts. */}
+        <div
           aria-hidden="true"
-          className="absolute inset-y-0 w-1/2"
-          style={{ left: LOGO / 4, background: "linear-gradient(105deg, transparent 0%, rgb(255 255 255 / 0.7) 50%, transparent 100%)" }}
-          {...shimmer}
-        />
+          className="absolute inset-0 overflow-hidden"
+          style={{ maskImage: `url(${emblemMask.src})`, maskSize: "100% 100%", WebkitMaskImage: `url(${emblemMask.src})`, WebkitMaskSize: "100% 100%" }}
+        >
+          <m.div
+            className="absolute inset-y-0 w-1/2"
+            style={{ left: LOGO / 4, background: "linear-gradient(105deg, transparent 0%, rgb(255 255 255 / 0.7) 50%, transparent 100%)" }}
+            {...shimmer}
+          />
+        </div>
       </m.div>
     </>
   );
