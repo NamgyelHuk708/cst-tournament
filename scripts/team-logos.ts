@@ -36,11 +36,20 @@ const ALIASES: Record<string, string> = {
  * To switch one back to its logo: delete its line, then run npm run logos.
  */
 const USE_CODE_BADGE = new Set<string>([
-  "570", // shared Druk Green corporate wordmark, not a team logo
-  "DLJ", // same file as 570
-  "DGP", // same file as 570
   "FIF", // sponsor banner, not the club crest
 ]);
+
+/**
+ * Part of a file to use, in source pixels, for files with more than the logo in them.
+ * Applied before the background is removed. Delete a line to use the whole file again.
+ */
+type Crop = { left: number; top: number; width: number; height: number };
+const DRUK_GREEN_SWIRL: Crop = { left: 0, top: 319, width: 398, height: 420 }; // swirl only: no wordmark, no screenshot icon
+const CROPS: Record<string, Crop> = {
+  "570": DRUK_GREEN_SWIRL,
+  DLJ: DRUK_GREEN_SWIRL,
+  DGP: DRUK_GREEN_SWIRL,
+};
 
 type Kind = "light" | "dark" | "clear" | null;
 
@@ -59,8 +68,9 @@ function circleMask(size: number, inset: number): Buffer {
 }
 
 /** The logo on a transparent SIZE×SIZE canvas, fitted inside the plate's circle. */
-async function processLogo(file: string): Promise<{ png: Buffer; method: string }> {
-  const { data, info } = await sharp(file).rotate().ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+async function processLogo(file: string, crop?: Crop): Promise<{ png: Buffer; method: string }> {
+  const source = crop ? sharp(await sharp(file).rotate().extract(crop).toBuffer()) : sharp(file).rotate();
+  const { data, info } = await source.ensureAlpha().raw().toBuffer({ resolveWithObject: true });
   const { width: w, height: h } = info;
   const border: number[] = [];
   for (let x = 0; x < w; x++) border.push(x, x + (h - 1) * w);
@@ -164,6 +174,7 @@ async function main() {
   const codes = new Set(teams.map((t) => t.short_code));
   for (const [alias, code] of Object.entries(ALIASES)) if (!codes.has(code)) throw new Error(`Alias "${alias}" points to unknown code ${code}`);
   for (const code of USE_CODE_BADGE) if (!codes.has(code)) throw new Error(`USE_CODE_BADGE lists unknown code ${code}`);
+  for (const code of Object.keys(CROPS)) if (!codes.has(code)) throw new Error(`CROPS lists unknown code ${code}`);
 
   const files = readdirSync(RAW_DIR).filter((f) => /\.(png|jpe?g|webp|gif|avif|tiff?|svg)$/i.test(f)).sort();
   const fileFor = new Map<string, string>();
@@ -192,16 +203,21 @@ async function main() {
       continue;
     }
     const src = path.join(RAW_DIR, file);
-    const hash = createHash("sha256").update(readFileSync(src)).update(`v${PIPELINE_VERSION}:${SIZE}`).digest("hex").slice(0, 10);
+    const crop = CROPS[code];
+    const hash = createHash("sha256")
+      .update(readFileSync(src))
+      .update(`v${PIPELINE_VERSION}:${SIZE}:${crop ? JSON.stringify(crop) : ""}`)
+      .digest("hex")
+      .slice(0, 10);
     manifest[code] = hash;
     if (previous[code] === hash && existsSync(out)) {
       lines.push(`  ${code.padEnd(4)} unchanged         ${file}`);
       continue;
     }
-    const { png, method } = await processLogo(src);
+    const { png, method } = await processLogo(src, crop);
     const webp = await toWebp(png);
     writeFileSync(out, webp);
-    lines.push(`  ${code.padEnd(4)} written ${(webp.length / 1024).toFixed(1).padStart(5)} KB  ${file} (${method})`);
+    lines.push(`  ${code.padEnd(4)} written ${(webp.length / 1024).toFixed(1).padStart(5)} KB  ${file} (${crop ? "cropped, " : ""}${method})`);
   }
   // Outputs for codes that no longer exist.
   for (const f of readdirSync(OUT_DIR)) {
