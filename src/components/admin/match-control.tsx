@@ -417,7 +417,7 @@ export function MatchControl({ matchId }: { matchId: number }) {
         error={toolError}
         busy={busy}
         onClose={() => setTool(null)}
-        onSubmit={() => runTool(() => supabase.rpc("admin_reset_match", { p_match: matchId }))}
+        onSubmit={() => runTool(() => supabase.rpc("admin_reset_match_clean", { p_match: matchId }))}
       />
 
       {editing && (

@@ -331,7 +331,8 @@ export function ResetSheet({
         {eventCount
           ? `All ${eventCount} goals and cards, with their scorers, will be removed.`
           : "There are no goals or cards to remove."}{" "}
-        The teams stay as they are.
+        Substitutions are removed too, and earlier steps can no longer be undone one by one. The teams and officials stay.
+        Undo straight after brings back the goals, cards and status, but not the substitutions.
       </p>
       {error && (
         <p role="alert" className="mt-3 rounded-xl border-l-4 border-text bg-card px-4 py-3 text-sm font-medium ring-1 ring-border">

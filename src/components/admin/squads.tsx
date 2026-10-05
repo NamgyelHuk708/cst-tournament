@@ -266,8 +266,8 @@ function AddPlayerSheet({ team, squad, onClose }: { team: Team; squad: Player[];
 function EditSquadPlayerSheet({ player, team, squad, onClose }: { player: Player; team: Team; squad: Player[]; onClose: () => void }) {
   const { local } = useTournament();
   const supabase = useMemo(() => createClient(), []);
-  const blocked = useRemovalBlock(player);
   const remove = useRemovePlayer(player, onClose);
+  const blocked = useRemovalBlock(player) ?? remove.error;
   const [shirt, setShirt] = useState(player.shirt_number != null ? String(player.shirt_number) : "");
   const [name, setName] = useState(player.name);
   const [saving, setSaving] = useState(false);
@@ -299,7 +299,6 @@ function EditSquadPlayerSheet({ player, team, squad, onClose }: { player: Player
         <p className="text-sm text-muted">For a misspelt name or wrong number: it changes this player everywhere, on all their goals, cards and substitutions.</p>
         <PlayerFields shirt={shirt} name={name} onShirt={setShirt} onName={setName} />
         {(error ?? problem) && <Problem text={(error ?? problem)!} />}
-        {remove.error && <Problem text={remove.error} />}
         {confirmRemove && blocked ? (
           <Problem text={blocked} />
         ) : confirmRemove ? (
@@ -374,8 +373,9 @@ function useRemovePlayer(player: Player, onDone: () => void) {
 }
 
 function RemovePlayerSheet({ player, team, onClose, onEdit }: { player: Player; team: Team; onClose: () => void; onEdit: () => void }) {
-  const blocked = useRemovalBlock(player);
   const remove = useRemovePlayer(player, onClose);
+  // Not allowed: either known here (real records) or the database's reason after trying.
+  const blocked = useRemovalBlock(player) ?? remove.error;
   return (
     <Sheet open onClose={onClose} title={blocked ? "Can't remove this player" : "Remove player?"}>
       <div className="space-y-4">
@@ -386,14 +386,13 @@ function RemovePlayerSheet({ player, team, onClose, onEdit }: { player: Player; 
             Remove <strong className="font-semibold">{playerLabel(player)}</strong> from {team.name}?
           </p>
         )}
-        {remove.error && <Problem text={remove.error} />}
         <div className="grid grid-cols-2 gap-3 pb-[env(safe-area-inset-bottom)]">
           <button type="button" onClick={onClose} className="h-14 rounded-xl font-semibold ring-1 ring-border active:bg-bg">
             Cancel
           </button>
           {blocked ? (
             <button type="button" onClick={onEdit} className="h-14 rounded-xl bg-text font-semibold text-white active:opacity-90">
-              Edit
+              Edit instead
             </button>
           ) : (
             <button type="button" onClick={remove.run} disabled={remove.busy} className="h-14 rounded-xl bg-text font-semibold text-white active:opacity-90 disabled:opacity-60">
