@@ -28,7 +28,7 @@ export function BannerHero() {
         {/* eslint-disable-next-line jsx-a11y/alt-text -- alt comes from getImageProps */}
         <img {...img} className="h-full w-full object-cover" />
       </picture>
-      <h2 id="tournament-title" className="px-4 pt-2.5 pb-3 text-center font-display text-[19px] leading-tight font-bold text-balance text-brand">
+      <h2 id="tournament-title" className="px-4 pt-2.5 pb-3 text-center font-display text-[19px] leading-tight font-bold text-balance text-brand-text">
         {TITLE}
       </h2>
     </section>

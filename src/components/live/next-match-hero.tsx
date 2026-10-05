@@ -20,7 +20,7 @@ export function NextMatchHero({ match, placeholders }: { match: Match; placehold
       <div className="h-1 bg-brand" />
       <div className="px-5 pt-4 pb-5">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-bold text-brand">Next match</span>
+          <span className="text-xs font-bold text-brand-text">Next match</span>
           {match.group_code ? (
             <GroupTag group={match.group_code} />
           ) : (

@@ -1,17 +1,24 @@
 @import "tailwindcss";
 
-/* Palette (light mode). Dark mode will redefine these variables only. */
+/* Palette (light mode). Dark mode redefines these variables only (see [data-theme="dark"] below).
+   Contrast is checked with scripts/check-contrast.py: every text pair meets WCAG AA. */
 :root {
   --bg: #f3f5f7;
   --card: #ffffff;
   --text: #1b2230;
   --muted: #5e6878;
   --border: #dce1e7;
-  --brand: #7a1f2b;
-  --accent: #8e99a6;
+  /* Brand: deep teal from the foundation-day banner. Fills (header, active tab, buttons) and text. */
+  --brand: #135463;
+  --brand-text: #135463; /* links and headings; lighter in dark mode, where --brand stays a fill */
+  /* Accent: banner blue-grey. Borders, dividers and decoration only, never text. */
+  --accent: #8aa9b1;
+  --accent-text: #56696e; /* the accent's tone where text needs it (AA on card and bg) */
   --live: #e39b13;
   --live-text: #4a2f00;
   --win: #2e7a4c;
+  --win-text: #2e7a4c; /* green as text (Qualify); lighter in dark mode */
+  --form-draw: #5e6878; /* form: draw circle (white symbol on it) */
   --card-yellow: #f2c230;
   --card-red: #d33a3a;
 
@@ -37,6 +44,23 @@
   --nav-height: 4rem;
 }
 
+/* Dark mode, prepared but not switched on yet (dark mode is out of scope for now): setting
+   data-theme="dark" on <html> applies it. Group, live, win and card colours are unchanged. */
+:root[data-theme="dark"] {
+  --bg: #0f171b;
+  --card: #17232a;
+  --text: #e7eef0;
+  --muted: #9fb0b6;
+  --border: #2b3b42;
+  --brand: #135463;
+  --brand-text: #7fb0bb;
+  --accent: #4f6a72;
+  --accent-text: #9fbac1;
+  --win-text: #5cbf83;
+  --form-draw: #66707f;
+  --live-text: #4a2f00;
+}
+
 @theme inline {
   --color-bg: var(--bg);
   --color-card: var(--card);
@@ -45,12 +69,16 @@
   --color-border: var(--border);
   --color-brand: var(--brand);
   --color-brand-deep: var(--brand-deep);
+  --color-brand-text: var(--brand-text);
   --color-accent: var(--accent);
+  --color-accent-text: var(--accent-text);
   --color-live: var(--live);
   --color-live-text: var(--live-text);
   --color-live-soft: var(--live-soft);
   --color-win: var(--win);
   --color-win-soft: var(--win-soft);
+  --color-win-text: var(--win-text);
+  --color-form-draw: var(--form-draw);
   --color-pitch: var(--pitch);
   --color-pitch-stripe: var(--pitch-stripe);
   --color-logo-plate: var(--logo-plate);

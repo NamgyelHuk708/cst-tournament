@@ -130,7 +130,7 @@ function SideCell({ side, which, winner }: { side: ResolvedSide; which: Side; wi
         >
           {side.team.short_code}
         </span>
-        {isWinner && <CheckIcon className="size-3.5 shrink-0 text-win" />}
+        {isWinner && <CheckIcon className="size-3.5 shrink-0 text-win-text" />}
       </span>
       <span className="max-w-full truncate text-xs leading-tight text-muted">{side.team.name}</span>
     </span>

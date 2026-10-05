@@ -69,15 +69,21 @@ Define these as Tailwind theme tokens. Don't hard-code hex values in components.
 | `text` | `#1B2230` | Primary text |
 | `muted` | `#5E6878` | Secondary text, meta |
 | `border` | `#DCE1E7` | Borders, dividers |
-| `brand` | `#7A1F2B` | Kemar maroon (brand) |
-| `accent` | `#8E99A6` | Jubilee silver (accent) |
+| `brand` | `#135463` | Deep teal from the foundation-day banner (brand): header, active tab, primary buttons |
+| `brand-text` | `#135463` | Brand as text: links, key headings, the tournament heading |
+| `accent` | `#8AA9B1` | Banner blue-grey: borders, dividers, decoration only, never text |
+| `accent-text` | `#56696E` | The accent's tone where text needs it |
 | `live` | `#E39B13` | Live state, saffron |
 | `live-text` | `#4A2F00` | Text on `live` |
-| `win` | `#2E7A4C` | Turf green: qualifying, winner |
+| `win` | `#2E7A4C` | Turf green: qualifying, winner, form win |
+| `win-text` | `#2E7A4C` | Green as text (Qualify) |
+| `form-draw` | `#5E6878` | Form: draw circle |
 | `card-yellow` | `#F2C230` | Yellow card |
 | `card-red` | `#D33A3A` | Red card |
 
-**Live is never red.** Red means a red card and nothing else.
+**Live is never red.** Red means a red card, or a loss in the group tables' form circles (always with its ✕ symbol), and nothing else.
+
+Tokens live once in `src/app/globals.css`, with a prepared dark set under `:root[data-theme="dark"]` (not switched on yet). `python3 scripts/check-contrast.py` checks every text and UI pair against WCAG AA in light and dark; run it after changing a colour.
 
 **Group colours**
 
@@ -192,7 +198,7 @@ Don't build out-of-scope features. If one looks needed, raise it instead.
 - **Multi-step actions** (set final score, reset, undo) set `app.defer_advance` so the advancement check runs once on the final state via `apply_advancement()`; any new multi-step action that can change a knockout result must do the same.
 - Half length lives in two places that must match: `HALF_LENGTH_MINUTES` in `tournament.ts` and `public.half_length_minutes()` in the database.
 - Admin routes: `src/proxy.ts` (session refresh + redirect), `requireAdmin()` in the admin layout, and the database. All three must hold.
-- Red is only for red cards, saffron only for live. Errors and destructive confirmations use ink (`text`) with clear wording.
+- Red is only for red cards (and form losses, with their ✕), saffron only for live. Errors and destructive confirmations use ink (`text`) with clear wording.
 
 ## Working rules
 

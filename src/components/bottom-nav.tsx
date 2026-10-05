@@ -32,7 +32,7 @@ export function BottomNav() {
                 href={href}
                 aria-current={active ? "page" : undefined}
                 className={`relative flex h-full flex-col items-center justify-center gap-0.5 text-xs font-semibold transition-colors ${
-                  active ? "text-brand" : "text-muted"
+                  active ? "text-brand-text" : "text-muted"
                 }`}
               >
                 <span

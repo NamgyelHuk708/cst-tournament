@@ -127,7 +127,7 @@ function AdminGroupCard({ standings }: { standings: GroupStandings }) {
             <tr className="text-xs text-muted">
               <th scope="col" className="w-8 py-2 pl-4 text-left font-medium">#</th>
               <th scope="col" className="py-2 text-left font-medium">Team</th>
-              <th scope="col" className="w-8 py-2 text-center font-medium">P</th>
+              <th scope="col" className="w-8 py-2 text-center font-medium"><abbr title="Matches played" className="no-underline">MP</abbr></th>
               <th scope="col" className="w-10 py-2 text-center font-medium">GD</th>
               <th scope="col" className="w-12 py-2 pr-4 text-right font-medium">Pts</th>
             </tr>
@@ -135,10 +135,10 @@ function AdminGroupCard({ standings }: { standings: GroupStandings }) {
           <tbody>
             {rows.map((r) => (
               <tr key={r.team.id} className="h-10 border-t border-border/70">
-                <td className={`pl-4 font-display font-bold ${r.qualifying ? "text-win" : "text-muted"}`}>{r.position}</td>
+                <td className={`pl-4 font-display font-bold ${r.qualifying ? "text-win-text" : "text-muted"}`}>{r.position}</td>
                 <th scope="row" className="text-left font-normal">
                   <span className="font-display text-base font-bold">{r.team.short_code}</span>
-                  {r.qualifying && <span className="ml-2 text-xs text-win">{r.qualified ? "Qualified" : "Qualifying"}</span>}
+                  {r.qualifying && <span className="ml-2 text-xs text-win-text">{r.qualified ? "Qualified" : "Qualifying"}</span>}
                   {complete && r.tiedUnresolved && <span className="ml-2 text-xs font-semibold">Level</span>}
                 </th>
                 <td className="text-center">{r.played}</td>

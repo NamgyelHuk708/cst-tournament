@@ -37,8 +37,8 @@ export function KnockoutCard({ match, featured = false }: { match: Match; featur
       className={`relative overflow-hidden rounded-xl bg-card shadow-sm ${featured ? "ring-2 ring-accent" : "ring-1 ring-border/60"}`}
     >
       <header className="flex items-center gap-2 px-3.5 pt-2.5 pb-1.5">
-        {featured && <TrophyIcon className="size-4 text-brand" />}
-        <span className={`font-display text-sm font-bold ${featured ? "text-brand" : "text-text"}`}>
+        {featured && <TrophyIcon className="size-4 text-brand-text" />}
+        <span className={`font-display text-sm font-bold ${featured ? "text-brand-text" : "text-text"}`}>
           {slotDisplayName(match.slot_label ?? "")}
         </span>
         <span className="ml-auto text-xs font-medium text-muted tabular">
@@ -95,7 +95,7 @@ function SideLine({
     <div className={`flex min-h-10 items-center gap-2 ${isLoser ? "text-muted" : ""}`}>
       <span className="grid w-4 shrink-0 place-items-center">
         {isWinner ? (
-          <CheckIcon className="size-4 text-win" />
+          <CheckIcon className="size-4 text-win-text" />
         ) : group ? (
           <GroupSwatch group={group} className="size-2" />
         ) : null}

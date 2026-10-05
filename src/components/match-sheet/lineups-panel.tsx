@@ -69,7 +69,7 @@ function NotAnnounced({ match }: { match: Match }) {
   const played = isLive(match) || isFinished(match);
   return (
     <div className="rounded-xl bg-bg px-6 py-10 text-center">
-      <PitchIcon className="mx-auto size-10 text-accent" />
+      <PitchIcon className="mx-auto size-10 text-accent-text" />
       <p className="mt-3 font-display text-lg font-semibold">Lineups not announced yet</p>
       <p className="mt-1 text-sm text-muted">
         {played ? "No lineups have been published for this match." : "Check back closer to kick-off."}

@@ -84,7 +84,7 @@ export function LiveView() {
       {finished.length > 0 && (
         <Link
           href="/matches?view=results"
-          className="-mt-4 flex h-11 items-center justify-end gap-0.5 px-1 text-sm font-semibold text-brand"
+          className="-mt-4 flex h-11 items-center justify-end gap-0.5 px-1 text-sm font-semibold text-brand-text"
         >
           See all results
           <ChevronIcon className="size-4 -rotate-90" />

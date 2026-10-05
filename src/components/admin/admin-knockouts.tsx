@@ -147,7 +147,7 @@ export function AdminKnockouts() {
                   <span className="block text-muted">Skipped: {p.reason}</span>
                 )}
               </span>
-              <span className={`shrink-0 text-xs font-semibold ${p.outcome === "filled" ? "text-win" : "text-muted"}`}>
+              <span className={`shrink-0 text-xs font-semibold ${p.outcome === "filled" ? "text-win-text" : "text-muted"}`}>
                 {p.outcome === "filled" ? "Will fill" : p.outcome === "unchanged" ? "Set" : "Skipped"}
               </span>
             </li>

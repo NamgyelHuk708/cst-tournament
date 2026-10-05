@@ -3,7 +3,7 @@ import { signOut } from "@/app/admin/actions";
 import { ConnectionPill } from "../connection-pill";
 import { AdminTabs } from "./admin-tabs";
 
-// Ink, not maroon: the admin area is a tool, visibly separate from the fan site.
+// Ink, not the brand teal: the admin area is a tool, visibly separate from the fan site.
 export function AdminHeader() {
   return (
     <header className="sticky top-0 z-30 bg-text text-white">

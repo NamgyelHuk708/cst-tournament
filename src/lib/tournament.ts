@@ -204,6 +204,32 @@ export type GroupStandings = {
   complete: boolean;
 };
 
+export type FormResult = "W" | "D" | "L";
+
+export type FormSlot = {
+  match: Match;
+  opponent: Team | undefined;
+  /** Null until the match is finished. */
+  result: FormResult | null;
+  goalsFor: number;
+  goalsAgainst: number;
+};
+
+/** A team's group matches, oldest first (one slot each), with its result in the ones that are finished. */
+export function teamForm(team: Pick<Team, "id">, matches: Match[], teamsById: Map<number, Team>): FormSlot[] {
+  return matches
+    .filter((m) => m.stage === "group" && (m.home_team_id === team.id || m.away_team_id === team.id))
+    .sort((a, b) => a.kickoff_at.localeCompare(b.kickoff_at) || a.id - b.id)
+    .map((match) => {
+      const home = match.home_team_id === team.id;
+      const goalsFor = home ? match.home_score : match.away_score;
+      const goalsAgainst = home ? match.away_score : match.home_score;
+      const opponentId = home ? match.away_team_id : match.home_team_id;
+      const result: FormResult | null = !isFinished(match) ? null : goalsFor > goalsAgainst ? "W" : goalsFor < goalsAgainst ? "L" : "D";
+      return { match, opponent: opponentId != null ? teamsById.get(opponentId) : undefined, result, goalsFor, goalsAgainst };
+    });
+}
+
 const tiedOnRecord = (a: StandingRow, b: StandingRow) =>
   a.points === b.points && a.goalDifference === b.goalDifference && a.goalsFor === b.goalsFor;
 

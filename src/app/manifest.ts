@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 
-// "Add to Home screen": the 25 emblem on brand maroon.
+// "Add to Home screen" icon and colours.
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "CST Silver Jubilee Football",
@@ -9,7 +9,7 @@ export default function manifest(): MetadataRoute.Manifest {
     start_url: "/",
     display: "standalone",
     background_color: "#f3f5f7",
-    theme_color: "#7a1f2b",
+    theme_color: "#135463",
     icons: [
       { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
       { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },

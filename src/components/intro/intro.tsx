@@ -8,7 +8,7 @@ import { LazyMotion, animate, domAnimation, m, useReducedMotion, type Easing } f
 import { useEffect, useRef, useState } from "react";
 import emblem from "@/assets/intro-emblem.webp";
 
-const MAROON = "#7A1F2B";
+const FIGURE = "#135463"; // brand teal (--brand)
 const INK = "#1B2230";
 const LOGO = 200; // emblem diameter, px
 
@@ -93,7 +93,7 @@ const BALL_START = {
 };
 
 function Capsule({ x, y, length, width, opacity }: { x: number; y: number; length: number; width: number; opacity: number }) {
-  return <line x1={x} y1={y} x2={x} y2={y + length} stroke={MAROON} strokeWidth={width} strokeLinecap="round" opacity={opacity} />;
+  return <line x1={x} y1={y} x2={x} y2={y + length} stroke={FIGURE} strokeWidth={width} strokeLinecap="round" opacity={opacity} />;
 }
 
 function Footballer() {
@@ -136,7 +136,7 @@ function Footballer() {
       <Capsule x={HIP.x} y={HIP.y} length={THIGH} width={15} opacity={opacity} />
       <g ref={shin}>
         <Capsule x={KNEE.x} y={KNEE.y} length={SHIN} width={12} opacity={opacity} />
-        <line x1={KNEE.x} y1={KNEE.y + SHIN + 2} x2={KNEE.x + 12} y2={KNEE.y + SHIN + 3} stroke={MAROON} strokeWidth={9} strokeLinecap="round" opacity={opacity} />
+        <line x1={KNEE.x} y1={KNEE.y + SHIN + 2} x2={KNEE.x + 12} y2={KNEE.y + SHIN + 3} stroke={FIGURE} strokeWidth={9} strokeLinecap="round" opacity={opacity} />
       </g>
     </g>
   );
@@ -164,8 +164,8 @@ function Footballer() {
           <g ref={torso}>
             {arm(farArm, farFore, 0.5)}
             {/* torso tapers from shoulders to hips; the neck is the gap below the head */}
-            <path d="M99 51 Q110 47 117 54 L106 117 Q98 121 90 116 Z" fill={MAROON} />
-            <circle cx={115} cy={33} r={12.5} fill={MAROON} />
+            <path d="M99 51 Q110 47 117 54 L106 117 Q98 121 90 116 Z" fill={FIGURE} />
+            <circle cx={115} cy={33} r={12.5} fill={FIGURE} />
             {arm(nearArm, nearFore, 1)}
           </g>
           {leg(kickThigh, kickShin, 1)}
@@ -293,7 +293,7 @@ function Emblem({ exitTo, exiting }: { exitTo: { x: number; y: number; scale: nu
       <m.div
         aria-hidden="true"
         className="absolute rounded-full"
-        style={{ ...centred, boxShadow: "inset 0 0 0 6px #d4d9df, inset 0 0 0 8px #8e99a6, 0 0 26px rgb(142 153 166 / 0.5)" }}
+        style={{ ...centred, boxShadow: "inset 0 0 0 6px #d4d9df, inset 0 0 0 8px #8aa9b1, 0 0 26px rgb(138 169 177 / 0.5)" }}
         {...ring}
       />
       <m.div className="absolute overflow-hidden rounded-full" style={centred} {...(exiting ? { initial: reveal.initial, ...exit } : reveal)}>

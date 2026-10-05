@@ -6,6 +6,21 @@ import { GROUP_BG } from "../group-tag";
 import { useTournament } from "../tournament-provider";
 import { GroupCard } from "./group-card";
 
+function FormKey({ result, label }: { result: "W" | "D" | "L"; label: string }) {
+  const fill = result === "W" ? "bg-win" : result === "L" ? "bg-card-red" : "bg-form-draw";
+  const path = result === "W" ? "M3.5 8.5 6.5 11.5 12.5 4.5" : result === "D" ? "M4 8h8" : "M4.5 4.5l7 7M11.5 4.5l-7 7";
+  return (
+    <span className="inline-flex items-center gap-1">
+      <span aria-hidden="true" className={`grid size-3.5 place-items-center rounded-full text-white ${fill}`}>
+        <svg viewBox="0 0 16 16" className="size-2.5">
+          <path d={path} fill="none" stroke="currentColor" strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </span>
+      {label}
+    </span>
+  );
+}
+
 export function GroupsView() {
   const { standings } = useTournament();
   const [active, setActive] = useState<GroupCode>("A");
@@ -60,6 +75,21 @@ export function GroupsView() {
         {GROUP_CODES.map((g) => (
           <GroupCard key={g} standings={standings[g]} />
         ))}
+      </div>
+
+      {/* One key for every table. */}
+      <div className="mt-4 space-y-1.5 px-1 text-xs leading-relaxed text-muted">
+        <p>MP matches played · W won · D drawn · L lost · GF goals for · GA goals against · GD goal difference · Pts points</p>
+        <p className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <span>Form, oldest first:</span>
+          <FormKey result="W" label="won" />
+          <FormKey result="D" label="drawn" />
+          <FormKey result="L" label="lost" />
+          <span className="inline-flex items-center gap-1">
+            <span aria-hidden="true" className="inline-block size-3.5 rounded-full border-2 border-accent" /> not played
+          </span>
+        </p>
+        <p className="sm:hidden">Swipe a table sideways for GF and GA.</p>
       </div>
     </div>
   );

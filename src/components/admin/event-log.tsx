@@ -65,7 +65,7 @@ export function EventLog({
                       {e.type === "own_goal" && ` (${teamsById.get(e.team_id)?.short_code})`}
                     </span>
                   ) : (
-                    <button type="button" onClick={() => onEdit(e)} className="text-sm font-medium text-brand underline-offset-2 active:underline">
+                    <button type="button" onClick={() => onEdit(e)} className="text-sm font-medium text-brand-text underline-offset-2 active:underline">
                       {isGoal ? "Add scorer" : "Add player"}
                     </button>
                   )}
