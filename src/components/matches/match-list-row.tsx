@@ -1,6 +1,6 @@
 "use client";
 
-import { formatTime } from "@/lib/format";
+import { formatTime, relativeDay } from "@/lib/format";
 import {
   isFinished,
   isLive,
@@ -31,6 +31,8 @@ export function MatchListRow({ match }: { match: Match }) {
   const outcome = matchOutcome(match);
   const winner = outcome?.winner ?? null;
   const pens = match.home_pens != null && match.away_pens != null ? `${match.home_pens}–${match.away_pens}` : null;
+  const day = relativeDay(match.kickoff_at, now);
+  const time = formatTime(match.kickoff_at);
   const clock = live ? (match.status === "half_time" ? "HT" : match.status === "penalties" ? "Pens" : matchClock(match, now).label) : null;
 
   const name = (s: ResolvedSide) => s.team?.short_code ?? s.placeholder ?? "To be decided";
@@ -46,16 +48,11 @@ export function MatchListRow({ match }: { match: Match }) {
 
   const body = (
     <>
-      <span className="flex w-11 shrink-0 flex-col items-start gap-0.5 leading-none">
-        {live ? (
-          <span className="inline-flex items-center gap-1 rounded-full bg-live px-1.5 py-0.5 font-display text-[13px] font-bold text-live-text tabular">
-            <span className="live-dot size-1.5 rounded-full bg-live-text" />
-            {clock}
-          </span>
-        ) : (
-          <span className="text-xs font-semibold text-muted tabular">#{match.id}</span>
-        )}
-        <span className="flex items-center gap-1 text-[11px] font-medium text-muted">
+      {/* Match number and stage, then the day and kick-off time on every row (never just a time). */}
+      <span className="flex w-[4.5rem] shrink-0 flex-col items-start gap-1 leading-none">
+        <span className="flex items-center gap-1 text-[11px] font-medium whitespace-nowrap text-muted tabular">
+          #{match.id}
+          <span aria-hidden="true">·</span>
           {match.group_code ? (
             <>
               <GroupSwatch group={match.group_code} className="size-2" />
@@ -65,6 +62,25 @@ export function MatchListRow({ match }: { match: Match }) {
             slotDisplayName(match.slot_label ?? "")
           )}
         </span>
+        {live ? (
+          <>
+            <span className="text-[11px] font-medium whitespace-nowrap text-muted tabular">
+              {day} {time}
+            </span>
+            <span className="inline-flex items-center gap-1 rounded-full bg-live px-1.5 py-0.5 font-display text-[13px] font-bold text-live-text tabular">
+              <span className="live-dot size-1.5 rounded-full bg-live-text" />
+              {clock}
+            </span>
+          </>
+        ) : (
+          <>
+            <span className="max-w-full truncate text-xs font-semibold text-muted">{day}</span>
+            <span className="flex items-baseline gap-1 whitespace-nowrap">
+              <span className={`font-display text-sm font-semibold tabular ${started || isFinished(match) ? "text-muted" : ""}`}>{time}</span>
+              {isFinished(match) && <span className="font-display text-[11px] font-bold text-muted">FT</span>}
+            </span>
+          </>
+        )}
       </span>
 
       <SideCell side={sides.home} which="home" winner={winner} />
@@ -80,7 +96,7 @@ export function MatchListRow({ match }: { match: Match }) {
         ) : isFinished(match) ? null : Date.parse(match.kickoff_at) <= now ? (
           <span className="text-center text-[11px] leading-tight font-medium text-muted">Result to come</span>
         ) : (
-          <span className="font-display text-[15px] font-semibold whitespace-nowrap tabular">{formatTime(match.kickoff_at)}</span>
+          <span className="font-display text-lg font-semibold text-muted">vs</span>
         )}
       </span>
 

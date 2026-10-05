@@ -20,11 +20,12 @@ export function dayKey(isoOrMs: string | number): string {
   return keyFmt.format(new Date(isoOrMs));
 }
 
-/** "Today", "Tomorrow" or "Sat 3 Oct", relative to now (ms). */
+/** "Today", "Tomorrow", "Yesterday" or "Sat 3 Oct", relative to now (ms). */
 export function relativeDay(iso: string, now: number): string {
   const day = dayKey(iso);
   if (day === dayKey(now)) return "Today";
   if (day === dayKey(now + 86_400_000)) return "Tomorrow";
+  if (day === dayKey(now - 86_400_000)) return "Yesterday";
   return formatDay(iso);
 }
 

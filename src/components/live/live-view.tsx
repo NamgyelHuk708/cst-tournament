@@ -8,7 +8,7 @@ import { MatchRow } from "../match-row";
 import { useServerNow, useTournament } from "../tournament-provider";
 import { useResolvedSides } from "../use-resolved-sides";
 import { IntroLiveSignal } from "../intro/intro-gate";
-import { BannerHero, BannerStrip } from "./live-banner";
+import { BannerHero } from "./live-banner";
 import { LiveHero } from "./live-hero";
 import { NextMatchHero } from "./next-match-hero";
 
@@ -42,9 +42,9 @@ export function LiveView() {
       {/* Lets the intro (in the layout) skip or cut short when a match is live. */}
       <IntroLiveSignal live={live.length > 0} />
 
-      {/* Banner and hero card read as one block; the banner shrinks to a strip while a match is live. */}
+      {/* Banner and hero card read as one block. The banner stays the same when a match is live. */}
       <div className="space-y-3">
-        {hero ? <BannerStrip /> : <BannerHero />}
+        <BannerHero />
         {hero ? (
           <LiveHero match={hero} />
         ) : next ? (
@@ -64,9 +64,8 @@ export function LiveView() {
 
       {upNext.length > 0 && (
         <Section title="Up next">
-          {upNext.map((m, i) => (
-            // Day label only where the day changes, so "Tomorrow" isn't repeated on every row.
-            <UpNextRow key={m.id} match={m} showDay={i === 0 || dayKey(m.kickoff_at) !== dayKey(upNext[i - 1].kickoff_at)} />
+          {upNext.map((m) => (
+            <UpNextRow key={m.id} match={m} />
           ))}
         </Section>
       )}
@@ -99,9 +98,9 @@ function NextHero({ match }: { match: Match }) {
   return <NextMatchHero match={match} placeholders={{ home: sides.home.placeholder, away: sides.away.placeholder }} />;
 }
 
-function UpNextRow({ match, showDay }: { match: Match; showDay: boolean }) {
+function UpNextRow({ match }: { match: Match }) {
   const sides = useResolvedSides(match);
-  return <MatchRow match={match} showDay={showDay} placeholders={{ home: sides.home.placeholder, away: sides.away.placeholder }} />;
+  return <MatchRow match={match} placeholders={{ home: sides.home.placeholder, away: sides.away.placeholder }} />;
 }
 
 function EmptyHero({ finishedCount }: { finishedCount: number }) {

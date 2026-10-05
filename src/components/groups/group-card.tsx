@@ -141,7 +141,7 @@ export function GroupCard({ standings }: { standings: GroupStandings }) {
       {showFixtures && (
         <ul id={fixturesId} className="divide-y divide-border border-t border-border">
           {fixtures.map((m) => (
-            <MatchRow key={m.id} match={m} showDay />
+            <MatchRow key={m.id} match={m} />
           ))}
         </ul>
       )}

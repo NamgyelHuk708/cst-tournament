@@ -8,7 +8,7 @@ const TITLE = "CST Silver Jubilee Departmental Football Tournament";
 const WIDE_FROM = 640;
 
 /**
- * Live page banner when nothing is live: the foundation-day artwork, then the tournament name as
+ * Live page banner, shown the same way whether or not a match is live: the foundation-day artwork, then the tournament name as
  * real text (the artwork doesn't mention the tournament). Phones get a crop of the logos and title;
  * wider screens see more of the artwork. Low priority and not preloaded: it never holds up the scores.
  */
@@ -33,9 +33,4 @@ export function BannerHero() {
       </h2>
     </section>
   );
-}
-
-/** While a match is live the artwork collapses to just the name, so the live card stays at the top. */
-export function BannerStrip() {
-  return <h2 className="truncate px-1 text-center font-display text-sm font-semibold text-muted">{TITLE}</h2>;
 }

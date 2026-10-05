@@ -14,6 +14,16 @@ const FALLBACK: Record<DisplayEvent["type"], string> = {
   red_card: "Red card",
 };
 
+/** "#28 Kinley Phuentsho": the shirt number (when recorded) muted in front, so names still line up. */
+function PlayerLabel({ name, number }: { name: string; number: number | null }) {
+  return (
+    <>
+      {number != null && <span className="font-medium text-muted tabular">#{number} </span>}
+      {name}
+    </>
+  );
+}
+
 /** "10', 34'" plus a count of goals with no minute recorded. */
 function minutesText(line: Pick<ScorerLine, "minutes" | "untimed">): string {
   const parts = [...line.minutes];
@@ -35,14 +45,20 @@ export function ScorerColumns({ events, className = "" }: { events: DisplayEvent
         .filter((l) => l.side === side)
         .map((l) => (
           // Away lines read in normal order too ("Pema Dorji 58' (OG)"), right-aligned, ball at the edge.
-          <li key={l.key} className={`flex items-center gap-1.5 ${side === "away" ? "justify-end" : ""}`}>
-            {side === "home" && <BallIcon className={`size-3.5 shrink-0 ${l.ownGoal ? "text-muted" : "text-text"}`} />}
-            <span className="min-w-0 truncate">{l.name}</span>
-            <span className="shrink-0 font-medium text-muted tabular">
-              {minutesText(l)}
-              {l.ownGoal && " (OG)"}
+          <li key={l.key} className={`flex items-start gap-1.5 ${side === "away" ? "justify-end" : ""}`}>
+            {side === "home" && <BallIcon className={`mt-0.5 size-3.5 shrink-0 ${l.ownGoal ? "text-muted" : "text-text"}`} />}
+            {/* When name and minutes don't fit on one line, the minutes move under the name rather than
+                cutting the name down to a letter or two. */}
+            <span className={`flex min-w-0 flex-wrap items-baseline gap-x-1.5 ${side === "away" ? "justify-end" : ""}`}>
+              <span className="max-w-full min-w-0 truncate">
+                <PlayerLabel name={l.name} number={l.number} />
+              </span>
+              <span className="shrink-0 font-medium text-muted tabular">
+                {minutesText(l)}
+                {l.ownGoal && " (OG)"}
+              </span>
             </span>
-            {side === "away" && <BallIcon className={`size-3.5 shrink-0 ${l.ownGoal ? "text-muted" : "text-text"}`} />}
+            {side === "away" && <BallIcon className={`mt-0.5 size-3.5 shrink-0 ${l.ownGoal ? "text-muted" : "text-text"}`} />}
           </li>
         ))}
       {reds
@@ -54,7 +70,9 @@ export function ScorerColumns({ events, className = "" }: { events: DisplayEvent
                 <CardIcon colour="red" />
               </span>
             )}
-            <span className="min-w-0 truncate">{e.playerName ?? "Red card"}</span>
+            <span className="min-w-0 truncate">
+              <PlayerLabel name={e.playerName ?? "Red card"} number={e.playerName ? e.playerNumber : null} />
+            </span>
             {e.minute != null && <span className="shrink-0 font-medium text-muted tabular">{eventMinuteLabel(e)}</span>}
             {side === "away" && (
               <span className="grid w-3.5 shrink-0 place-items-center">
@@ -111,7 +129,7 @@ export function MatchTimeline({ match, events }: { match: Match; events: Display
               <EventIcon type={e.type} />
             </span>
             <span className="min-w-0 truncate">
-              {name}
+              <PlayerLabel name={name} number={e.playerName ? e.playerNumber : null} />
               {e.type === "own_goal" && e.playerName && <span className="text-muted"> (OG)</span>}
               {row.count != null && row.count > 1 && <span className="font-medium text-muted tabular"> ×{row.count}</span>}
             </span>

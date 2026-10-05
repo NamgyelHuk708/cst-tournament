@@ -528,6 +528,8 @@ export type DisplayEvent = MatchEvent & {
   /** Side of the scoreboard the event is shown under. Own goals appear under the team that benefits. */
   side: Side;
   playerName: string | null;
+  /** Shirt number, when recorded. */
+  playerNumber: number | null;
 };
 
 /** Goals and cards for a match, ordered by minute, placed on the correct side. */
@@ -540,6 +542,7 @@ export function eventsForMatch(match: Match, events: MatchEvent[], playersById: 
         ...e,
         side: e.type === "own_goal" ? otherSide(ownSide) : ownSide,
         playerName: e.player_id ? playersById.get(e.player_id)?.name ?? null : null,
+        playerNumber: e.player_id ? playersById.get(e.player_id)?.shirt_number ?? null : null,
       };
     })
     .sort(compareEventTime);
@@ -563,6 +566,8 @@ export type ScorerLine = {
   side: Side;
   /** Player name, "Goal" when no scorer was recorded. */
   name: string;
+  /** Shirt number, when recorded. */
+  number: number | null;
   ownGoal: boolean;
   /** Minutes in order ("10'", "45+2'"); goals without a minute are counted in `untimed`. */
   minutes: string[];
@@ -584,6 +589,7 @@ export function scorerLines(events: DisplayEvent[]): ScorerLine[] {
       key,
       side: e.side,
       name: e.playerName ?? (ownGoal ? "Own goal" : "Goal"),
+      number: e.playerName ? e.playerNumber : null,
       ownGoal: ownGoal && e.playerName != null,
       minutes: [],
       untimed: 0,

@@ -18,8 +18,6 @@ import { useFlashOnChange } from "./use-flash";
 
 type Props = {
   match: Match;
-  /** Show the day (e.g. "Tomorrow") above the time for scheduled matches. */
-  showDay?: boolean;
   /** Labels to use when a side has no team yet (knockout placeholders). */
   placeholders?: Partial<Record<Side, string>>;
 };
@@ -28,7 +26,7 @@ type Props = {
  * One match as a compact, stacked row: status on the left, a line per team,
  * scores right-aligned. Tapping it opens the match sheet.
  */
-export function MatchRow({ match, showDay = false, placeholders }: Props) {
+export function MatchRow({ match, placeholders }: Props) {
   const { teamsById } = useTournament();
   const openSheet = useMatchSheet();
 
@@ -40,7 +38,7 @@ export function MatchRow({ match, showDay = false, placeholders }: Props) {
 
   const body = (
     <>
-      <StatusCell match={match} showDay={showDay} />
+      <StatusCell match={match} />
       <div className="min-w-0 flex-1 space-y-1">
         <TeamLine team={home} placeholder={placeholders?.home} score={started ? match.home_score : null}
           pens={match.home_pens} state={lineState(outcome?.winner, "home")} />
@@ -123,26 +121,32 @@ function TeamLine({
   );
 }
 
-function StatusCell({ match, showDay }: { match: Match; showDay: boolean }) {
+/** Day and kick-off time on every row ("Tomorrow" over "8:00 PM"), plus the live clock or FT. */
+function StatusCell({ match }: { match: Match }) {
   const now = useServerNow(15_000);
+  const day = relativeDay(match.kickoff_at, now);
+  const time = formatTime(match.kickoff_at);
   if (isLive(match)) {
     const clock = matchClock(match, now);
     return (
-      <span className="w-[4.25rem] shrink-0">
+      <span className="w-[5rem] shrink-0 leading-tight">
         <span className="inline-flex items-center gap-1 rounded-full bg-live px-2 py-0.5 font-display text-sm font-bold text-live-text tabular">
           <span className="live-dot size-1.5 rounded-full bg-live-text" />
           {clock.label}
         </span>
+        <span className="mt-0.5 block text-[11px] font-medium whitespace-nowrap text-muted tabular">
+          {day} {time}
+        </span>
       </span>
     );
   }
-  if (isFinished(match)) {
-    return <span className="w-[4.25rem] shrink-0 font-display text-sm font-semibold tracking-wide text-muted">FT</span>;
-  }
   return (
-    <span className="w-[4.25rem] shrink-0 leading-tight">
-      {showDay && <span className="block text-xs font-semibold text-muted">{relativeDay(match.kickoff_at, now)}</span>}
-      <span className="block font-display text-[15px] font-semibold tabular">{formatTime(match.kickoff_at).replace(" ", " ")}</span>
+    <span className="w-[5rem] shrink-0 leading-tight">
+      <span className="block truncate text-xs font-semibold text-muted">{day}</span>
+      <span className="flex items-baseline gap-1 whitespace-nowrap">
+        <span className={`font-display text-[15px] font-semibold tabular ${isFinished(match) ? "text-muted" : ""}`}>{time}</span>
+        {isFinished(match) && <span className="font-display text-xs font-bold text-muted">FT</span>}
+      </span>
     </span>
   );
 }
