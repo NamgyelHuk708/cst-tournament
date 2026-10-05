@@ -7,8 +7,10 @@ import {
   GROUP_CODES,
   KNOCKOUT_ROUNDS,
   currentRound,
+  displaySlotLabels,
   previewFillRound16,
   resolveSide,
+  slotDisplayName,
   type KnockoutRound,
   type Match,
 } from "@/lib/tournament";
@@ -39,7 +41,7 @@ export function AdminKnockouts() {
     const { data, error } = await supabase.rpc("admin_fill_round_of_16");
     setBusy(false);
     if (error) {
-      setError(error.message);
+      setError(displaySlotLabels(error.message));
       return;
     }
     const report = (data ?? []) as { outcome: string }[];
@@ -109,7 +111,7 @@ export function AdminKnockouts() {
           });
           return (
             <li key={m.id}>
-              <Link href={`/admin/match/${m.id}`} className="block rounded-xl active:opacity-80" aria-label={`Open ${m.slot_label}`}>
+              <Link href={`/admin/match/${m.id}`} className="block rounded-xl active:opacity-80" aria-label={`Open ${slotDisplayName(m.slot_label ?? "")}`}>
                 <KnockoutCard match={m} featured={m.slot_label === "FINAL"} />
               </Link>
               {warnings.map((w) => (
@@ -131,7 +133,7 @@ export function AdminKnockouts() {
         <ul className="mt-3 divide-y divide-border overflow-hidden rounded-xl text-sm ring-1 ring-border empty:hidden">
           {plans.filter((p) => p.outcome !== "skipped").map((p) => (
             <li key={`${p.match.id}-${p.side}`} className="flex items-center gap-3 px-3 py-2.5">
-              <span className="w-16 shrink-0 font-display font-bold">{p.match.slot_label}</span>
+              <span className="w-16 shrink-0 font-display font-bold">{slotDisplayName(p.match.slot_label ?? "")}</span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-muted">{p.placeholder}</span>
                 {p.outcome === "filled" ? (

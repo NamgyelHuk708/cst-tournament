@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { uuid } from "@/lib/uuid";
 import {
+  displaySlotLabels,
   eventMinuteLabel,
   isKnockout,
   isLive,
@@ -55,7 +56,7 @@ const STATUS_UNDO: Record<MatchStatus, string> = {
 function errorMessage(err: unknown): string {
   const msg = err && typeof err === "object" && "message" in err ? String(err.message) : "";
   if (/fetch|network|Failed/i.test(msg)) return "No connection. Check the signal and try again.";
-  return msg || "Something went wrong. Try again.";
+  return displaySlotLabels(msg) || "Something went wrong. Try again.";
 }
 
 export function MatchControl({ matchId }: { matchId: number }) {
@@ -95,7 +96,7 @@ export function MatchControl({ matchId }: { matchId: number }) {
         const newId = d[`${side}_team_id`];
         if (oldId === newId) return;
         const code = (id: number | null) => (id != null ? teamsById.get(id)?.short_code : undefined);
-        const into = d.slot_label === "3RD" ? "the 3rd place match" : d.slot_label === "FINAL" ? "the final" : d.slot_label;
+        const into = d.slot_label === "3RD" ? "the 3rd place match" : d.slot_label === "FINAL" ? "the Final" : slotDisplayName(d.slot_label ?? "");
         if (newId != null) notes.push(`${code(newId)} goes through to ${into}${oldId != null ? ` in place of ${code(oldId)}` : ""}.`);
         else if (oldId != null) notes.push(`${code(oldId)} removed from ${into} until this tie has a winner.`);
       });
@@ -334,7 +335,7 @@ export function MatchControl({ matchId }: { matchId: number }) {
           playersById={playersById}
           startedLaterTies={dependents
             .filter((d) => d.status !== "scheduled" || events.some((e) => e.match_id === d.id))
-            .map((d) => d.slot_label ?? "")}
+            .map((d) => slotDisplayName(d.slot_label ?? ""))}
           error={toolError}
           busy={busy}
           onClose={() => setTool(null)}

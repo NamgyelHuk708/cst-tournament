@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { GROUP_CODES, type Match, type ResolvedSide, type Team } from "@/lib/tournament";
+import { GROUP_CODES, slotDisplayName, type Match, type ResolvedSide, type Team } from "@/lib/tournament";
 import { Sheet } from "../sheet";
 
 /** Choose the two teams of a knockout tie. Suggestions come from the bracket; any team can be picked. */
@@ -29,7 +29,7 @@ export function TeamsSheet({
   const same = home != null && home === away;
 
   return (
-    <Sheet open={open} onClose={onClose} title={`Teams for ${match.slot_label}`}>
+    <Sheet open={open} onClose={onClose} title={`Teams for ${slotDisplayName(match.slot_label ?? "")}`}>
       <div className="space-y-4">
         <TeamPicker label="Home" value={home} onChange={setHome} teams={teams} side={sides.home} />
         <TeamPicker label="Away" value={away} onChange={setAway} teams={teams} side={sides.away} />

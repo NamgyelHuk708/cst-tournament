@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { formatDay } from "@/lib/format";
-import { KNOCKOUT_ROUNDS, currentRound, matchOutcome, type KnockoutRound, type Match } from "@/lib/tournament";
+import { KNOCKOUT_ROUNDS, currentRound, matchOutcome, slotDisplayName, winnerGoesTo, type KnockoutRound, type Match } from "@/lib/tournament";
 import { TrophyIcon } from "../icons";
 import { TeamLink } from "../team-link";
 import { useTournament } from "../tournament-provider";
@@ -15,7 +15,6 @@ export function KnockoutsView() {
   const round = KNOCKOUT_ROUNDS.find((r) => r.key === roundKey)!;
   const bySlot = new Map(matches.filter((m) => m.slot_label).map((m) => [m.slot_label!, m]));
   const roundMatches = round.slots.map((s) => bySlot.get(s)).filter((m): m is Match => !!m);
-  const nextRound = KNOCKOUT_ROUNDS[KNOCKOUT_ROUNDS.indexOf(round) + 1];
 
   const final = bySlot.get("FINAL");
   const finalOutcome = final ? matchOutcome(final) : null;
@@ -73,12 +72,13 @@ export function KnockoutsView() {
                 </div>
               </div>
             )}
-            {bySlot.get("FINAL") && <KnockoutCard match={bySlot.get("FINAL")!} featured />}
+            {/* In playing order: the 3rd place match is the day before the final. */}
             {bySlot.get("3RD") && <KnockoutCard match={bySlot.get("3RD")!} />}
+            {bySlot.get("FINAL") && <KnockoutCard match={bySlot.get("FINAL")!} featured />}
           </div>
         ) : (
           <ol className="space-y-5">
-            {pairs(roundMatches).map((pair, i) => (
+            {pairs(roundMatches).map((pair) => (
               <li key={pair[0].id}>
                 <div className="relative pr-5">
                   <div className="space-y-2">
@@ -96,18 +96,31 @@ export function KnockoutsView() {
                     </>
                   )}
                 </div>
-                {nextRound && (
-                  <p className="mt-1.5 pr-5 text-right text-xs font-medium text-muted">
-                    Winners meet in{" "}
-                    <span className="font-display text-[13px] font-bold text-text">{nextRound.slots[i]}</span>
-                  </p>
-                )}
+                <NextTie match={pair[0]} matches={matches} />
               </li>
             ))}
           </ol>
         )}
       </div>
     </div>
+  );
+}
+
+/** "Winners meet in QF1", from the stored sources. */
+function NextTie({ match, matches }: { match: Match; matches: Match[] }) {
+  const next = winnerGoesTo(match, matches);
+  if (!next?.slot_label) return null;
+  return (
+    <p className="mt-1.5 pr-5 text-right text-xs font-medium text-muted">
+      Winners meet in{" "}
+      {next.slot_label === "FINAL" ? (
+        <>
+          the <span className="font-display text-[13px] font-bold text-text">Final</span>
+        </>
+      ) : (
+        <span className="font-display text-[13px] font-bold text-text">{slotDisplayName(next.slot_label)}</span>
+      )}
+    </p>
   );
 }
 

@@ -331,13 +331,32 @@ export const KNOCKOUT_ROUNDS: KnockoutRound[] = [
     slots: ["R16-M1", "R16-M2", "R16-M3", "R16-M4", "R16-M5", "R16-M6", "R16-M7", "R16-M8"] },
   { key: "qf", label: "Quarter-finals", shortLabel: "QF", slots: ["QF1", "QF2", "QF3", "QF4"] },
   { key: "sf", label: "Semi-finals", shortLabel: "SF", slots: ["SF1", "SF2"] },
-  { key: "finals", label: "Finals", shortLabel: "Final", slots: ["FINAL", "3RD"] },
+  // 3rd place first: it is played the day before the final.
+  { key: "finals", label: "Finals", shortLabel: "Final", slots: ["3RD", "FINAL"] },
 ];
 
+/**
+ * A bracket label as shown to people, matching the official bracket: "R16-M1" → "M1",
+ * "FINAL" → "Final", "3RD" → "3rd place". Stored labels never change.
+ */
 export function slotDisplayName(slotLabel: string): string {
   if (slotLabel === "FINAL") return "Final";
   if (slotLabel === "3RD") return "3rd place";
-  return slotLabel;
+  return slotLabel.replace(/^R16-/, "");
+}
+
+/** Bracket labels inside a message from the database ("Reset R16-M1 first") in display form. */
+export function displaySlotLabels(text: string): string {
+  return text.replace(/\bR16-(M\d)\b/g, "$1");
+}
+
+/** The tie a match's winner goes on to (by the stored sources, not match numbers). */
+export function winnerGoesTo(match: Pick<Match, "id">, matches: Match[]): Match | undefined {
+  return matches.find(
+    (m) =>
+      (m.home_source === "match_winner" && m.home_source_match === match.id) ||
+      (m.away_source === "match_winner" && m.away_source_match === match.id),
+  );
 }
 
 export type ResolvedSide = {
@@ -380,7 +399,8 @@ export function resolveSide(
 
   const sourceMatch = sourceMatchId != null ? ctx.matchesById.get(sourceMatchId) : undefined;
   const wantWinner = source === "match_winner";
-  const placeholder = `${wantWinner ? "Winner" : "Loser"} ${sourceMatch?.slot_label ? slotDisplayName(sourceMatch.slot_label) : `match ${sourceMatchId}`}`;
+  // The 3rd place match takes the semi-final losers, shown as "Runner-up SF1" (stored as a loser source).
+  const placeholder = `${wantWinner ? "Winner" : "Runner-up"} ${sourceMatch?.slot_label ? slotDisplayName(sourceMatch.slot_label) : `match ${sourceMatchId}`}`;
   let projected: Team | null = null;
   if (sourceMatch) {
     const outcome = matchOutcome(sourceMatch);
@@ -429,7 +449,7 @@ export function previewFillRound16(
       if (!g.complete) plan = { team: null, outcome: "skipped", reason: `Group ${group} not complete` };
       else if (!row || row.tiedUnresolved) plan = { team: null, outcome: "skipped", reason: `Group ${group} needs a decision` };
       else if (row.team.id === currentId) plan = { team: row.team, outcome: "unchanged", reason: null };
-      else if (started) plan = { team: row.team, outcome: "skipped", reason: `${match.slot_label} has already started` };
+      else if (started) plan = { team: row.team, outcome: "skipped", reason: `${slotDisplayName(match.slot_label ?? "")} has already started` };
       else plan = { team: row.team, outcome: "filled", reason: null };
       plans.push({ match, side, placeholder, current, ...plan });
     }
