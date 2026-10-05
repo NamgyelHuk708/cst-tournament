@@ -12,7 +12,7 @@ import {
   slotDisplayName,
   type Match,
 } from "@/lib/tournament";
-import { EventColumns } from "../event-list";
+import { MatchTimeline, ScorerColumns } from "../event-list";
 import { GroupTag } from "../group-tag";
 import { Matchup } from "../live/live-hero";
 import { Sheet } from "../sheet";
@@ -55,7 +55,7 @@ export function MatchSheetProvider({ children }: { children: React.ReactNode }) 
 type Tab = "summary" | "lineups";
 
 function MatchDetail({ match, onLeave }: { match: Match; onLeave: () => void }) {
-  const { teamsById } = useTournament();
+  const { teamsById, events, playersById } = useTournament();
   const sides = useResolvedSides(match);
   const [tab, setTab] = useState<Tab>("summary");
   const tabsId = useId();
@@ -102,6 +102,7 @@ function MatchDetail({ match, onLeave }: { match: Match; onLeave: () => void }) 
           Penalties {match.home_pens}–{match.away_pens}
         </p>
       )}
+      <ScorerColumns events={eventsForMatch(match, events, playersById)} className="mt-4" />
 
       {/* Without the lineups flag there is only the summary: no tabs. */}
       {!LineupsPanel ? (
@@ -166,7 +167,7 @@ function SummaryPanel({ match }: { match: Match }) {
   return (
     <div className="space-y-4">
       {matchEvents.length > 0 ? (
-        <EventColumns events={matchEvents} />
+        <MatchTimeline match={match} events={matchEvents} />
       ) : (
         <p className="rounded-xl bg-bg px-4 py-4 text-center text-sm text-muted">
           {started

@@ -1,7 +1,7 @@
 "use client";
 
 import { eventsForMatch, matchClock, slotDisplayName, type Match, type Team } from "@/lib/tournament";
-import { EventColumns } from "../event-list";
+import { ScorerColumns } from "../event-list";
 import { GroupTag } from "../group-tag";
 import { TeamLink } from "../team-link";
 import { TeamLogo } from "../team-logo";
@@ -58,7 +58,7 @@ export function LiveHero({ match }: { match: Match }) {
 
         {matchEvents.length > 0 && (
           <div className="mt-5 border-t border-border pt-4">
-            <EventColumns events={matchEvents} />
+            <ScorerColumns events={matchEvents} />
           </div>
         )}
       </div>

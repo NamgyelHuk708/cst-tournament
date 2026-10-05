@@ -105,6 +105,34 @@ export function matchClock(match: Pick<Match, "status" | "period_started_at">, n
   return { label, running: true };
 }
 
+/** The clock as a minute and stoppage time (45 + 2), or null when no half is running. */
+export function clockMinute(match: Pick<Match, "status" | "period_started_at">, now: number | null): { minute: number; added: number } | null {
+  if ((match.status !== "first_half" && match.status !== "second_half") || !match.period_started_at || now == null) return null;
+  const halfStart = match.status === "first_half" ? 0 : HALF_LENGTH_MINUTES;
+  const halfEnd = halfStart + HALF_LENGTH_MINUTES;
+  const minute = halfStart + Math.max(0, Math.floor((now - Date.parse(match.period_started_at)) / 60_000)) + 1;
+  return minute > halfEnd ? { minute: halfEnd, added: Math.min(minute - halfEnd, MAX_STOPPAGE_SHOWN) } : { minute, added: 0 };
+}
+
+/** Stoppage time recorded per half at most. */
+export const MAX_STOPPAGE_MINUTES = 30;
+
+/** Minutes that end a half (45, 90): the only ones that can have stoppage time. */
+export function isHalfEnd(minute: number): boolean {
+  return minute === HALF_LENGTH_MINUTES || minute === HALF_LENGTH_MINUTES * 2;
+}
+
+/** Why a minute can't be right, or null if it's fine. */
+export function minuteProblem(minute: number, added: number): string | null {
+  const full = HALF_LENGTH_MINUTES * 2;
+  if (!Number.isInteger(minute) || minute < 1) return "The minute must be 1 or more.";
+  if (minute > full) return `The match has ${full} minutes. For a goal in stoppage time, use ${full} and add the extra minutes.`;
+  if (added < 0 || !Number.isInteger(added)) return "Stoppage time must be a whole number of minutes.";
+  if (added > 0 && !isHalfEnd(minute)) return `Stoppage time only goes after ${HALF_LENGTH_MINUTES} or ${full}.`;
+  if (added > MAX_STOPPAGE_MINUTES) return `Stoppage time can't be more than ${MAX_STOPPAGE_MINUTES} minutes.`;
+  return null;
+}
+
 // ---------------------------------------------------------------------------
 // Results
 // ---------------------------------------------------------------------------
@@ -524,6 +552,112 @@ export function compareEventTime(
 ): number {
   if (a.minute == null || b.minute == null) return (a.minute == null ? 1 : 0) - (b.minute == null ? 1 : 0) || a.id - b.id;
   return a.minute - b.minute || (a.added_time ?? 0) - (b.added_time ?? 0) || a.id - b.id;
+}
+
+// ---------------------------------------------------------------------------
+// Scorers and timeline
+// ---------------------------------------------------------------------------
+
+export type ScorerLine = {
+  key: string;
+  side: Side;
+  /** Player name, "Goal" when no scorer was recorded. */
+  name: string;
+  ownGoal: boolean;
+  /** Minutes in order ("10'", "45+2'"); goals without a minute are counted in `untimed`. */
+  minutes: string[];
+  untimed: number;
+};
+
+/**
+ * Goals grouped by scorer, as broadcasters show them: one line per player with all their minutes,
+ * players ordered by their first goal. Own goals sit under the team that benefited, marked OG.
+ * Goals with no scorer recorded share a "Goal" line, so the count still adds up.
+ */
+export function scorerLines(events: DisplayEvent[]): ScorerLine[] {
+  const lines = new Map<string, ScorerLine>();
+  for (const e of events) {
+    if (e.type !== "goal" && e.type !== "own_goal") continue;
+    const ownGoal = e.type === "own_goal";
+    const key = `${e.side}:${ownGoal ? "og" : "g"}:${e.player_id ?? "none"}`;
+    const line = lines.get(key) ?? {
+      key,
+      side: e.side,
+      name: e.playerName ?? (ownGoal ? "Own goal" : "Goal"),
+      ownGoal: ownGoal && e.playerName != null,
+      minutes: [],
+      untimed: 0,
+    };
+    if (e.minute == null) line.untimed++;
+    else line.minutes.push(eventMinuteLabel(e));
+    lines.set(key, line);
+  }
+  return [...lines.values()]; // events arrive in time order, so lines are in order of first goal
+}
+
+export type TimelineRow =
+  | { kind: "event"; event: DisplayEvent; score: [number, number] | null; hatTrick: boolean; count?: number }
+  | { kind: "divider"; label: string; detail?: string }
+  | { kind: "untimed" };
+
+const PLAYED_FIRST_HALF: readonly MatchStatus[] = ["half_time", "second_half", "penalties", "finished"];
+
+/**
+ * Every goal and card in minute order, with the running score on goals, half time and full time
+ * as dividers (and the shoot-out for knockouts), then anything without a minute at the end.
+ */
+export function matchTimeline(match: Match, events: DisplayEvent[]): TimelineRow[] {
+  const timed = events.filter((e) => e.minute != null);
+  const untimed = events.filter((e) => e.minute == null);
+  const goalsSoFar = new Map<string, number>();
+  const isGoal = (e: DisplayEvent) => e.type === "goal" || e.type === "own_goal";
+  const hatTrickOn = (e: DisplayEvent) => {
+    if (e.type !== "goal" || !e.player_id) return false;
+    const n = (goalsSoFar.get(e.player_id) ?? 0) + 1;
+    goalsSoFar.set(e.player_id, n);
+    return n === 3;
+  };
+  const score: [number, number] = [0, 0];
+  const rows: TimelineRow[] = [];
+  let halfTimeShown = false;
+  // The half-time score is only known if every goal has a minute.
+  const halfTimeKnown = !untimed.some(isGoal);
+  const halfTime = () => {
+    if (halfTimeShown || !halfTimeKnown || !PLAYED_FIRST_HALF.includes(match.status)) return;
+    halfTimeShown = true;
+    rows.push({ kind: "divider", label: "Half time", detail: `${score[0]}–${score[1]}` });
+  };
+  for (const e of timed) {
+    if (e.minute! > HALF_LENGTH_MINUTES) halfTime();
+    if (isGoal(e)) score[e.side === "home" ? 0 : 1]++;
+    rows.push({ kind: "event", event: e, score: isGoal(e) ? [score[0], score[1]] : null, hatTrick: hatTrickOn(e) });
+  }
+  halfTime();
+  if (match.status === "penalties" || match.status === "finished") {
+    rows.push({ kind: "divider", label: "Full time", detail: `${match.home_score}–${match.away_score}` });
+    if (match.home_pens != null && match.away_pens != null) {
+      rows.push({ kind: "divider", label: "Penalties", detail: `${match.home_pens}–${match.away_pens}` });
+    }
+  }
+  if (untimed.length) {
+    rows.push({ kind: "untimed" });
+    // Goals with neither scorer nor minute (e.g. a final score entered afterwards) share one row per
+    // team and type: "Goal ×17" rather than seventeen identical lines.
+    const grouped = new Map<string, Extract<TimelineRow, { kind: "event" }>>();
+    for (const e of untimed) {
+      if (isGoal(e) && !e.player_id) {
+        const key = `${e.side}:${e.type}`;
+        const row = grouped.get(key);
+        if (row) row.count = (row.count ?? 1) + 1;
+        else {
+          const fresh: Extract<TimelineRow, { kind: "event" }> = { kind: "event", event: e, score: null, hatTrick: false, count: 1 };
+          grouped.set(key, fresh);
+          rows.push(fresh);
+        }
+      } else rows.push({ kind: "event", event: e, score: null, hatTrick: hatTrickOn(e) });
+    }
+  }
+  return rows;
 }
 
 /** "67'", "45+2'", or "–" when the minute isn't known. */
