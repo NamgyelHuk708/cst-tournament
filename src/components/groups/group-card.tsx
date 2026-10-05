@@ -51,13 +51,13 @@ export function GroupCard({ standings }: { standings: GroupStandings }) {
         </span>
       </div>
 
-      <table className="w-full text-sm tabular">
+      <table className="w-full table-fixed text-sm tabular">
         <caption className="sr-only">
           Group {group} standings. Top {QUALIFIERS_PER_GROUP} qualify.
         </caption>
         <thead>
           <tr className="text-xs font-semibold text-muted">
-            <th scope="col" className="w-9 py-2 pl-4 text-left font-semibold">
+            <th scope="col" className="w-8 py-2 pl-4 text-left font-semibold sm:w-9">
               <span className="sr-only">Position</span>#
             </th>
             <th scope="col" className="py-2 text-left font-semibold">Team</th>
@@ -65,8 +65,8 @@ export function GroupCard({ standings }: { standings: GroupStandings }) {
             <Th label="Won">W</Th>
             <Th label="Drawn">D</Th>
             <Th label="Lost">L</Th>
-            <Th label="Goal difference" className="w-9">GD</Th>
-            <th scope="col" className="w-11 py-2 pr-4 text-right font-semibold">
+            <Th label="Goal difference" className="w-8 sm:w-9">GD</Th>
+            <th scope="col" className="w-10 py-2 pr-4 text-right font-semibold sm:w-11">
               <abbr title="Points" className="no-underline">Pts</abbr>
             </th>
           </tr>
@@ -115,7 +115,7 @@ export function GroupCard({ standings }: { standings: GroupStandings }) {
   );
 }
 
-function Th({ children, label, className = "w-7" }: { children: React.ReactNode; label: string; className?: string }) {
+function Th({ children, label, className = "w-6 sm:w-7" }: { children: React.ReactNode; label: string; className?: string }) {
   return (
     <th scope="col" className={`py-2 text-center font-semibold ${className}`}>
       <abbr title={label} className="no-underline">
@@ -136,15 +136,11 @@ function Row({ row, afterCut, markTie }: { row: StandingRow; afterCut: boolean; 
           {row.position}
         </span>
       </td>
-      <th scope="row" className="max-w-0 pr-2 text-left font-normal">
+      <th scope="row" className="max-w-0 py-2 pr-2 text-left font-normal">
         <span className="flex items-center gap-2">
-          <TeamLogo team={row.team} size={20} className="self-center" />
-          <TeamLink team={row.team} className="font-display text-[17px] font-bold tracking-wide">
+          <TeamLogo team={row.team} size={20} />
+          <TeamLink team={row.team} className="font-display text-[17px] leading-none font-bold tracking-wide">
             {row.team.short_code}
-          </TeamLink>
-          {/* Full name only where there is room for it; on phones the code is the label. */}
-          <TeamLink team={row.team} decorative className="hidden truncate text-[13px] text-muted sm:inline">
-            {row.team.name}
           </TeamLink>
           {row.orderedByOverride && (
             <span className="text-xs text-muted" title="Order set by the organisers">
@@ -157,6 +153,10 @@ function Row({ row, afterCut, markTie }: { row: StandingRow; afterCut: boolean; 
             </span>
           )}
         </span>
+        {/* The full name on its own line, wrapping rather than cut short, so fans needn't know the codes. */}
+        <TeamLink team={row.team} decorative className="mt-1 block text-xs leading-tight text-muted [overflow-wrap:anywhere]">
+          {row.team.name}
+        </TeamLink>
       </th>
       <td className="text-center">{row.played}</td>
       <td className="text-center">{row.won}</td>
