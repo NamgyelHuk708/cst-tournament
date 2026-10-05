@@ -11,6 +11,7 @@ import {
   type Match,
   type MatchEvent,
   type Player,
+  type Official,
   type Snapshot,
   type Substitution,
   type Team,
@@ -36,6 +37,7 @@ type TournamentContextValue = Snapshot & {
     upsertPlayer: (row: Player) => void;
     upsertSub: (row: Substitution) => void;
     removeSub: (id: number) => void;
+    setOfficials: (matchId: number, rows: Official[]) => void;
     refresh: () => Promise<void>;
   };
 };
@@ -149,6 +151,9 @@ export function TournamentProvider({
         .on<Substitution>("postgres_changes", { event: "*", schema: "public", table: "substitutions" }, (p) =>
           apply((d) => ({ ...d, substitutions: applyChange(d.substitutions, p) })),
         )
+        .on<Official>("postgres_changes", { event: "*", schema: "public", table: "match_officials" }, (p) =>
+          apply((d) => ({ ...d, officials: applyChange(d.officials, p) })),
+        )
         .subscribe((status) => {
           // Ignore callbacks from channels we have already replaced (removing one fires CLOSED).
           if (disposed || current !== channel) return;
@@ -225,6 +230,7 @@ export function TournamentProvider({
       upsertPlayer: (row) => setData((d) => ({ ...d, players: upsert(d.players, row) })),
       upsertSub: (row) => setData((d) => ({ ...d, substitutions: upsert(d.substitutions, row) })),
       removeSub: (id) => setData((d) => ({ ...d, substitutions: d.substitutions.filter((x) => x.id !== id) })),
+      setOfficials: (matchId, rows) => setData((d) => ({ ...d, officials: [...d.officials.filter((o) => o.match_id !== matchId), ...rows] })),
       refresh,
     }),
     [refresh],

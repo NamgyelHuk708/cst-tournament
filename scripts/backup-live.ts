@@ -44,11 +44,21 @@ async function main() {
   u.password = encodeURIComponent(password);
   u.port = "5432";
   const dbUrl = u.toString();
+  // The connection string contains the password: it is never printed. Errors are reported with the
+  // password removed, and the tool's own output is filtered the same way.
+  const redact = (text: string) => text.split(dbUrl).join("<database url>").split(password).join("<password>").split(encodeURIComponent(password)).join("<password>");
   for (const [suffix, extra] of [["schema", []], ["data", ["--data-only", "--use-copy"]]] as const) {
-    execFileSync("npx", ["supabase", "db", "dump", "--db-url", dbUrl, "--schema", "public", ...extra, "-f", `${base}.${suffix}.sql`], {
-      stdio: ["ignore", "ignore", "inherit"],
-    });
-    console.log(`pg_dump (${suffix}): ${base}.${suffix}.sql`);
+    try {
+      execFileSync("npx", ["supabase", "db", "dump", "--db-url", dbUrl, "--schema", "public", ...extra, "-f", `${base}.${suffix}.sql`], {
+        stdio: ["ignore", "pipe", "pipe"],
+        encoding: "utf8",
+      });
+      console.log(`pg_dump (${suffix}): ${base}.${suffix}.sql`);
+    } catch (err) {
+      const e = err as { status?: number; stderr?: string; stdout?: string };
+      const detail = redact(`${e.stderr ?? ""}${e.stdout ?? ""}`).trim().split("\n").slice(-6).join("\n");
+      throw new Error(`pg_dump (${suffix}) failed${e.status != null ? ` (exit ${e.status})` : ""}. The JSON snapshot was saved.\n${detail}`);
+    }
   }
 }
 

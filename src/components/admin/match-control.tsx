@@ -29,6 +29,7 @@ import { useResolvedSides } from "../use-resolved-sides";
 import { EventLog } from "./event-log";
 import { EditPlayerSheet } from "./edit-player-sheet";
 import { EventSheet } from "./event-sheet";
+import { OfficialsSection } from "./officials";
 import { SubSheet } from "./sub-sheet";
 import { Sheet } from "../sheet";
 
@@ -280,6 +281,8 @@ export function MatchControl({ matchId }: { matchId: number }) {
       </div>
 
       <Scoreboard match={match} home={home} away={away} score={score} />
+
+      <OfficialsSection match={match} />
 
       <EventLog
         events={matchEvents}

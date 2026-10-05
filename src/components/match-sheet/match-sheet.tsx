@@ -9,6 +9,7 @@ import {
   isFinished,
   isLive,
   matchClock,
+  groupOfficials,
   slotDisplayName,
   subsForMatch,
   type Match,
@@ -160,7 +161,8 @@ function Status({ match }: { match: Match }) {
 }
 
 function SummaryPanel({ match }: { match: Match }) {
-  const { events, playersById, substitutions } = useTournament();
+  const { events, playersById, substitutions, officials } = useTournament();
+  const officialGroups = groupOfficials(officials, match.id);
   const now = useServerNow(60_000);
   const matchEvents = eventsForMatch(match, events, playersById);
   const matchSubs = subsForMatch(match, substitutions, playersById);
@@ -178,6 +180,27 @@ function SummaryPanel({ match }: { match: Match }) {
               ? "Result to come. Goals and cards will appear here once it is entered."
               : "Goals and cards will appear here once the match starts."}
         </p>
+      )}
+      {officialGroups.length > 0 && (
+        <section aria-labelledby="officials-title">
+          <h3 id="officials-title" className="mb-2 px-1 text-xs font-bold text-muted">
+            Officials
+          </h3>
+          <dl className="divide-y divide-border rounded-xl text-sm ring-1 ring-border">
+            {officialGroups.map((g) => (
+              <div key={g.label} className="flex items-baseline justify-between gap-4 px-4 py-2.5">
+                <dt className="shrink-0 text-muted">{g.label}</dt>
+                <dd className="min-w-0 text-right font-medium">
+                  {g.names.map((n, i) => (
+                    <span key={i} className="block">
+                      {n}
+                    </span>
+                  ))}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </section>
       )}
       <dl className="divide-y divide-border rounded-xl text-sm ring-1 ring-border">
         <Info label="Kick-off">

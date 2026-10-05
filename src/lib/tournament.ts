@@ -12,6 +12,8 @@ export type MatchEvent = Pick<
   "id" | "match_id" | "type" | "team_id" | "player_id" | "minute" | "added_time" | "client_id"
 >;
 export type Player = Pick<Tables["players"]["Row"], "id" | "team_id" | "name" | "shirt_number">;
+export type OfficialRole = "referee" | "assistant_referee" | "fourth_official" | "match_commissioner" | "other";
+export type Official = { id: number; match_id: number; role: OfficialRole; custom_role: string | null; name: string; position: number };
 export type Substitution = Pick<
   Tables["substitutions"]["Row"],
   "id" | "match_id" | "team_id" | "player_off" | "player_on" | "minute" | "added_time" | "client_id"
@@ -27,7 +29,39 @@ export type Snapshot = {
   events: MatchEvent[];
   players: Player[];
   substitutions: Substitution[];
+  officials: Official[];
 };
+
+/** Officials' roles in the standard order, with their labels. */
+export const OFFICIAL_ROLES: { role: OfficialRole; label: string; plural: string }[] = [
+  { role: "referee", label: "Referee", plural: "Referees" },
+  { role: "assistant_referee", label: "Assistant referee", plural: "Assistant referees" },
+  { role: "fourth_official", label: "Fourth official", plural: "Fourth officials" },
+  { role: "match_commissioner", label: "Match commissioner", plural: "Match commissioners" },
+  { role: "other", label: "Other", plural: "Other" },
+];
+
+/**
+ * A match's officials grouped in the standard order (Referee, Assistant referees, Fourth official,
+ * Match commissioner, then each "Other" under its own label), keeping the admin's order within a group.
+ */
+export function groupOfficials(officials: Official[], matchId: number): { label: string; names: string[] }[] {
+  const mine = officials.filter((o) => o.match_id === matchId).sort((a, b) => a.position - b.position);
+  const groups: { label: string; names: string[] }[] = [];
+  for (const r of OFFICIAL_ROLES) {
+    const list = mine.filter((o) => o.role === r.role);
+    if (!list.length) continue;
+    if (r.role === "other") {
+      for (const o of list) {
+        const label = o.custom_role || "Other";
+        const g = groups.find((x) => x.label === label);
+        if (g) g.names.push(o.name);
+        else groups.push({ label, names: [o.name] });
+      }
+    } else groups.push({ label: list.length > 1 ? r.plural : r.label, names: list.map((o) => o.name) });
+  }
+  return groups;
+}
 
 // ---------------------------------------------------------------------------
 // Constants

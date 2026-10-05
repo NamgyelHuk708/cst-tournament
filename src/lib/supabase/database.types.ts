@@ -195,6 +195,47 @@ export type Database = {
           },
         ]
       }
+      match_officials: {
+        Row: {
+          created_at: string
+          custom_role: string | null
+          id: number
+          is_demo: boolean
+          match_id: number
+          name: string
+          position: number
+          role: string
+        }
+        Insert: {
+          created_at?: string
+          custom_role?: string | null
+          id?: never
+          is_demo?: boolean
+          match_id: number
+          name: string
+          position?: number
+          role: string
+        }
+        Update: {
+          created_at?: string
+          custom_role?: string | null
+          id?: never
+          is_demo?: boolean
+          match_id?: number
+          name?: string
+          position?: number
+          role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "match_officials_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       matches: {
         Row: {
           away_pens: number | null
@@ -735,6 +776,25 @@ export type Database = {
           to: "matches"
           isOneToOne: true
           isSetofReturn: false
+        }
+      }
+      admin_set_officials: {
+        Args: { p_match: number; p_officials: Json }
+        Returns: {
+          created_at: string
+          custom_role: string | null
+          id: number
+          is_demo: boolean
+          match_id: number
+          name: string
+          position: number
+          role: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "match_officials"
+          isOneToOne: false
+          isSetofReturn: true
         }
       }
       admin_set_pens: {
