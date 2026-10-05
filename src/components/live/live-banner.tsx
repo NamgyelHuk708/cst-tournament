@@ -1,39 +1,41 @@
-import Image from "next/image";
-import hero from "@/assets/banner-hero.webp";
-import strip from "@/assets/banner-strip.webp";
+import { getImageProps } from "next/image";
+import phone from "@/assets/banner-phone.webp";
+import wide from "@/assets/banner-wide.webp";
 
-const ALT = "CST Silver Jubilee Departmental Football Tournament";
-// The page column is max-w-xl (576px) minus 16px gutters; full width below that.
-const SIZES = "(min-width: 576px) 544px, calc(100vw - 32px)";
+const ALT = "College of Science and Technology, Royal University of Bhutan — celebrating the 25th Foundation Day";
+const TITLE = "CST Silver Jubilee Departmental Football Tournament";
+// Breakpoint where the wider crop takes over (Tailwind's sm). The page column is max-w-xl (576px).
+const WIDE_FROM = 640;
 
 /**
- * Tournament banner for the Live page when nothing is live. The artwork is pre-cropped
- * (scripts/brand-assets.py) to the emblem and title, so it stays readable at phone width.
- * Not preloaded and low fetch priority: it must never hold up the scores.
+ * Live page banner when nothing is live: the foundation-day artwork, then the tournament name as
+ * real text (the artwork doesn't mention the tournament). Phones get a crop of the logos and title;
+ * wider screens see more of the artwork. Low priority and not preloaded: it never holds up the scores.
  */
 export function BannerHero() {
+  const common = { alt: ALT, fetchPriority: "low" as const, loading: "lazy" as const };
+  const { props: { srcSet: wideSrcSet } } = getImageProps({ ...common, src: wide, sizes: "544px" });
+  const { props: img } = getImageProps({ ...common, src: phone, sizes: "calc(100vw - 32px)" });
+
   return (
-    <Image
-      src={hero}
-      alt={ALT}
-      sizes={SIZES}
-      placeholder="blur"
-      fetchPriority="low"
-      className="h-auto w-full rounded-2xl shadow-sm"
-    />
+    <section aria-labelledby="tournament-title" className="overflow-hidden rounded-2xl bg-card shadow-sm ring-1 ring-border/60">
+      {/* Fixed proportions per breakpoint, so nothing below moves when the image arrives. */}
+      <picture
+        className="block aspect-[1620/661] bg-cover bg-center sm:aspect-[2/1]"
+        style={{ backgroundImage: `url(${phone.blurDataURL})` }}
+      >
+        <source media={`(min-width: ${WIDE_FROM}px)`} srcSet={wideSrcSet} sizes="544px" />
+        {/* eslint-disable-next-line jsx-a11y/alt-text -- alt comes from getImageProps */}
+        <img {...img} className="h-full w-full object-cover" />
+      </picture>
+      <h2 id="tournament-title" className="px-4 pt-2.5 pb-3 text-center font-display text-[19px] leading-tight font-bold text-balance text-brand">
+        {TITLE}
+      </h2>
+    </section>
   );
 }
 
-/** Slim version while a match is live, so the live card stays near the top of the screen. */
+/** While a match is live the artwork collapses to just the name, so the live card stays at the top. */
 export function BannerStrip() {
-  return (
-    <Image
-      src={strip}
-      alt={ALT}
-      sizes={SIZES}
-      placeholder="blur"
-      fetchPriority="low"
-      className="h-auto w-full rounded-xl"
-    />
-  );
+  return <h2 className="truncate px-1 text-center font-display text-sm font-semibold text-muted">{TITLE}</h2>;
 }
