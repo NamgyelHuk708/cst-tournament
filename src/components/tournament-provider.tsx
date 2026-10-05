@@ -12,6 +12,7 @@ import {
   type MatchEvent,
   type Player,
   type Snapshot,
+  type Substitution,
   type Team,
 } from "@/lib/tournament";
 
@@ -33,6 +34,8 @@ type TournamentContextValue = Snapshot & {
     upsertEvent: (row: MatchEvent) => void;
     removeEvent: (id: number) => void;
     upsertPlayer: (row: Player) => void;
+    upsertSub: (row: Substitution) => void;
+    removeSub: (id: number) => void;
     refresh: () => Promise<void>;
   };
 };
@@ -143,6 +146,9 @@ export function TournamentProvider({
         .on<Player>("postgres_changes", { event: "*", schema: "public", table: "players" }, (p) =>
           apply((d) => ({ ...d, players: applyChange(d.players, p) })),
         )
+        .on<Substitution>("postgres_changes", { event: "*", schema: "public", table: "substitutions" }, (p) =>
+          apply((d) => ({ ...d, substitutions: applyChange(d.substitutions, p) })),
+        )
         .subscribe((status) => {
           // Ignore callbacks from channels we have already replaced (removing one fires CLOSED).
           if (disposed || current !== channel) return;
@@ -217,6 +223,8 @@ export function TournamentProvider({
       upsertEvent: (row) => setData((d) => ({ ...d, events: upsert(d.events, row) })),
       removeEvent: (id) => setData((d) => ({ ...d, events: d.events.filter((e) => e.id !== id) })),
       upsertPlayer: (row) => setData((d) => ({ ...d, players: upsert(d.players, row) })),
+      upsertSub: (row) => setData((d) => ({ ...d, substitutions: upsert(d.substitutions, row) })),
+      removeSub: (id) => setData((d) => ({ ...d, substitutions: d.substitutions.filter((x) => x.id !== id) })),
       refresh,
     }),
     [refresh],

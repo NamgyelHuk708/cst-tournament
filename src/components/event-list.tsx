@@ -1,4 +1,4 @@
-import { eventMinuteLabel, matchTimeline, scorerLines, type DisplayEvent, type Match, type ScorerLine, type Side } from "@/lib/tournament";
+import { eventMinuteLabel, matchTimeline, scorerLines, type DisplayEvent, type DisplaySub, type Match, type ScorerLine, type Side } from "@/lib/tournament";
 import { BallIcon, CardIcon } from "./icons";
 
 function EventIcon({ type, className = "" }: { type: DisplayEvent["type"]; className?: string }) {
@@ -95,8 +95,8 @@ export function ScorerColumns({ events, className = "" }: { events: DisplayEvent
  * Every goal and card in order, on its team's side, with the running score on goals and
  * half time / full time (and penalties) as dividers. Untimed events are listed at the end.
  */
-export function MatchTimeline({ match, events }: { match: Match; events: DisplayEvent[] }) {
-  const rows = matchTimeline(match, events);
+export function MatchTimeline({ match, events, subs = [] }: { match: Match; events: DisplayEvent[]; subs?: DisplaySub[] }) {
+  const rows = matchTimeline(match, events, subs);
   if (rows.length === 0) return null;
   return (
     <ol className="text-[13px]" aria-label="Match timeline">
@@ -114,6 +114,17 @@ export function MatchTimeline({ match, events }: { match: Match; events: Display
                 </span>
               )}
               <span aria-hidden="true" className="h-px flex-1 bg-border" />
+            </li>
+          );
+        }
+        if (row.kind === "sub") {
+          const away = row.sub.side === "away";
+          return (
+            <li key={`s${row.sub.id}`} className={`flex min-h-8 items-center gap-2 ${away ? "flex-row-reverse text-right" : ""}`}>
+              <span className="w-10 shrink-0 font-display text-sm font-bold text-muted tabular" style={{ textAlign: away ? "right" : "left" }}>
+                {row.sub.minute != null ? eventMinuteLabel(row.sub) : ""}
+              </span>
+              <SubText sub={row.sub} align={away ? "right" : "left"} />
             </li>
           );
         }
@@ -145,5 +156,43 @@ export function MatchTimeline({ match, events }: { match: Match; events: Display
         );
       })}
     </ol>
+  );
+}
+
+/**
+ * A substitution on two lines, "↑ #14 Sonam in" over "↓ #9 Dorji out", so names aren't cut short.
+ * The arrows sit in the icon column, and the words say which is which, not the colour.
+ */
+export function SubText({ sub, align = "left" }: { sub: DisplaySub; align?: "left" | "right" }) {
+  const line = (arrow: string, tone: string, p: DisplaySub["on"], word: string) => (
+    <span className={`flex min-w-0 items-center gap-2 ${align === "right" ? "flex-row-reverse" : ""}`}>
+      <span aria-hidden="true" className={`grid w-3.5 shrink-0 place-items-center font-bold ${tone}`}>
+        {arrow}
+      </span>
+      <span className="min-w-0 truncate">
+        {p ? <PlayerLabel name={p.name} number={p.number} /> : "Player"} <span className="text-muted">{word}</span>
+      </span>
+    </span>
+  );
+  return (
+    <span className="grid min-w-0 flex-1 gap-0.5 py-0.5">
+      {line("↑", "text-win-text", sub.on, "in")}
+      {line("↓", "text-muted", sub.off, "out")}
+    </span>
+  );
+}
+
+/** The live card's latest event when it's a substitution: minute and team, then who came on and off. */
+export function LatestSub({ sub, team }: { sub: DisplaySub; team: string }) {
+  return (
+    <div className="flex items-center gap-3 rounded-xl bg-bg px-3 py-2 text-[13px]">
+      <span className="shrink-0 leading-tight">
+        <span className="block text-[11px] font-semibold text-muted">Latest</span>
+        <span className="block font-display text-sm font-bold tabular">
+          {sub.minute != null ? eventMinuteLabel(sub) : ""} {team}
+        </span>
+      </span>
+      <SubText sub={sub} />
+    </div>
   );
 }

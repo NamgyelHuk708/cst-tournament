@@ -17,6 +17,7 @@ import {
   type Match,
   type MatchEvent,
   type MatchStatus,
+  type Substitution,
   type Team,
 } from "@/lib/tournament";
 import { ChevronIcon } from "../icons";
@@ -26,16 +27,23 @@ import { FinalScoreSheet, MoreSheet, ResetSheet, StatusSheet } from "./correctio
 import { TeamsSheet } from "./teams-sheet";
 import { useResolvedSides } from "../use-resolved-sides";
 import { EventLog } from "./event-log";
+import { EditPlayerSheet } from "./edit-player-sheet";
 import { EventSheet } from "./event-sheet";
+import { SubSheet } from "./sub-sheet";
 import { Sheet } from "../sheet";
 
 export type PendingTap = { clientId: string; matchId: number; teamId: number; type: EventType };
-type LastAction = {
-  id: number;
-  kind: "event" | "status" | "pens" | "final_score" | "reset" | "teams";
-  event_id: number | null;
-  new_status: MatchStatus | null;
-};
+type LastAction =
+  | {
+      source: "match";
+      id: number;
+      kind: "event" | "status" | "pens" | "final_score" | "reset" | "teams";
+      event_id: number | null;
+      new_status: MatchStatus | null;
+      created_at: string;
+    }
+  // Player edits and substitutions keep their own undo history (admin_actions).
+  | { source: "extra"; id: number; kind: "player_edit" | "sub_add" | "sub_edit" | "sub_delete"; created_at: string };
 
 const EVENT_NOUN: Record<EventType, string> = {
   goal: "Goal",
@@ -60,7 +68,7 @@ function errorMessage(err: unknown): string {
 }
 
 export function MatchControl({ matchId }: { matchId: number }) {
-  const { matches, matchesById, teamsById, teams, events, playersById, local } = useTournament();
+  const { matches, matchesById, teamsById, teams, events, playersById, substitutions, local } = useTournament();
   const supabase = useMemo(() => createClient(), []);
   const match = matchesById.get(matchId);
 
@@ -74,11 +82,14 @@ export function MatchControl({ matchId }: { matchId: number }) {
   const [confirmStatus, setConfirmStatus] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<MatchEvent | null>(null);
   const [adding, setAdding] = useState(false);
+  const [subbing, setSubbing] = useState<{ teamId: number; sub: Substitution | null } | null>(null);
+  const [editingPlayer, setEditingPlayer] = useState<string | null>(null);
   // Correction tools; errors from them are shown inside their sheet.
   const [tool, setTool] = useState<"more" | "final" | "status" | "reset" | "teams" | null>(null);
   const [toolError, setToolError] = useState<string | null>(null);
 
   const matchEvents = useMemo(() => events.filter((e) => e.match_id === matchId), [events, matchId]);
+  const matchSubs = useMemo(() => substitutions.filter((x) => x.match_id === matchId), [substitutions, matchId]);
 
   // Ties fed by this one. When a result moves a team into one of them, say so.
   const dependents = matches.filter((m) => m.home_source_match === matchId || m.away_source_match === matchId);
@@ -106,16 +117,29 @@ export function MatchControl({ matchId }: { matchId: number }) {
   // Taps still in flight: shown in the score until their event arrives.
   const inFlight = pending.filter((p) => !matchEvents.some((e) => e.client_id === p.clientId));
 
+  // The newest open action across both undo histories: one Undo button reverses whichever is more recent.
   const loadLastAction = useCallback(async () => {
-    const { data } = await supabase
-      .from("match_actions")
-      .select("id, kind, event_id, new_status")
-      .eq("match_id", matchId)
-      .is("undone_at", null)
-      .order("id", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    setLastAction((data as LastAction | null) ?? null);
+    const [main, extra] = await Promise.all([
+      supabase
+        .from("match_actions")
+        .select("id, kind, event_id, new_status, created_at")
+        .eq("match_id", matchId)
+        .is("undone_at", null)
+        .order("id", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from("admin_actions")
+        .select("id, kind, created_at")
+        .eq("match_id", matchId)
+        .is("undone_at", null)
+        .order("id", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+    ]);
+    const a = main.data ? ({ source: "match", ...main.data } as LastAction) : null;
+    const b = extra.data ? ({ source: "extra", ...extra.data } as LastAction) : null;
+    setLastAction(a && b ? (a.created_at > b.created_at ? a : b) : (a ?? b));
   }, [supabase, matchId]);
 
   // Refresh the undo label whenever the match changes (here or on another device).
@@ -208,7 +232,10 @@ export function MatchControl({ matchId }: { matchId: number }) {
 
   const undo = () =>
     run(
-      () => supabase.rpc("admin_undo", { p_match: matchId }),
+      () =>
+        lastAction?.source === "extra"
+          ? supabase.rpc("admin_undo_extra", { p_match: matchId })
+          : supabase.rpc("admin_undo", { p_match: matchId }),
       () => {
         setToast(null);
         local.refresh();
@@ -256,9 +283,12 @@ export function MatchControl({ matchId }: { matchId: number }) {
 
       <EventLog
         events={matchEvents}
+        subs={matchSubs}
         match={match}
         onEdit={setEditing}
         onDelete={setConfirmDelete}
+        onEditSub={(sub) => setSubbing({ teamId: sub.team_id, sub })}
+        onEditPlayer={setEditingPlayer}
       />
 
       <ControlDock
@@ -272,6 +302,7 @@ export function MatchControl({ matchId }: { matchId: number }) {
         failed={failed}
         toast={toast}
         onTap={tap}
+        onSub={(teamId) => setSubbing({ teamId, sub: null })}
         onRetry={() => failed && sendTap(failed.tap)}
         onDismissError={() => {
           setError(null);
@@ -309,6 +340,30 @@ export function MatchControl({ matchId }: { matchId: number }) {
               supabase.rpc("admin_set_ko_teams", { p_match: matchId, p_home: h as number, p_away: a as number }),
             )
           }
+        />
+      )}
+
+      {subbing && (
+        <SubSheet
+          key={subbing.sub?.id ?? `new-${subbing.teamId}`}
+          match={match}
+          teamId={subbing.teamId}
+          sub={subbing.sub}
+          onClose={() => setSubbing(null)}
+          onSaved={() => {
+            setSubbing(null);
+            loadLastAction();
+          }}
+        />
+      )}
+      {editingPlayer && (
+        <EditPlayerSheet
+          playerId={editingPlayer}
+          matchId={matchId}
+          onClose={() => {
+            setEditingPlayer(null);
+            loadLastAction();
+          }}
         />
       )}
 
@@ -444,6 +499,9 @@ export function MatchControl({ matchId }: { matchId: number }) {
 
 function describeUndo(action: LastAction | null, events: MatchEvent[], shortCode: (id: number) => string): string | null {
   if (!action) return null;
+  if (action.source === "extra") {
+    return { player_edit: "Undo player edit", sub_add: "Undo substitution", sub_edit: "Undo substitution change", sub_delete: "Undo deleting the substitution" }[action.kind];
+  }
   if (action.kind === "status") return action.new_status ? STATUS_UNDO[action.new_status] : "Undo status change";
   if (action.kind === "pens") return "Undo penalty score";
   if (action.kind === "final_score") return "Undo set final score";

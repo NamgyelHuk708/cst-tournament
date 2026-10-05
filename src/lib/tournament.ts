@@ -12,6 +12,10 @@ export type MatchEvent = Pick<
   "id" | "match_id" | "type" | "team_id" | "player_id" | "minute" | "added_time" | "client_id"
 >;
 export type Player = Pick<Tables["players"]["Row"], "id" | "team_id" | "name" | "shirt_number">;
+export type Substitution = Pick<
+  Tables["substitutions"]["Row"],
+  "id" | "match_id" | "team_id" | "player_off" | "player_on" | "minute" | "added_time" | "client_id"
+>;
 export type EventType = Enums["event_type"];
 export type MatchStatus = Enums["match_status"];
 export type MatchStage = Enums["match_stage"];
@@ -22,6 +26,7 @@ export type Snapshot = {
   matches: Match[];
   events: MatchEvent[];
   players: Player[];
+  substitutions: Substitution[];
 };
 
 // ---------------------------------------------------------------------------
@@ -601,8 +606,25 @@ export function scorerLines(events: DisplayEvent[]): ScorerLine[] {
   return [...lines.values()]; // events arrive in time order, so lines are in order of first goal
 }
 
+export type PlayerRef = { name: string; number: number | null };
+
+export type DisplaySub = Substitution & { side: Side; off: PlayerRef | null; on: PlayerRef | null };
+
+/** Substitutions for a match, in time order, with names and numbers. Untimed ones go last. */
+export function subsForMatch(match: Match, subs: Substitution[], playersById: Map<string, Player>): DisplaySub[] {
+  const ref = (id: string | null): PlayerRef | null => {
+    const p = id ? playersById.get(id) : undefined;
+    return p ? { name: p.name, number: p.shirt_number } : null;
+  };
+  return subs
+    .filter((s) => s.match_id === match.id)
+    .map((s) => ({ ...s, side: (s.team_id === match.home_team_id ? "home" : "away") as Side, off: ref(s.player_off), on: ref(s.player_on) }))
+    .sort(compareEventTime);
+}
+
 export type TimelineRow =
   | { kind: "event"; event: DisplayEvent; score: [number, number] | null; hatTrick: boolean; count?: number }
+  | { kind: "sub"; sub: DisplaySub }
   | { kind: "divider"; label: string; detail?: string }
   | { kind: "untimed" };
 
@@ -612,9 +634,13 @@ const PLAYED_FIRST_HALF: readonly MatchStatus[] = ["half_time", "second_half", "
  * Every goal and card in minute order, with the running score on goals, half time and full time
  * as dividers (and the shoot-out for knockouts), then anything without a minute at the end.
  */
-export function matchTimeline(match: Match, events: DisplayEvent[]): TimelineRow[] {
+export function matchTimeline(match: Match, events: DisplayEvent[], subs: DisplaySub[] = []): TimelineRow[] {
   const timed = events.filter((e) => e.minute != null);
   const untimed = events.filter((e) => e.minute == null);
+  // Substitutions slot in by minute (after a goal or card in the same minute); untimed ones go last.
+  const timedSubs = subs.filter((x) => x.minute != null);
+  const subsBefore = (e: Pick<MatchEvent, "minute" | "added_time"> | null) =>
+    timedSubs.filter((x) => !e || x.minute! < e.minute! || (x.minute === e.minute && (x.added_time ?? 0) < (e.added_time ?? 0)));
   const goalsSoFar = new Map<string, number>();
   const isGoal = (e: DisplayEvent) => e.type === "goal" || e.type === "own_goal";
   const hatTrickOn = (e: DisplayEvent) => {
@@ -633,11 +659,22 @@ export function matchTimeline(match: Match, events: DisplayEvent[]): TimelineRow
     halfTimeShown = true;
     rows.push({ kind: "divider", label: "Half time", detail: `${score[0]}–${score[1]}` });
   };
+  const placed = new Set<number>();
+  const placeSubs = (list: DisplaySub[]) => {
+    for (const x of list) {
+      if (placed.has(x.id)) continue;
+      if (x.minute! > HALF_LENGTH_MINUTES) halfTime();
+      placed.add(x.id);
+      rows.push({ kind: "sub", sub: x });
+    }
+  };
   for (const e of timed) {
+    placeSubs(subsBefore(e));
     if (e.minute! > HALF_LENGTH_MINUTES) halfTime();
     if (isGoal(e)) score[e.side === "home" ? 0 : 1]++;
     rows.push({ kind: "event", event: e, score: isGoal(e) ? [score[0], score[1]] : null, hatTrick: hatTrickOn(e) });
   }
+  placeSubs(timedSubs);
   halfTime();
   if (match.status === "penalties" || match.status === "finished") {
     rows.push({ kind: "divider", label: "Full time", detail: `${match.home_score}–${match.away_score}` });
@@ -645,8 +682,10 @@ export function matchTimeline(match: Match, events: DisplayEvent[]): TimelineRow
       rows.push({ kind: "divider", label: "Penalties", detail: `${match.home_pens}–${match.away_pens}` });
     }
   }
-  if (untimed.length) {
+  const untimedSubs = subs.filter((x) => x.minute == null);
+  if (untimed.length || untimedSubs.length) {
     rows.push({ kind: "untimed" });
+    for (const x of untimedSubs) rows.push({ kind: "sub", sub: x });
     // Goals with neither scorer nor minute (e.g. a final score entered afterwards) share one row per
     // team and type: "Goal ×17" rather than seventeen identical lines.
     const grouped = new Map<string, Extract<TimelineRow, { kind: "event" }>>();

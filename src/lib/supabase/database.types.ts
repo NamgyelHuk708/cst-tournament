@@ -14,6 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_actions: {
+        Row: {
+          created_at: string
+          id: number
+          is_demo: boolean
+          kind: string
+          match_id: number | null
+          payload: Json
+          undone_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: never
+          is_demo?: boolean
+          kind: string
+          match_id?: number | null
+          payload: Json
+          undone_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: never
+          is_demo?: boolean
+          kind?: string
+          match_id?: number | null
+          payload?: Json
+          undone_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_actions_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       admins: {
         Row: {
           created_at: string
@@ -317,6 +355,81 @@ export type Database = {
           },
         ]
       }
+      substitutions: {
+        Row: {
+          added_time: number | null
+          client_id: string | null
+          created_at: string
+          id: number
+          is_demo: boolean
+          match_id: number
+          minute: number | null
+          player_off: string | null
+          player_on: string | null
+          team_id: number
+        }
+        Insert: {
+          added_time?: number | null
+          client_id?: string | null
+          created_at?: string
+          id?: never
+          is_demo?: boolean
+          match_id: number
+          minute?: number | null
+          player_off?: string | null
+          player_on?: string | null
+          team_id: number
+        }
+        Update: {
+          added_time?: number | null
+          client_id?: string | null
+          created_at?: string
+          id?: never
+          is_demo?: boolean
+          match_id?: number
+          minute?: number | null
+          player_off?: string | null
+          player_on?: string | null
+          team_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "substitutions_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "substitutions_player_off_team_id_fkey"
+            columns: ["player_off", "team_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id", "team_id"]
+          },
+          {
+            foreignKeyName: "substitutions_player_on_team_id_fkey"
+            columns: ["player_on", "team_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id", "team_id"]
+          },
+          {
+            foreignKeyName: "substitutions_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "group_standings"
+            referencedColumns: ["team_id"]
+          },
+          {
+            foreignKeyName: "substitutions_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       teams: {
         Row: {
           group_code: string
@@ -423,6 +536,37 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      admin_add_substitution: {
+        Args: {
+          p_added: number
+          p_client_id: string
+          p_match: number
+          p_minute: number
+          p_new_name?: string
+          p_new_shirt?: number
+          p_off: string
+          p_on: string
+          p_team: number
+        }
+        Returns: {
+          added_time: number | null
+          client_id: string | null
+          created_at: string
+          id: number
+          is_demo: boolean
+          match_id: number
+          minute: number | null
+          player_off: string | null
+          player_on: string | null
+          team_id: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "substitutions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       admin_clear_qualifier_order: {
         Args: { p_group: string }
         Returns: undefined
@@ -464,6 +608,29 @@ export type Database = {
         }
       }
       admin_delete_event: { Args: { p_event: number }; Returns: undefined }
+      admin_delete_substitution: { Args: { p_sub: number }; Returns: undefined }
+      admin_edit_player: {
+        Args: {
+          p_match?: number
+          p_name: string
+          p_player: string
+          p_shirt: number
+        }
+        Returns: {
+          created_at: string
+          id: string
+          is_demo: boolean
+          name: string
+          shirt_number: number | null
+          team_id: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "players"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       admin_fill_round_of_16: { Args: never; Returns: Json }
       admin_reset_match: {
         Args: { p_match: number }
@@ -644,6 +811,7 @@ export type Database = {
         }
       }
       admin_undo: { Args: { p_match: number }; Returns: Json }
+      admin_undo_extra: { Args: { p_match: number }; Returns: string }
       admin_update_event: {
         Args: {
           p_added_time: number
@@ -672,12 +840,52 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      admin_update_substitution: {
+        Args: {
+          p_added: number
+          p_minute: number
+          p_off: string
+          p_on: string
+          p_sub: number
+        }
+        Returns: {
+          added_time: number | null
+          client_id: string | null
+          created_at: string
+          id: number
+          is_demo: boolean
+          match_id: number
+          minute: number | null
+          player_off: string | null
+          player_on: string | null
+          team_id: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "substitutions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       admin_upsert_player: {
         Args: { p_name: string; p_shirt: number; p_team: number }
         Returns: string
       }
       apply_advancement: {
         Args: { p_match: number; p_old_loser: number; p_old_winner: number }
+        Returns: undefined
+      }
+      check_minute: {
+        Args: { p_added: number; p_minute: number }
+        Returns: undefined
+      }
+      check_player: {
+        Args: {
+          p_except: string
+          p_name: string
+          p_shirt: number
+          p_team: number
+        }
         Returns: undefined
       }
       credited_goals: {

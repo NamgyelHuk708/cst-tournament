@@ -3,20 +3,11 @@
 import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { uuid } from "@/lib/uuid";
-import {
-  HALF_LENGTH_MINUTES,
-  MAX_STOPPAGE_MINUTES,
-  clockMinute,
-  eventMinuteLabel,
-  isHalfEnd,
-  minuteProblem,
-  type EventType,
-  type Match,
-  type MatchEvent,
-  type Side,
-} from "@/lib/tournament";
-import { useServerNow, useTournament } from "../tournament-provider";
+import { type EventType, type Match, type MatchEvent, type Side } from "@/lib/tournament";
+import { useTournament } from "../tournament-provider";
 import { Sheet } from "../sheet";
+import { EditPlayerSheet } from "./edit-player-sheet";
+import { MinuteField, useMinuteInput } from "./minute-field";
 
 const TYPES: { type: EventType; label: string }[] = [
   { type: "goal", label: "Goal" },
@@ -56,18 +47,13 @@ export function EventSheet({
   const [playerId, setPlayerId] = useState<string | null>(event?.player_id ?? null);
   const [newName, setNewName] = useState("");
   const [newShirt, setNewShirt] = useState("");
-  const now = useServerNow(15_000);
-  // A new event starts at the match clock (45+2 in stoppage time); an existing one keeps its minute.
-  const [initial] = useState(() => (event ? (event.minute != null ? { minute: event.minute, added: event.added_time ?? 0 } : null) : clockMinute(match, now)));
-  // Typed as text, so the field can be briefly empty while the admin types a new number.
-  const [minuteText, setMinuteText] = useState<string | null>(initial ? String(initial.minute) : null);
-  const [addedText, setAddedText] = useState(initial ? String(initial.added) : "0");
-  const minute = minuteText == null ? null : minuteText === "" ? NaN : Number(minuteText);
-  const atHalfEnd = minute != null && isHalfEnd(minute);
-  // Stoppage time only at the end of a half; anywhere else it is 0.
-  const added = atHalfEnd ? Number(addedText || 0) : 0;
-  const problem = minute == null ? null : Number.isNaN(minute) ? "Enter the minute, or choose Not known." : minuteProblem(minute, added);
-  const setMinute = (v: number | null) => setMinuteText(v == null ? null : String(v));
+  // A new event starts at the match clock; an existing one keeps its minute (or "Not known").
+  const minuteState = useMinuteInput(
+    match,
+    event ? (event.minute != null ? { minute: event.minute, added: event.added_time ?? 0 } : null) : undefined,
+  );
+  const { minute, added, problem } = minuteState;
+  const [editingPlayer, setEditingPlayer] = useState(false);
   const [clientId] = useState(() => uuid());
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -146,6 +132,9 @@ export function EventSheet({
 
   return (
     <Sheet open onClose={onClose} title={title}>
+      {editingPlayer && effectivePlayer && effectivePlayer !== NEW_PLAYER && (
+        <EditPlayerSheet playerId={effectivePlayer} matchId={match.id} onClose={() => setEditingPlayer(false)} />
+      )}
       <div className="space-y-5">
         <Field label="Type">
           <div className="grid grid-cols-4 gap-1.5 rounded-xl bg-bg p-1">
@@ -210,6 +199,15 @@ export function EventSheet({
               />
             </div>
           )}
+          {effectivePlayer && effectivePlayer !== NEW_PLAYER && (
+            <button
+              type="button"
+              onClick={() => setEditingPlayer(true)}
+              className="mt-2 h-9 text-sm font-medium text-brand-text underline-offset-2 active:underline"
+            >
+              Edit player&apos;s name or number
+            </button>
+          )}
           {squad.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-2">
               {squad.map((p) => (
@@ -223,52 +221,7 @@ export function EventSheet({
         </Field>
 
         <Field label="Minute">
-          {minuteText == null ? (
-            <div className="flex items-center gap-3">
-              <span className="text-sm text-muted">Not known</span>
-              <button
-                type="button"
-                onClick={() => {
-                  const c = clockMinute(match, now);
-                  setMinuteText(String(c?.minute ?? HALF_LENGTH_MINUTES));
-                  setAddedText(String(c?.added ?? 0));
-                }}
-                className="h-11 rounded-full bg-bg px-4 text-sm font-medium ring-1 ring-border"
-              >
-                Add minute
-              </button>
-            </div>
-          ) : (
-            <>
-              <div className="flex items-center gap-3">
-                <Stepper text={minuteText} min={1} max={HALF_LENGTH_MINUTES * 2} onText={setMinuteText} label="Minute" />
-                <span className={`text-lg font-semibold ${atHalfEnd ? "text-muted" : "text-border"}`}>+</span>
-                <Stepper
-                  text={atHalfEnd ? addedText : "0"}
-                  min={0}
-                  max={MAX_STOPPAGE_MINUTES}
-                  onText={setAddedText}
-                  label="Stoppage time"
-                  disabled={!atHalfEnd}
-                />
-              </div>
-              <p className="mt-2 flex items-center justify-between gap-3 text-xs text-muted">
-                <span>
-                  {problem ? (
-                    <span role="alert" className="font-medium text-text">{problem}</span>
-                  ) : (
-                    <>
-                      Shows as <span className="font-display text-sm font-bold text-text tabular">{eventMinuteLabel({ minute: minute!, added_time: added })}</span>
-                      {!atHalfEnd && <span> · stoppage time only after {HALF_LENGTH_MINUTES} or {HALF_LENGTH_MINUTES * 2}</span>}
-                    </>
-                  )}
-                </span>
-                <button type="button" onClick={() => setMinute(null)} className="h-9 shrink-0 px-2 font-medium text-text underline-offset-2 active:underline">
-                  Not known
-                </button>
-              </p>
-            </>
-          )}
+          <MinuteField state={minuteState} />
         </Field>
 
         {error && (
@@ -314,50 +267,5 @@ function Chip({ selected, onClick, children }: { selected: boolean; onClick: () 
     >
       {children}
     </button>
-  );
-}
-
-/**
- * A number the admin can type (the phone shows its number keypad) or nudge with − and +.
- * Typing is free-form; the sheet checks the value and explains any problem.
- */
-function Stepper({
-  text,
-  min,
-  max,
-  onText,
-  label,
-  disabled = false,
-}: {
-  text: string;
-  min: number;
-  max: number;
-  onText: (v: string) => void;
-  label: string;
-  disabled?: boolean;
-}) {
-  const value = Number(text || 0);
-  const step = (d: number) => onText(String(Math.min(max, Math.max(min, value + d))));
-  return (
-    <div className={`flex items-center rounded-xl ring-1 ring-border ${disabled ? "opacity-40" : ""}`} role="group" aria-label={label}>
-      <button type="button" disabled={disabled} onClick={() => step(-1)} aria-label={`${label} minus one`} className="size-12 text-xl font-bold active:bg-bg">
-        −
-      </button>
-      <input
-        value={text}
-        disabled={disabled}
-        onChange={(e) => onText(e.target.value.replace(/\D/g, "").slice(0, 3))}
-        onFocus={(e) => e.target.select()}
-        type="text"
-        inputMode="numeric"
-        pattern="[0-9]*"
-        enterKeyHint="done"
-        aria-label={label}
-        className="h-12 w-14 text-center font-display text-xl font-bold tabular outline-none disabled:bg-transparent"
-      />
-      <button type="button" disabled={disabled} onClick={() => step(1)} aria-label={`${label} plus one`} className="size-12 text-xl font-bold active:bg-bg">
-        +
-      </button>
-    </div>
   );
 }

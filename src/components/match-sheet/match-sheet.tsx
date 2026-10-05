@@ -10,6 +10,7 @@ import {
   isLive,
   matchClock,
   slotDisplayName,
+  subsForMatch,
   type Match,
 } from "@/lib/tournament";
 import { MatchTimeline, ScorerColumns } from "../event-list";
@@ -159,15 +160,16 @@ function Status({ match }: { match: Match }) {
 }
 
 function SummaryPanel({ match }: { match: Match }) {
-  const { events, playersById } = useTournament();
+  const { events, playersById, substitutions } = useTournament();
   const now = useServerNow(60_000);
   const matchEvents = eventsForMatch(match, events, playersById);
+  const matchSubs = subsForMatch(match, substitutions, playersById);
   const started = isLive(match) || isFinished(match);
 
   return (
     <div className="space-y-4">
-      {matchEvents.length > 0 ? (
-        <MatchTimeline match={match} events={matchEvents} />
+      {matchEvents.length > 0 || matchSubs.length > 0 ? (
+        <MatchTimeline match={match} events={matchEvents} subs={matchSubs} />
       ) : (
         <p className="rounded-xl bg-bg px-4 py-4 text-center text-sm text-muted">
           {started

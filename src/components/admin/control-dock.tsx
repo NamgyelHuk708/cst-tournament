@@ -16,6 +16,7 @@ type Props = {
   failed: { tap: PendingTap; message: string } | null;
   toast: { eventId?: number; text: string } | null;
   onTap: (teamId: number, type: EventType) => void;
+  onSub: (teamId: number) => void;
   onRetry: () => void;
   onDismissError: () => void;
   onAddScorer: () => void;
@@ -162,6 +163,15 @@ export function ControlDock(props: Props) {
                       <CardIcon colour="red" /> Red
                     </button>
                   </div>
+                  <button
+                    type="button"
+                    disabled={!team || !live}
+                    onClick={() => team && props.onSub(team.id)}
+                    aria-label={`Substitution for ${team?.name ?? "team"}`}
+                    className="flex h-11 w-full items-center justify-center gap-1.5 rounded-xl text-sm font-semibold ring-1 ring-border active:bg-bg disabled:text-muted disabled:opacity-50"
+                  >
+                    <span aria-hidden="true" className="font-bold">⇅</span> Sub
+                  </button>
                 </div>
               ))}
             </div>

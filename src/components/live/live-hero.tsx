@@ -1,7 +1,7 @@
 "use client";
 
-import { eventsForMatch, matchClock, slotDisplayName, type Match, type Team } from "@/lib/tournament";
-import { ScorerColumns } from "../event-list";
+import { compareEventTime, eventsForMatch, matchClock, slotDisplayName, subsForMatch, type Match, type Team } from "@/lib/tournament";
+import { LatestSub, ScorerColumns } from "../event-list";
 import { GroupTag } from "../group-tag";
 import { TeamLink } from "../team-link";
 import { TeamLogo } from "../team-logo";
@@ -11,12 +11,17 @@ import { useFlashOnChange } from "../use-flash";
 
 /** The live match, readable from arm's length: big score, saffron status, minute. */
 export function LiveHero({ match }: { match: Match }) {
-  const { teamsById, events, playersById } = useTournament();
+  const { teamsById, events, playersById, substitutions } = useTournament();
   const now = useServerNow(5_000);
   const clock = matchClock(match, now);
   const home = match.home_team_id != null ? teamsById.get(match.home_team_id) : undefined;
   const away = match.away_team_id != null ? teamsById.get(match.away_team_id) : undefined;
   const matchEvents = eventsForMatch(match, events, playersById);
+  // A substitution shows as the latest event when nothing has happened since it.
+  const timedSubs = subsForMatch(match, substitutions, playersById).filter((x) => x.minute != null);
+  const lastSub = timedSubs.at(-1);
+  const lastEvent = matchEvents.filter((e) => e.minute != null).at(-1);
+  const latestSub = lastSub && (!lastEvent || compareEventTime(lastSub, { ...lastEvent, id: -1 }) >= 0) ? lastSub : null;
   const statusText =
     match.status === "half_time" ? "Half-time" : match.status === "penalties" ? "Penalties" : "Live";
 
@@ -56,9 +61,10 @@ export function LiveHero({ match }: { match: Match }) {
           </p>
         )}
 
-        {matchEvents.length > 0 && (
-          <div className="mt-5 border-t border-border pt-4">
+        {(matchEvents.length > 0 || latestSub) && (
+          <div className="mt-5 space-y-3 border-t border-border pt-4">
             <ScorerColumns events={matchEvents} />
+            {latestSub && <LatestSub sub={latestSub} team={teamsById.get(latestSub.team_id)?.short_code ?? ""} />}
           </div>
         )}
       </div>
