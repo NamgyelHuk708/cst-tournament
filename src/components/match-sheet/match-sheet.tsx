@@ -7,12 +7,10 @@ import {
   eventsForMatch,
   isFinished,
   isLive,
-  matchClock,
   groupOfficials,
   slotDisplayName,
   subsForMatch,
   type Match,
-  isBallInPlay,
 } from "@/lib/tournament";
 import { MatchTimeline, ScorerColumns } from "../event-list";
 import { GroupTag } from "../group-tag";
@@ -22,6 +20,7 @@ import { useServerNow, useTournament } from "../tournament-provider";
 import { useResolvedSides } from "../use-resolved-sides";
 import { MatchSheetContext } from "./context";
 import { PlayersPanel } from "./players-panel";
+import { LivePill } from "../live-pill";
 
 /** One match detail sheet for the public pages; any match opens it via useMatchSheet(). */
 export function MatchSheetProvider({ children }: { children: React.ReactNode }) {
@@ -125,17 +124,7 @@ function MatchDetail({ match, onLeave }: { match: Match; onLeave: () => void }) 
 }
 
 function Status({ match }: { match: Match }) {
-  const now = useServerNow(5_000);
-  if (isLive(match)) {
-    const label = match.status === "half_time" ? "HT" : match.status === "penalties" ? "Pens" : matchClock(match, now).label;
-    return (
-      <span
-        className={`inline-flex shrink-0 items-center rounded-full bg-live px-2.5 py-0.5 font-display text-sm font-bold text-live-text tabular ${isBallInPlay(match) ? "live-breathe" : ""}`}
-      >
-        {label}
-      </span>
-    );
-  }
+  if (isLive(match)) return <LivePill match={match} size="md" />;
   if (isFinished(match)) return <span className="shrink-0 font-display text-sm font-semibold text-muted">Full time</span>;
   return (
     <span className="shrink-0 text-xs font-semibold text-muted tabular">

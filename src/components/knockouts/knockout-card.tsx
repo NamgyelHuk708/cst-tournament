@@ -4,27 +4,25 @@ import { formatDay, formatTime } from "@/lib/format";
 import {
   isFinished,
   isLive,
-  matchClock,
   matchOutcome,
   slotDisplayName,
   type Match,
   type ResolvedSide,
   type Side,
-  isBallInPlay,
 } from "@/lib/tournament";
 import { CheckIcon, ChevronIcon, TrophyIcon } from "../icons";
 import { GroupSwatch } from "../group-tag";
 import { TeamLogo } from "../team-logo";
 import { useMatchSheet } from "../match-sheet/context";
 import { OpenMatchOverlay } from "../match-sheet/open-overlay";
-import { useServerNow, useTournament } from "../tournament-provider";
+import { useTournament } from "../tournament-provider";
 import { useResolvedSides } from "../use-resolved-sides";
 import { useFlashOnChange } from "../use-flash";
+import { LivePill } from "../live-pill";
 
 export function KnockoutCard({ match, featured = false }: { match: Match; featured?: boolean }) {
   const sides = useResolvedSides(match);
   const { teamsById } = useTournament();
-  const now = useServerNow(15_000);
   const outcome = matchOutcome(match);
   const live = isLive(match);
   const started = live || isFinished(match);
@@ -44,9 +42,7 @@ export function KnockoutCard({ match, featured = false }: { match: Match; featur
         </span>
         <span className="ml-auto text-xs font-medium text-muted tabular">
           {live ? (
-            <span className={`inline-flex items-center gap-1 rounded-full bg-live px-2 py-0.5 font-display text-[13px] font-bold text-live-text ${isBallInPlay(match) ? "live-breathe" : ""}`}>
-              {matchClock(match, now).label}
-            </span>
+            <LivePill match={match} />
           ) : isFinished(match) ? (
             "Full time"
           ) : (

@@ -20,7 +20,6 @@ import {
   type MatchStatus,
   type Substitution,
   type Team,
-  isBallInPlay,
 } from "@/lib/tournament";
 import { ChevronIcon } from "../icons";
 import { useServerNow, useTournament } from "../tournament-provider";
@@ -33,6 +32,7 @@ import { EventSheet } from "./event-sheet";
 import { OfficialsSection } from "./officials";
 import { SubSheet } from "./sub-sheet";
 import { Sheet } from "../sheet";
+import { LivePill } from "../live-pill";
 
 export type PendingTap = { clientId: string; matchId: number; teamId: number; type: EventType };
 type LastAction =
@@ -576,13 +576,7 @@ function Scoreboard({
   return (
     <section aria-label="Scoreboard" className="mx-4 mt-1 rounded-2xl bg-card px-4 py-3 ring-1 ring-border/60">
       <div className="flex items-center justify-between text-sm">
-        <span
-          className={`inline-flex items-center font-semibold ${
-            live ? `rounded-full bg-live px-2.5 py-0.5 text-live-text ${isBallInPlay(match) ? "live-breathe" : ""}` : "text-muted"
-          }`}
-        >
-          {statusText[match.status]}
-        </span>
+        {live ? <LivePill match={match} size="md" /> : <span className="font-semibold text-muted">{statusText[match.status]}</span>}
         {live && clock.running && <span className="font-display text-2xl leading-none font-bold tabular">{clock.label}</span>}
       </div>
       <div className="mt-1 grid grid-cols-[1fr_auto_1fr] items-center">

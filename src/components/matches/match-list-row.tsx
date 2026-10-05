@@ -10,7 +10,6 @@ import {
   type Match,
   type ResolvedSide,
   type Side,
-  isBallInPlay,
 } from "@/lib/tournament";
 import { GroupSwatch } from "../group-tag";
 import { CheckIcon, ChevronIcon } from "../icons";
@@ -18,6 +17,7 @@ import { useMatchSheet } from "../match-sheet/context";
 import { TeamLogo } from "../team-logo";
 import { useServerNow } from "../tournament-provider";
 import { useResolvedSides } from "../use-resolved-sides";
+import { LivePill } from "../live-pill";
 
 /**
  * One match as a result line: "THS 4–2 IMM", match number and stage on the left.
@@ -68,9 +68,7 @@ export function MatchListRow({ match }: { match: Match }) {
             <span className="text-[11px] font-medium whitespace-nowrap text-muted tabular">
               {day} {time}
             </span>
-            <span className={`inline-flex items-center gap-1 rounded-full bg-live px-1.5 py-0.5 font-display text-[13px] font-bold text-live-text tabular ${isBallInPlay(match) ? "live-breathe" : ""}`}>
-              {clock}
-            </span>
+            <LivePill match={match} />
           </>
         ) : (
           <>

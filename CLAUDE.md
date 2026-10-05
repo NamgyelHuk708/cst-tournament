@@ -69,7 +69,7 @@ Act as a senior UI/UX designer with 20+ years of experience in sports and live-d
 3. **Live score glanceable from arm's length.** Score digits are large, high-contrast and tabular. Live state and match minute are visible without reading.
 4. **Progressive disclosure.** Show the summary first. Details (scorers, cards, full fixture list) are one tap away.
 5. **Minimal and clean.** No decoration that doesn't carry information. Use whitespace and type hierarchy before adding borders, shadows or colour.
-6. **Sentence case for all labels.** No all-caps text or `uppercase` styling ("Up next", "Qualify ↑", "Tomorrow"). Team short codes and standard abbreviations (HT, FT, QF, R16) stay as they are.
+6. **Sentence case for all labels.** No all-caps text or `uppercase` styling ("Up next", "Qualify ↑", "Tomorrow"). Team short codes and standard abbreviations (HT, FT, QF, R16) stay as they are. The one exception is the live LED sign ("LIVE · 45+2'", "HALF-TIME").
 
 **Admin UI** is used one-handed, outdoors, under time pressure: large tap targets (min 48px), destructive actions confirmable or undoable, and the current match state always visible.
 
@@ -88,8 +88,8 @@ Define these as Tailwind theme tokens. Don't hard-code hex values in components.
 | `brand-text` | `#135463` | Brand as text: links, key headings, the tournament heading |
 | `accent` | `#8AA9B1` | Banner blue-grey: borders, dividers, decoration only, never text |
 | `accent-text` | `#56696E` | The accent's tone where text needs it |
-| `live` | `#E39B13` | Live state, saffron |
-| `live-text` | `#4A2F00` | Text on `live` |
+| `live` | `#135463` | Live state: the college teal, as the LED status pill (dark mode: `#20788C`) |
+| `live-text` | `#FFFFFF` | Text on `live` |
 | `win` | `#2E7A4C` | Turf green: qualifying, winner, form win |
 | `win-text` | `#2E7A4C` | Green as text (Qualify) |
 | `form-draw` | `#5E6878` | Form: draw circle |
@@ -207,6 +207,7 @@ Don't build out-of-scope features. If one looks needed, raise it instead.
 - The root layout loads one snapshot (`src/lib/snapshot.ts`) and `TournamentProvider` keeps it live: one Realtime channel, polling every 15s while disconnected, refresh on wake.
 - Match minutes and countdowns use server time (`/api/time` offset via `useServerNow`), never the device clock. When the admin starts a half, `period_started_at` must be set from database time (`now()`), not the admin's phone.
 - Times are always displayed in Asia/Thimphu via `src/lib/format.ts`.
+- **Live status pill:** always `LivePill` (`src/components/live-pill.tsx`): a fixed-size teal LED sign with a dot-matrix texture. While the ball is in play (`isBallInPlay`: first or second half) the text scrolls right to left ("LIVE · 45+2' · RIC 0–4 BEA" on the live card, "LIVE · 45+2'" elsewhere) and the live card's top bar has a teal sweep; at half-time and penalties both are still ("HALF-TIME"). Screen readers get the plain status once; reduced motion shows it still and centred. Animations use only transform. The clock always shows the actual stoppage minutes (45+2', 90+17').
 - **The score is derived from events by the database.** Triggers set `home_score`/`away_score` from goal and own-goal events (own goals count for the opponent); any direct write to the score columns is replaced. To change a score, add, edit or delete events. `scoreFromEvents()` in `tournament.ts` mirrors the rule for optimistic UI.
 - **Admin writes:** `admin_add_event` (idempotent: each tap sends a client-generated `client_id`; a repeat returns the original event), `admin_update_event`, `admin_delete_event`, `admin_set_status` (only valid transitions; a repeat is a no-op; halves start from database `now()`), `admin_set_pens`, `admin_undo`, `admin_upsert_player`. `match_actions` is the undo history: undo reverses the last goal, card, status change (including full time and status corrections, with their penalty score), penalty change, set final score, reset match, or team change (choose teams / fill R16, per tie). Edits and deletes from the event log are confirmed actions, not part of undo. Set/clear qualifiers are not per-match; Clear and Set reverse each other.
 - **Player edits and substitutions** (migration `20261006090000`): `admin_edit_player` (name and number only, never score, status or clock; no longer used by the admin screens, see Squads), `admin_add_substitution` (idempotent by `client_id`; can create the player coming on), `admin_update_substitution`, `admin_delete_substitution`. Substitutions live in their own `substitutions` table, so they never touch scores or standings. Their undo history is `admin_actions` (separate from `match_actions`), reversed by `admin_undo_extra`; the admin's single Undo button calls whichever of the two histories has the newer open entry. Validation is inside the functions (`check_minute`, `check_player`), raising SQLSTATE `CST01` with a plain message. Before kick-off, substitutions are only accepted on demo matches (for testing).
@@ -216,7 +217,7 @@ Don't build out-of-scope features. If one looks needed, raise it instead.
 - **Multi-step actions** (set final score, reset, undo) set `app.defer_advance` so the advancement check runs once on the final state via `apply_advancement()`; any new multi-step action that can change a knockout result must do the same.
 - Half length lives in two places that must match: `HALF_LENGTH_MINUTES` in `tournament.ts` and `public.half_length_minutes()` in the database.
 - Admin routes: `src/proxy.ts` (session refresh + redirect), `requireAdmin()` in the admin layout, and the database. All three must hold.
-- Red is only for red cards (and form losses, with their ✕), saffron only for live. Errors and destructive confirmations use ink (`text`) with clear wording.
+- Red is only for red cards (and form losses, with their ✕). Live is shown by the teal LED pill. Errors and destructive confirmations use ink (`text`) with clear wording.
 
 ## Working rules
 

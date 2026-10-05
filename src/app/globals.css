@@ -14,8 +14,9 @@
   /* Accent: banner blue-grey. Borders, dividers and decoration only, never text. */
   --accent: #8aa9b1;
   --accent-text: #56696e; /* the accent's tone where text needs it (AA on card and bg) */
-  --live: #e39b13;
-  --live-text: #4a2f00;
+  /* Live: the college teal, as a lit LED sign with white text. */
+  --live: #135463;
+  --live-text: #ffffff;
   --win: #2e7a4c;
   --win-text: #2e7a4c; /* green as text (Qualify); lighter in dark mode */
   --form-draw: #5e6878; /* form: draw circle (white symbol on it) */
@@ -42,7 +43,7 @@
 }
 
 /* Dark mode, prepared but not switched on yet (dark mode is out of scope for now): setting
-   data-theme="dark" on <html> applies it. Group, live, win and card colours are unchanged. */
+   data-theme="dark" on <html> applies it. Group, win and card colours are unchanged; live is a lighter teal. */
 :root[data-theme="dark"] {
   --bg: #0f171b;
   --card: #17232a;
@@ -55,7 +56,8 @@
   --accent-text: #9fbac1;
   --win-text: #5cbf83;
   --form-draw: #66707f;
-  --live-text: #4a2f00;
+  --live: #20788c; /* a lighter teal, so the live dot stands out on dark cards; white text still AA */
+  --live-text: #ffffff;
 }
 
 @theme inline {
@@ -118,34 +120,61 @@ body {
 }
 
 /*
- * Ball in play: a soft saffron glow breathes around the live pill, and a light sweep travels along
- * the live card's top bar. Both animate only opacity and transform (compositor-only, cheap on
- * phones), sit behind or beside the content so text never moves, and are added only while a half
- * is being played: at half-time and other pauses the pill and bar are solid, and finished is static.
+ * The live status as a teal LED sign (LivePill). A fixed-size pill with a faint dot-matrix texture;
+ * while the ball is in play the text scrolls right to left in a seamless loop (four identical
+ * copies, moved by one copy). Only transform is animated, so it stays smooth on phones.
  */
-@keyframes live-breathe {
-  0% { opacity: 0; transform: scale(0.96); }
-  45% { opacity: 0.75; transform: scale(1.06); }
-  100% { opacity: 0; transform: scale(1.14); }
-}
-
-.live-breathe {
+.led {
   position: relative;
-  isolation: isolate;
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  overflow: hidden;
+  border-radius: 9999px;
+  background: var(--live);
+  color: var(--live-text);
+  line-height: 1;
 }
 
-.live-breathe::before {
+/* Dot matrix: dark lines between "pixels", like an LED board. Static. */
+.led::after {
   content: "";
   position: absolute;
   inset: 0;
-  z-index: -1;
-  border-radius: inherit;
-  box-shadow: 0 0 8px 2px var(--live);
-  opacity: 0;
   pointer-events: none;
-  animation: live-breathe 2s ease-in-out infinite;
+  background-image: radial-gradient(circle, transparent 0.75px, rgb(0 0 0 / 0.2) 1.15px);
+  background-size: 3px 3px;
 }
 
+.led-window {
+  display: flex;
+  width: 100%;
+  overflow: hidden;
+  /* Text fades in and out at the ends, as it would at the edge of a sign. */
+  mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+}
+
+.led-track {
+  display: flex;
+  width: max-content;
+  animation: led-scroll var(--led-duration, 7s) linear infinite;
+  will-change: transform;
+}
+
+.led-copy {
+  flex: none;
+  white-space: nowrap;
+}
+
+.led-sep {
+  padding: 0 0.6em;
+}
+
+@keyframes led-scroll {
+  to { transform: translateX(-25%); }
+}
+
+/* Live card top bar: a teal-to-blue-grey sweep travelling left to right, only while the ball is in play. */
 @keyframes live-sweep {
   0% { transform: translateX(-100%); }
   100% { transform: translateX(250%); }
@@ -161,14 +190,7 @@ body {
   position: absolute;
   inset: 0;
   width: 40%;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    color-mix(in srgb, var(--brand) 55%, transparent) 30%,
-    color-mix(in srgb, #fff 65%, transparent) 50%,
-    color-mix(in srgb, var(--brand) 55%, transparent) 70%,
-    transparent
-  );
+  background: linear-gradient(90deg, transparent, var(--accent) 30%, #d9e5e8 50%, var(--accent) 70%, transparent);
   transform: translateX(-100%);
   pointer-events: none;
   animation: live-sweep 2.6s cubic-bezier(0.45, 0, 0.55, 1) infinite;
@@ -204,7 +226,20 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .live-dot, .score-flash, .skeleton::after, .live-breathe::before, .live-sweep::after {
+  .live-dot, .score-flash, .skeleton::after, .live-sweep::after {
     animation: none;
+  }
+  /* Still, centred, shown once. */
+  .led-track {
+    width: 100%;
+    justify-content: center;
+    animation: none;
+  }
+  .led-window {
+    mask-image: none;
+  }
+  .led-copy:not(:first-child),
+  .led-sep {
+    display: none;
   }
 }

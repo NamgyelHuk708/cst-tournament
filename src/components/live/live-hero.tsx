@@ -1,19 +1,18 @@
 "use client";
 
-import { compareEventTime, eventsForMatch, isBallInPlay, matchClock, slotDisplayName, subsForMatch, type Match, type Team } from "@/lib/tournament";
+import { compareEventTime, eventsForMatch, isBallInPlay, slotDisplayName, subsForMatch, type Match, type Team } from "@/lib/tournament";
 import { LatestSub, ScorerColumns } from "../event-list";
 import { GroupTag } from "../group-tag";
 import { TeamLink } from "../team-link";
 import { TeamLogo } from "../team-logo";
 import { MatchDetailsHint, OpenMatchOverlay } from "../match-sheet/open-overlay";
-import { useServerNow, useTournament } from "../tournament-provider";
+import { useTournament } from "../tournament-provider";
 import { useFlashOnChange } from "../use-flash";
+import { LivePill } from "../live-pill";
 
-/** The live match, readable from arm's length: big score, saffron status, minute. */
+/** The live match, readable from arm's length: big score, teal LED status with the minute. */
 export function LiveHero({ match }: { match: Match }) {
   const { teamsById, events, playersById, substitutions } = useTournament();
-  const now = useServerNow(5_000);
-  const clock = matchClock(match, now);
   const home = match.home_team_id != null ? teamsById.get(match.home_team_id) : undefined;
   const away = match.away_team_id != null ? teamsById.get(match.away_team_id) : undefined;
   const matchEvents = eventsForMatch(match, events, playersById, teamsById);
@@ -22,8 +21,6 @@ export function LiveHero({ match }: { match: Match }) {
   const lastSub = timedSubs.at(-1);
   const lastEvent = matchEvents.filter((e) => e.minute != null).at(-1);
   const latestSub = lastSub && (!lastEvent || compareEventTime(lastSub, { ...lastEvent, id: -1 }) >= 0) ? lastSub : null;
-  const statusText =
-    match.status === "half_time" ? "Half-time" : match.status === "penalties" ? "Penalties" : "Live";
 
   return (
     <article aria-label="Live match" className="relative overflow-hidden rounded-2xl bg-card shadow-[0_1px_2px_rgb(27_34_48/0.06),0_8px_24px_-12px_rgb(27_34_48/0.18)]">
@@ -35,15 +32,8 @@ export function LiveHero({ match }: { match: Match }) {
         </div>
 
         <div className="mt-4 flex justify-center">
-          <span
-            role="status"
-            aria-live="polite"
-            className={`inline-flex items-center gap-2 rounded-full bg-live px-3.5 py-1.5 text-live-text ${isBallInPlay(match) ? "live-breathe" : ""}`}
-          >
-            <span className="text-xs font-bold">{statusText}</span>
-            {match.status !== "half_time" && match.status !== "penalties" && (
-              <span className="font-display text-xl leading-none font-bold tabular">{clock.label}</span>
-            )}
+          <span role="status" aria-live="polite">
+            <LivePill match={match} size="lg" home={home} away={away} />
           </span>
         </div>
 
