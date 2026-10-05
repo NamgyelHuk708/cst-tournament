@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { uuid } from "@/lib/uuid";
-import { bySquadOrder, eventMinuteLabel, type EventType, type Match, type MatchEvent, type Side } from "@/lib/tournament";
+import { bySquadOrder, eventMinuteLabel, scoreFromEvents, type EventType, type Match, type MatchEvent, type Side } from "@/lib/tournament";
 import { useTournament } from "../tournament-provider";
 import { Sheet } from "../sheet";
 import { EditPlayerSheet } from "./edit-player-sheet";
@@ -32,17 +32,17 @@ export function EventSheet({
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const { teamsById, players, local } = useTournament();
+  const { teamsById, players, events, local } = useTournament();
   const supabase = useMemo(() => createClient(), []);
   const sideOf = (teamId: number): Side => (teamId === match.home_team_id ? "home" : "away");
   const teamOn = (side: Side) => (side === "home" ? match.home_team_id : match.away_team_id)!;
   const flip = (side: Side): Side => (side === "home" ? "away" : "home");
 
   const [type, setType] = useState<EventType>(event?.type ?? "goal");
-  // "Credited" side: who the goal counts for, or who got the card.
-  const [credited, setCredited] = useState<Side>(
-    !event ? "home" : event.type === "own_goal" ? flip(sideOf(event.team_id)) : sideOf(event.team_id),
-  );
+  // The team picked at the top, which is always the player's own team: who scored, whose player
+  // put it into their own net, or who got the card. Switching between Goal and Own goal keeps it,
+  // so a goal tapped under BSM and changed to Own goal starts as an own goal by a BSM player.
+  const [teamSide, setTeamSide] = useState<Side>(event ? sideOf(event.team_id) : "home");
   const [playerId, setPlayerId] = useState<string | null>(event?.player_id ?? null);
   const [newName, setNewName] = useState("");
   const [newShirt, setNewShirt] = useState("");
@@ -58,8 +58,10 @@ export function EventSheet({
   const [error, setError] = useState<string | null>(null);
 
   const isGoal = type === "goal" || type === "own_goal";
-  // The player's own team: for an own goal, the side that conceded.
-  const playerSide = type === "own_goal" ? flip(credited) : credited;
+  const ownGoal = type === "own_goal";
+  const playerSide = teamSide;
+  // Who the goal counts for: an own goal counts for the other team.
+  const credited = ownGoal ? flip(teamSide) : teamSide;
   const playerTeamId = teamOn(playerSide);
   const squad = players.filter((p) => p.team_id === playerTeamId).sort(bySquadOrder);
   const selectedValid = playerId === NEW_PLAYER || playerId === null || squad.some((p) => p.id === playerId);
@@ -75,6 +77,28 @@ export function EventSheet({
       ? `Add scorer to goal${at}`
       : `Edit ${eventNoun}${at}`;
   const pickHint = event?.player_id ? " · tap another player to change" : "";
+
+  // Preview of what Save will record, with the score it leads to.
+  const picked = effectivePlayer && effectivePlayer !== NEW_PLAYER ? squad.find((p) => p.id === effectivePlayer) : undefined;
+  const who = picked
+    ? `${picked.shirt_number != null ? `#${picked.shirt_number} ` : ""}${picked.name} (${code(playerSide)})`
+    : effectivePlayer === NEW_PLAYER && newName.trim()
+      ? `${newShirt ? `#${newShirt} ` : ""}${newName.trim()} (${code(playerSide)})`
+      : `a ${code(playerSide)} player (name not recorded)`;
+  const before = scoreFromEvents(match, events);
+  const after = scoreFromEvents(match, [
+    ...events.filter((e) => e.id !== event?.id),
+    { match_id: match.id, type, team_id: playerTeamId },
+  ]);
+  const scoreText =
+    after.home === before.home && after.away === before.away
+      ? `Score stays ${after.home}–${after.away}.`
+      : `Score becomes ${after.home}–${after.away}.`;
+  const preview = !isGoal
+    ? null
+    : ownGoal
+      ? `Own goal by ${who} — counts for ${code(credited)}. ${scoreText}`
+      : `Goal by ${who} for ${code(credited)}. ${scoreText}`;
 
   async function save() {
     if (problem) {
@@ -157,25 +181,26 @@ export function EventSheet({
           </div>
         </Field>
 
-        <Field label={isGoal ? "Goal for" : "Card for"}>
+        <Field label={ownGoal ? "Whose player scored into their own net?" : isGoal ? "Goal for" : "Card for"}>
           <div className="grid grid-cols-2 gap-2">
             {(["home", "away"] as const).map((side) => (
               <button
                 key={side}
                 type="button"
-                aria-pressed={credited === side}
-                onClick={() => setCredited(side)}
+                aria-pressed={teamSide === side}
+                onClick={() => setTeamSide(side)}
                 className={`h-12 rounded-xl font-display text-xl font-bold ${
-                  credited === side ? "bg-text text-white" : "ring-1 ring-border"
+                  teamSide === side ? "bg-text text-white" : "ring-1 ring-border"
                 }`}
               >
                 {code(side)}
               </button>
             ))}
           </div>
+          {ownGoal && <p className="mt-2 text-sm text-muted">The goal counts for {code(credited)}.</p>}
         </Field>
 
-        <Field label={`${type === "own_goal" ? `Own goal by (${code(playerSide)} player)` : isGoal ? "Scored by" : "Player"}${pickHint}`}>
+        <Field label={`${ownGoal ? `Own goal by (${code(playerSide)} player)` : isGoal ? "Scored by" : "Player"}${pickHint}`}>
           <PlayerChips squad={squad} selected={effectivePlayer} onPick={setPlayerId} teamCode={code(playerSide)} />
           {effectivePlayer === NEW_PLAYER && (
             <div className="mt-2 grid grid-cols-[1fr_5.5rem] gap-2">
@@ -211,6 +236,12 @@ export function EventSheet({
         <Field label="Minute">
           <MinuteField state={minuteState} />
         </Field>
+
+        {preview && (
+          <p aria-live="polite" className="rounded-xl bg-bg px-4 py-3 text-sm font-medium ring-1 ring-border">
+            {preview}
+          </p>
+        )}
 
         {error && (
           <p role="alert" className="rounded-xl border-l-4 border-text bg-card px-4 py-3 text-sm font-medium ring-1 ring-border">

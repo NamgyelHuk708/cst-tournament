@@ -16,6 +16,7 @@ import {
   type EventType,
   type Match,
   type MatchEvent,
+  type Player,
   type MatchStatus,
   type Substitution,
   type Team,
@@ -477,7 +478,7 @@ export function MatchControl({ matchId }: { matchId: number }) {
 
       <Sheet open={!!confirmDelete} onClose={() => setConfirmDelete(null)} title="Delete this event?">
         {confirmDelete && (
-          <DeleteSummary event={confirmDelete} match={match} events={matchEvents} shortCode={shortCode} />
+          <DeleteSummary event={confirmDelete} match={match} events={matchEvents} shortCode={shortCode} playersById={playersById} />
         )}
         <div className="mt-5 grid grid-cols-2 gap-3">
           <button type="button" onClick={() => setConfirmDelete(null)} className="h-14 rounded-xl font-semibold ring-1 ring-border active:bg-bg">
@@ -514,22 +515,41 @@ function describeUndo(action: LastAction | null, events: MatchEvent[], shortCode
   return ev ? `Undo ${EVENT_NOUN[ev.type].toLowerCase()} · ${shortCode(ev.team_id)} ${eventMinuteLabel(ev)}` : "Undo last event";
 }
 
+/** "#5 Dorji (BSM)", or "a BSM player" when no name was recorded. */
+function ownGoalScorer(event: MatchEvent, playersById: Map<string, Player>, shortCode: (id: number) => string): string {
+  const p = event.player_id ? playersById.get(event.player_id) : undefined;
+  return p ? `${p.shirt_number != null ? `#${p.shirt_number} ` : ""}${p.name} (${shortCode(event.team_id)})` : `a ${shortCode(event.team_id)} player`;
+}
+
 function DeleteSummary({
   event,
   match,
   events,
   shortCode,
+  playersById,
 }: {
   event: MatchEvent;
   match: Match;
   events: MatchEvent[];
   shortCode: (id: number) => string;
+  playersById: Map<string, Player>;
 }) {
   const isGoal = event.type === "goal" || event.type === "own_goal";
   const after = scoreFromEvents(match, events.filter((e) => e.id !== event.id));
   return (
     <p className="text-base">
-      {EVENT_NOUN[event.type]} · {shortCode(event.team_id)} {eventMinuteLabel(event)}
+      {event.type === "own_goal" ? (
+        <>
+          Own goal by {ownGoalScorer(event, playersById, shortCode)} {eventMinuteLabel(event)}
+          <span className="block text-sm text-muted">
+            Counts for {shortCode((event.team_id === match.home_team_id ? match.away_team_id : match.home_team_id) ?? -1)}
+          </span>
+        </>
+      ) : (
+        <>
+          {EVENT_NOUN[event.type]} · {shortCode(event.team_id)} {eventMinuteLabel(event)}
+        </>
+      )}
       {isGoal && (
         <span className="mt-1 block text-sm text-muted">
           The score will change to{" "}

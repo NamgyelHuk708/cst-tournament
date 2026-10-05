@@ -569,10 +569,17 @@ export type DisplayEvent = MatchEvent & {
   playerName: string | null;
   /** Shirt number, when recorded. */
   playerNumber: number | null;
+  /** Short code of the player's own team ("BSM"), shown with own goals: "Dorji (BSM) 37' (OG)". */
+  playerTeamCode: string | null;
 };
 
 /** Goals and cards for a match, ordered by minute, placed on the correct side. */
-export function eventsForMatch(match: Match, events: MatchEvent[], playersById: Map<string, Player>): DisplayEvent[] {
+export function eventsForMatch(
+  match: Match,
+  events: MatchEvent[],
+  playersById: Map<string, Player>,
+  teamsById?: Map<number, Pick<Team, "short_code">>,
+): DisplayEvent[] {
   return events
     .filter((e) => e.match_id === match.id)
     .map((e) => {
@@ -582,6 +589,7 @@ export function eventsForMatch(match: Match, events: MatchEvent[], playersById: 
         side: e.type === "own_goal" ? otherSide(ownSide) : ownSide,
         playerName: e.player_id ? playersById.get(e.player_id)?.name ?? null : null,
         playerNumber: e.player_id ? playersById.get(e.player_id)?.shirt_number ?? null : null,
+        playerTeamCode: teamsById?.get(e.team_id)?.short_code ?? null,
       };
     })
     .sort(compareEventTime);
@@ -608,6 +616,8 @@ export type ScorerLine = {
   /** Shirt number, when recorded. */
   number: number | null;
   ownGoal: boolean;
+  /** For own goals: the scorer's own team ("BSM"), the side the line is not listed under. */
+  teamCode: string | null;
   /** Minutes in order ("10'", "45+2'"); goals without a minute are counted in `untimed`. */
   minutes: string[];
   untimed: number;
@@ -630,6 +640,7 @@ export function scorerLines(events: DisplayEvent[]): ScorerLine[] {
       name: e.playerName ?? (ownGoal ? "Own goal" : "Goal"),
       number: e.playerName ? e.playerNumber : null,
       ownGoal: ownGoal && e.playerName != null,
+      teamCode: ownGoal ? e.playerTeamCode : null,
       minutes: [],
       untimed: 0,
     };

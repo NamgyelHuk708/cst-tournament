@@ -16,7 +16,7 @@ export function LiveHero({ match }: { match: Match }) {
   const clock = matchClock(match, now);
   const home = match.home_team_id != null ? teamsById.get(match.home_team_id) : undefined;
   const away = match.away_team_id != null ? teamsById.get(match.away_team_id) : undefined;
-  const matchEvents = eventsForMatch(match, events, playersById);
+  const matchEvents = eventsForMatch(match, events, playersById, teamsById);
   // A substitution shows as the latest event when nothing has happened since it.
   const timedSubs = subsForMatch(match, substitutions, playersById).filter((x) => x.minute != null);
   const lastSub = timedSubs.at(-1);

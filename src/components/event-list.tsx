@@ -52,6 +52,7 @@ export function ScorerColumns({ events, className = "" }: { events: DisplayEvent
             <span className={`flex min-w-0 flex-wrap items-baseline gap-x-1.5 ${side === "away" ? "justify-end" : ""}`}>
               <span className="max-w-full min-w-0 truncate">
                 <PlayerLabel name={l.name} number={l.number} />
+                {l.teamCode && <span className="text-muted"> ({l.teamCode})</span>}
               </span>
               <span className="shrink-0 font-medium text-muted tabular">
                 {minutesText(l)}
@@ -141,6 +142,7 @@ export function MatchTimeline({ match, events, subs = [] }: { match: Match; even
             </span>
             <span className="min-w-0 truncate">
               <PlayerLabel name={name} number={e.playerName ? e.playerNumber : null} />
+              {e.type === "own_goal" && e.playerTeamCode && <span className="text-muted"> ({e.playerTeamCode})</span>}
               {e.type === "own_goal" && e.playerName && <span className="text-muted"> (OG)</span>}
               {row.count != null && row.count > 1 && <span className="font-medium text-muted tabular"> ×{row.count}</span>}
             </span>

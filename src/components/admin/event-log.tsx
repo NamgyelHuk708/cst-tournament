@@ -105,32 +105,65 @@ export function EventLog({
                 <span className="grid w-4 shrink-0 place-items-center">
                   {e.type === "yellow_card" ? <CardIcon colour="yellow" /> : e.type === "red_card" ? <CardIcon colour="red" /> : <BallIcon />}
                 </span>
-                <span className="min-w-0 flex-1 leading-tight">
-                  <span className="block text-sm font-semibold">
-                    {LABEL[e.type]} · {teamsById.get(creditedTeamId ?? -1)?.short_code}
-                  </span>
-                  {player ? (
-                    <span className="flex min-w-0 items-baseline gap-2 text-sm text-muted">
-                      <span className="min-w-0 truncate">
-                        {player.shirt_number != null && <span className="tabular">#{player.shirt_number} </span>}
-                        {player.name}
-                        {e.type === "own_goal" && ` (${teamsById.get(e.team_id)?.short_code})`}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => onEditPlayer(player.id)}
-                        aria-label={`Fix name or number of ${player.name}, on all their events`}
-                        className="shrink-0 font-medium text-brand-text underline-offset-2 active:underline"
-                      >
-                        Fix name/number
-                      </button>
+                {e.type === "own_goal" ? (
+                  // Own goals read the way a score keeper says them: who put it in, then who benefits.
+                  <span className="min-w-0 flex-1 leading-tight">
+                    <span className="block truncate text-sm font-semibold">
+                      Own goal by{" "}
+                      {player ? (
+                        <>
+                          {player.shirt_number != null && <span className="tabular">#{player.shirt_number} </span>}
+                          {player.name} ({teamsById.get(e.team_id)?.short_code})
+                        </>
+                      ) : (
+                        `a ${teamsById.get(e.team_id)?.short_code} player`
+                      )}
                     </span>
-                  ) : (
-                    <button type="button" onClick={() => onEdit(e)} className="text-sm font-medium text-brand-text underline-offset-2 active:underline">
-                      {isGoal ? "Add scorer" : "Add player"}
-                    </button>
-                  )}
-                </span>
+                    <span className="flex min-w-0 items-baseline gap-2 text-sm text-muted">
+                      <span className="shrink-0">Counts for {teamsById.get(creditedTeamId ?? -1)?.short_code}</span>
+                      {player ? (
+                        <button
+                          type="button"
+                          onClick={() => onEditPlayer(player.id)}
+                          aria-label={`Fix name or number of ${player.name}, on all their events`}
+                          className="shrink-0 font-medium text-brand-text underline-offset-2 active:underline"
+                        >
+                          Fix name/number
+                        </button>
+                      ) : (
+                        <button type="button" onClick={() => onEdit(e)} className="shrink-0 font-medium text-brand-text underline-offset-2 active:underline">
+                          Add player
+                        </button>
+                      )}
+                    </span>
+                  </span>
+                ) : (
+                  <span className="min-w-0 flex-1 leading-tight">
+                    <span className="block text-sm font-semibold">
+                      {LABEL[e.type]} · {teamsById.get(creditedTeamId ?? -1)?.short_code}
+                    </span>
+                    {player ? (
+                      <span className="flex min-w-0 items-baseline gap-2 text-sm text-muted">
+                        <span className="min-w-0 truncate">
+                          {player.shirt_number != null && <span className="tabular">#{player.shirt_number} </span>}
+                          {player.name}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => onEditPlayer(player.id)}
+                          aria-label={`Fix name or number of ${player.name}, on all their events`}
+                          className="shrink-0 font-medium text-brand-text underline-offset-2 active:underline"
+                        >
+                          Fix name/number
+                        </button>
+                      </span>
+                    ) : (
+                      <button type="button" onClick={() => onEdit(e)} className="text-sm font-medium text-brand-text underline-offset-2 active:underline">
+                        {isGoal ? "Add scorer" : "Add player"}
+                      </button>
+                    )}
+                  </span>
+                )}
                 <button
                   type="button"
                   onClick={() => onEdit(e)}

@@ -95,7 +95,7 @@ function MatchDetail({ match, onLeave }: { match: Match; onLeave: () => void }) 
           Penalties {match.home_pens}–{match.away_pens}
         </p>
       )}
-      <ScorerColumns events={eventsForMatch(match, events, playersById)} className="mt-4" />
+      <ScorerColumns events={eventsForMatch(match, events, playersById, teamsById)} className="mt-4" />
 
       <div role="tablist" aria-label="Match details" className="mt-5 grid grid-cols-2 gap-1 rounded-xl bg-bg p-1 ring-1 ring-border">
         {(["summary", "players"] as const).map((t) => (
@@ -143,10 +143,10 @@ function Status({ match }: { match: Match }) {
 }
 
 function SummaryPanel({ match }: { match: Match }) {
-  const { events, playersById, substitutions, officials } = useTournament();
+  const { events, playersById, teamsById, substitutions, officials } = useTournament();
   const officialGroups = groupOfficials(officials, match.id);
   const now = useServerNow(60_000);
-  const matchEvents = eventsForMatch(match, events, playersById);
+  const matchEvents = eventsForMatch(match, events, playersById, teamsById);
   const matchSubs = subsForMatch(match, substitutions, playersById);
   const started = isLive(match) || isFinished(match);
 
