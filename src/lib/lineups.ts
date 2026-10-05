@@ -60,6 +60,8 @@ export async function getLineup(matchId: number): Promise<MatchLineup | null> {
 // ---------------------------------------------------------------------------
 
 const POSITION_ORDER: LineupPosition[] = ["GK", "DF", "MF", "FW"];
+/** Assumed when a lineup has no formation and its players' positions don't give one. 11-a-side. */
+export const DEFAULT_FORMATION = "4-3-3";
 const MAX_PER_LINE = 6;
 
 export type PitchLayout = {
@@ -77,17 +79,19 @@ function parseFormation(formation: string | null): number[] | null {
 
 /**
  * Lays the starters out in lines. Works for any number of players and any formation:
- * if the formation doesn't fit the starters, they are grouped by position instead.
+ *  1. the lineup's own formation, if it fits the starters;
+ *  2. otherwise the players' positions (GK, DF, MF, FW), if every starter has one;
+ *  3. otherwise DEFAULT_FORMATION (4-3-3), if it fits;
+ *  4. otherwise grouped by whatever positions there are.
  */
 export function pitchLayout(lineup: TeamLineup): PitchLayout {
   const starters = lineup.players.filter((p) => p.starter);
   if (starters.length === 0) return { lines: [], formation: null };
 
-  const counts = parseFormation(lineup.formation);
   const gkIndex = Math.max(0, starters.findIndex((p) => p.position === "GK"));
   const outfield = starters.filter((_, i) => i !== gkIndex);
-
-  if (counts && counts.reduce((a, b) => a + b, 0) === outfield.length) {
+  const fits = (counts: number[] | null): counts is number[] => !!counts && counts.reduce((a, b) => a + b, 0) === outfield.length;
+  const inFormation = (counts: number[]): PitchLayout => {
     const lines: LineupPlayer[][] = [[starters[gkIndex]]];
     let at = 0;
     for (const n of counts) {
@@ -95,9 +99,20 @@ export function pitchLayout(lineup: TeamLineup): PitchLayout {
       at += n;
     }
     return { lines, formation: counts.join("-") };
+  };
+
+  const own = parseFormation(lineup.formation);
+  if (fits(own)) return inFormation(own);
+  const assumed = parseFormation(DEFAULT_FORMATION);
+  if (starters.some((p) => p.position == null) && fits(assumed)) return inFormation(assumed);
+
+  // No positions at all: first player in goal, the rest in even lines of up to four.
+  if (starters.every((p) => p.position == null) && outfield.length > 0) {
+    const rows = Math.ceil(outfield.length / 4);
+    return inFormation(Array.from({ length: rows }, (_, i) => Math.floor((outfield.length + i) / rows)));
   }
 
-  // Fallback: by position, keeping the listed order within each position.
+  // By position, keeping the listed order within each position.
   const byPosition = POSITION_ORDER.map((pos) =>
     starters.filter((p) => (p.position ?? "MF") === pos),
   ).filter((line) => line.length > 0);

@@ -125,13 +125,13 @@ type PitchProps = {
   awayTally: Map<LineupPlayer, PlayerTally>;
 };
 
-const LINE_HEIGHT = 60;
+const LINE_HEIGHT = 64;
 
 function Pitch({ home, away, homeTeam, awayTeam, homeTally, awayTally }: PitchProps) {
   const homeLines = home ? pitchLayout(home).lines : [];
   const awayLines = away ? pitchLayout(away).lines : [];
   // Both halves the same height, sized to the team with more lines.
-  const halfHeight = Math.max(homeLines.length, awayLines.length, 3) * LINE_HEIGHT + 44;
+  const halfHeight = Math.max(homeLines.length, awayLines.length, 3) * LINE_HEIGHT + 36;
 
   return (
     <div
@@ -194,7 +194,7 @@ function Half({
       aria-label={`${team?.short_code ?? ""} starting lineup`}
       // Home attacks down the screen, away attacks up: goalkeepers at each end. Each team's
       // own left is on its left as it attacks, so the home lines read right to left.
-      className={`relative flex justify-around px-2 ${side === "home" ? "flex-col pt-3 pb-9" : "flex-col-reverse pt-9 pb-3"}`}
+      className={`relative flex justify-around px-2 ${side === "home" ? "flex-col pt-3 pb-7" : "flex-col-reverse pt-7 pb-3"}`}
       style={{ height }}
     >
       {lines.map((line, i) => (
