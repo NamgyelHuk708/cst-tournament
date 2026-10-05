@@ -10,7 +10,7 @@ import { useTournament } from "../tournament-provider";
  * (everywhere at once, via Realtime), never the score, status or clock. Undo in this match reverses it.
  */
 export function EditPlayerSheet({ playerId, matchId, onClose }: { playerId: string; matchId: number | null; onClose: () => void }) {
-  const { playersById, teamsById, local } = useTournament();
+  const { playersById, teamsById, events, substitutions, local } = useTournament();
   const supabase = useMemo(() => createClient(), []);
   const player = playersById.get(playerId);
   const [name, setName] = useState(player?.name ?? "");
@@ -20,6 +20,11 @@ export function EditPlayerSheet({ playerId, matchId, onClose }: { playerId: stri
 
   if (!player) return null;
   const team = teamsById.get(player.team_id);
+  // Every goal, card and substitution this player is named on, in any match.
+  const eventCount =
+    events.filter((e) => e.player_id === playerId).length +
+    substitutions.filter((x) => x.player_on === playerId || x.player_off === playerId).length;
+  const label = `${player.shirt_number != null ? `#${player.shirt_number} ` : ""}${player.name}`;
   const unchanged = name.trim() === player.name && (shirt === "" ? null : Number(shirt)) === player.shirt_number;
 
   async function save() {
@@ -42,9 +47,17 @@ export function EditPlayerSheet({ playerId, matchId, onClose }: { playerId: stri
   }
 
   return (
-    <Sheet open onClose={onClose} title={`Edit player · ${team?.short_code ?? ""}`}>
+    <Sheet open onClose={onClose} title={`Fix name/number · ${team?.short_code ?? ""}`}>
       <div className="space-y-4">
-        <p className="text-sm text-muted">Changes this player everywhere, straight away. The score and the clock aren&apos;t affected.</p>
+        {eventCount > 1 ? (
+          <p className="rounded-xl border-l-4 border-text bg-bg px-4 py-3 text-sm font-medium">
+            This changes {label} on all {eventCount} of their events. To change who scored one goal, use the pencil on that goal instead.
+          </p>
+        ) : (
+          <p className="text-sm text-muted">
+            For correcting a misspelt name or wrong number. It changes {label} everywhere, straight away. To change who scored a goal, use the pencil on that goal instead.
+          </p>
+        )}
         <div className="grid grid-cols-[1fr_5.5rem] gap-2">
           <label className="block">
             <span className="mb-1 block text-sm font-semibold text-muted">Name</span>

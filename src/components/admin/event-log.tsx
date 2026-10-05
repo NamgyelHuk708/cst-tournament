@@ -11,6 +11,14 @@ const LABEL: Record<EventType, string> = {
   red_card: "Red card",
 };
 
+/** "Edit this goal", "Edit this card": the pencil changes one event, never the player. */
+const NOUN: Record<EventType, string> = {
+  goal: "goal",
+  own_goal: "own goal",
+  yellow_card: "card",
+  red_card: "card",
+};
+
 type Item = { kind: "event"; e: MatchEvent } | { kind: "sub"; s: Substitution };
 
 /** What has been recorded (goals, cards and substitutions), newest first, each with edit and delete. */
@@ -111,9 +119,10 @@ export function EventLog({
                       <button
                         type="button"
                         onClick={() => onEditPlayer(player.id)}
+                        aria-label={`Fix name or number of ${player.name}, on all their events`}
                         className="shrink-0 font-medium text-brand-text underline-offset-2 active:underline"
                       >
-                        Edit player
+                        Fix name/number
                       </button>
                     </span>
                   ) : (
@@ -125,7 +134,8 @@ export function EventLog({
                 <button
                   type="button"
                   onClick={() => onEdit(e)}
-                  aria-label={`Edit ${LABEL[e.type].toLowerCase()} at ${eventMinuteLabel(e)}`}
+                  aria-label={`Edit this ${NOUN[e.type]}${e.minute != null ? ` at ${eventMinuteLabel(e)}` : ""}`}
+                  title={`Edit this ${NOUN[e.type]}`}
                   className="grid size-11 place-items-center rounded-lg text-muted active:bg-bg"
                 >
                   <PencilIcon />
@@ -133,7 +143,7 @@ export function EventLog({
                 <button
                   type="button"
                   onClick={() => onDelete(e)}
-                  aria-label={`Delete ${LABEL[e.type].toLowerCase()} at ${eventMinuteLabel(e)}`}
+                  aria-label={`Delete this ${NOUN[e.type]}${e.minute != null ? ` at ${eventMinuteLabel(e)}` : ""}`}
                   className="grid size-11 place-items-center rounded-lg text-muted active:bg-bg"
                 >
                   <TrashIcon />

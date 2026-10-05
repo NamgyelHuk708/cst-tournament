@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { uuid } from "@/lib/uuid";
-import { bySquadOrder, type EventType, type Match, type MatchEvent, type Side } from "@/lib/tournament";
+import { bySquadOrder, eventMinuteLabel, type EventType, type Match, type MatchEvent, type Side } from "@/lib/tournament";
 import { useTournament } from "../tournament-provider";
 import { Sheet } from "../sheet";
 import { EditPlayerSheet } from "./edit-player-sheet";
@@ -66,7 +66,15 @@ export function EventSheet({
   const effectivePlayer = selectedValid ? playerId : null;
 
   const code = (side: Side) => teamsById.get(teamOn(side))?.short_code ?? "";
-  const title = !event ? "Add goal or card" : event.player_id ? "Edit event" : isGoal ? "Add scorer" : "Edit card";
+  // Name the one event being changed, so it can't be mistaken for fixing the player everywhere.
+  const eventNoun = event ? { goal: "goal", own_goal: "own goal", yellow_card: "yellow card", red_card: "red card" }[event.type] : "";
+  const at = event ? (event.minute != null ? ` at ${eventMinuteLabel(event)}` : " (minute not known)") : "";
+  const title = !event
+    ? "Add goal or card"
+    : !event.player_id && (event.type === "goal" || event.type === "own_goal")
+      ? `Add scorer to goal${at}`
+      : `Edit ${eventNoun}${at}`;
+  const pickHint = event?.player_id ? " · tap another player to change" : "";
 
   async function save() {
     if (problem) {
@@ -167,7 +175,7 @@ export function EventSheet({
           </div>
         </Field>
 
-        <Field label={type === "own_goal" ? `Own goal by (${code(playerSide)} player)` : isGoal ? "Scored by" : "Player"}>
+        <Field label={`${type === "own_goal" ? `Own goal by (${code(playerSide)} player)` : isGoal ? "Scored by" : "Player"}${pickHint}`}>
           <PlayerChips squad={squad} selected={effectivePlayer} onPick={setPlayerId} teamCode={code(playerSide)} />
           {effectivePlayer === NEW_PLAYER && (
             <div className="mt-2 grid grid-cols-[1fr_5.5rem] gap-2">
@@ -195,7 +203,7 @@ export function EventSheet({
               onClick={() => setEditingPlayer(true)}
               className="mt-2 h-9 text-sm font-medium text-brand-text underline-offset-2 active:underline"
             >
-              Edit player&apos;s name or number
+              Fix name/number (changes all their events)
             </button>
           )}
         </Field>
