@@ -10,6 +10,7 @@ import {
   type Match,
   type ResolvedSide,
   type Side,
+  isBallInPlay,
 } from "@/lib/tournament";
 import { CheckIcon, ChevronIcon, TrophyIcon } from "../icons";
 import { GroupSwatch } from "../group-tag";
@@ -43,8 +44,7 @@ export function KnockoutCard({ match, featured = false }: { match: Match; featur
         </span>
         <span className="ml-auto text-xs font-medium text-muted tabular">
           {live ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-live px-2 py-0.5 font-display text-[13px] font-bold text-live-text">
-              <span className="live-dot size-1.5 rounded-full bg-live-text" />
+            <span className={`inline-flex items-center gap-1 rounded-full bg-live px-2 py-0.5 font-display text-[13px] font-bold text-live-text ${isBallInPlay(match) ? "live-breathe" : ""}`}>
               {matchClock(match, now).label}
             </span>
           ) : isFinished(match) ? (

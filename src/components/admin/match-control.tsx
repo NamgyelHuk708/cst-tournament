@@ -20,6 +20,7 @@ import {
   type MatchStatus,
   type Substitution,
   type Team,
+  isBallInPlay,
 } from "@/lib/tournament";
 import { ChevronIcon } from "../icons";
 import { useServerNow, useTournament } from "../tournament-provider";
@@ -566,7 +567,7 @@ function Scoreboard({
   const statusText: Record<MatchStatus, string> = {
     scheduled: "Not started",
     first_half: "First half",
-    half_time: "Half time",
+    half_time: "Half-time",
     second_half: "Second half",
     penalties: "Penalties",
     finished: "Full time",
@@ -575,8 +576,11 @@ function Scoreboard({
   return (
     <section aria-label="Scoreboard" className="mx-4 mt-1 rounded-2xl bg-card px-4 py-3 ring-1 ring-border/60">
       <div className="flex items-center justify-between text-sm">
-        <span className={`inline-flex items-center gap-1.5 font-semibold ${live ? "text-live-text" : "text-muted"}`}>
-          {live && <span className="live-dot size-2 rounded-full bg-live" />}
+        <span
+          className={`inline-flex items-center font-semibold ${
+            live ? `rounded-full bg-live px-2.5 py-0.5 text-live-text ${isBallInPlay(match) ? "live-breathe" : ""}` : "text-muted"
+          }`}
+        >
           {statusText[match.status]}
         </span>
         {live && clock.running && <span className="font-display text-2xl leading-none font-bold tabular">{clock.label}</span>}

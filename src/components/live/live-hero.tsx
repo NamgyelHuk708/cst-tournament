@@ -1,6 +1,6 @@
 "use client";
 
-import { compareEventTime, eventsForMatch, matchClock, slotDisplayName, subsForMatch, type Match, type Team } from "@/lib/tournament";
+import { compareEventTime, eventsForMatch, isBallInPlay, matchClock, slotDisplayName, subsForMatch, type Match, type Team } from "@/lib/tournament";
 import { LatestSub, ScorerColumns } from "../event-list";
 import { GroupTag } from "../group-tag";
 import { TeamLink } from "../team-link";
@@ -27,7 +27,7 @@ export function LiveHero({ match }: { match: Match }) {
 
   return (
     <article aria-label="Live match" className="relative overflow-hidden rounded-2xl bg-card shadow-[0_1px_2px_rgb(27_34_48/0.06),0_8px_24px_-12px_rgb(27_34_48/0.18)]">
-      <div className="h-1 bg-live" />
+      <div className={`h-1 bg-live ${isBallInPlay(match) ? "live-sweep" : ""}`} />
       <div className="px-5 pt-4 pb-5">
         <div className="flex items-center justify-between">
           {match.group_code ? <GroupTag group={match.group_code} /> : <StageTag match={match} />}
@@ -38,9 +38,8 @@ export function LiveHero({ match }: { match: Match }) {
           <span
             role="status"
             aria-live="polite"
-            className="inline-flex items-center gap-2 rounded-full bg-live py-1.5 pr-3.5 pl-3 text-live-text"
+            className={`inline-flex items-center gap-2 rounded-full bg-live px-3.5 py-1.5 text-live-text ${isBallInPlay(match) ? "live-breathe" : ""}`}
           >
-            <span className="live-dot size-2 rounded-full bg-live-text" />
             <span className="text-xs font-bold">{statusText}</span>
             {match.status !== "half_time" && match.status !== "penalties" && (
               <span className="font-display text-xl leading-none font-bold tabular">{clock.label}</span>

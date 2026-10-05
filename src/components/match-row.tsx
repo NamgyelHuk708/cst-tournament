@@ -9,6 +9,7 @@ import {
   type Match,
   type Side,
   type Team,
+  isBallInPlay,
 } from "@/lib/tournament";
 import { useMatchSheet } from "./match-sheet/context";
 import { ChevronIcon } from "./icons";
@@ -130,8 +131,7 @@ function StatusCell({ match }: { match: Match }) {
     const clock = matchClock(match, now);
     return (
       <span className="w-[5rem] shrink-0 leading-tight">
-        <span className="inline-flex items-center gap-1 rounded-full bg-live px-2 py-0.5 font-display text-sm font-bold text-live-text tabular">
-          <span className="live-dot size-1.5 rounded-full bg-live-text" />
+        <span className={`inline-flex items-center gap-1 rounded-full bg-live px-2 py-0.5 font-display text-sm font-bold text-live-text tabular ${isBallInPlay(match) ? "live-breathe" : ""}`}>
           {clock.label}
         </span>
         <span className="mt-0.5 block text-[11px] font-medium whitespace-nowrap text-muted tabular">

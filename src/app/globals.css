@@ -117,6 +117,63 @@ body {
   animation: live-pulse 1.8s ease-out infinite;
 }
 
+/*
+ * Ball in play: a soft saffron glow breathes around the live pill, and a light sweep travels along
+ * the live card's top bar. Both animate only opacity and transform (compositor-only, cheap on
+ * phones), sit behind or beside the content so text never moves, and are added only while a half
+ * is being played: at half-time and other pauses the pill and bar are solid, and finished is static.
+ */
+@keyframes live-breathe {
+  0% { opacity: 0; transform: scale(0.96); }
+  45% { opacity: 0.75; transform: scale(1.06); }
+  100% { opacity: 0; transform: scale(1.14); }
+}
+
+.live-breathe {
+  position: relative;
+  isolation: isolate;
+}
+
+.live-breathe::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  box-shadow: 0 0 8px 2px var(--live);
+  opacity: 0;
+  pointer-events: none;
+  animation: live-breathe 2s ease-in-out infinite;
+}
+
+@keyframes live-sweep {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(250%); }
+}
+
+.live-sweep {
+  position: relative;
+  overflow: hidden;
+}
+
+.live-sweep::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--brand) 55%, transparent) 30%,
+    color-mix(in srgb, #fff 65%, transparent) 50%,
+    color-mix(in srgb, var(--brand) 55%, transparent) 70%,
+    transparent
+  );
+  transform: translateX(-100%);
+  pointer-events: none;
+  animation: live-sweep 2.6s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+
 /* Brief highlight when a score changes. */
 @keyframes score-flash {
   0% { background-color: var(--live-soft); }
@@ -147,7 +204,7 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .live-dot, .score-flash, .skeleton::after {
+  .live-dot, .score-flash, .skeleton::after, .live-breathe::before, .live-sweep::after {
     animation: none;
   }
 }

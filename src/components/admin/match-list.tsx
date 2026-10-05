@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { dayKey, formatTime, relativeDay } from "@/lib/format";
-import { isFinished, isLive, matchClock, slotDisplayName, type Match } from "@/lib/tournament";
+import { isFinished, isLive, matchClock, slotDisplayName, type Match, isBallInPlay } from "@/lib/tournament";
 import { GroupSwatch } from "../group-tag";
 import { ChevronIcon } from "../icons";
 import { useServerNow, useTournament } from "../tournament-provider";
@@ -64,8 +64,7 @@ export function AdminMatchRow({ match, now, hideGroup = false }: { match: Match;
     <Link href={`/admin/match/${match.id}`} className="flex min-h-16 items-center gap-3 px-4 py-3 active:bg-bg">
       <span className="w-[4.5rem] shrink-0 leading-tight">
         {live ? (
-          <span className="inline-flex items-center gap-1 rounded-full bg-live px-2 py-0.5 font-display text-sm font-bold text-live-text tabular">
-            <span className="live-dot size-1.5 rounded-full bg-live-text" />
+          <span className={`inline-flex items-center gap-1 rounded-full bg-live px-2 py-0.5 font-display text-sm font-bold text-live-text tabular ${isBallInPlay(match) ? "live-breathe" : ""}`}>
             {matchClock(match, now).label}
           </span>
         ) : isFinished(match) ? (

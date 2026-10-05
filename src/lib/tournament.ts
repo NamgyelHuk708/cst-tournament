@@ -79,6 +79,11 @@ export type GroupCode = (typeof GROUP_CODES)[number];
 
 const LIVE_STATUSES: readonly MatchStatus[] = ["first_half", "half_time", "second_half", "penalties"];
 
+/** A half is being played (the clock runs). Not at half-time, penalties or before/after the match. */
+export function isBallInPlay(match: Pick<Match, "status">): boolean {
+  return match.status === "first_half" || match.status === "second_half";
+}
+
 export function isLive(match: Pick<Match, "status">): boolean {
   return LIVE_STATUSES.includes(match.status);
 }

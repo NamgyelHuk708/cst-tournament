@@ -12,6 +12,7 @@ import {
   slotDisplayName,
   subsForMatch,
   type Match,
+  isBallInPlay,
 } from "@/lib/tournament";
 import { MatchTimeline, ScorerColumns } from "../event-list";
 import { GroupTag } from "../group-tag";
@@ -128,8 +129,9 @@ function Status({ match }: { match: Match }) {
   if (isLive(match)) {
     const label = match.status === "half_time" ? "HT" : match.status === "penalties" ? "Pens" : matchClock(match, now).label;
     return (
-      <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-live px-2.5 py-0.5 font-display text-sm font-bold text-live-text tabular">
-        <span className="live-dot size-1.5 rounded-full bg-live-text" />
+      <span
+        className={`inline-flex shrink-0 items-center rounded-full bg-live px-2.5 py-0.5 font-display text-sm font-bold text-live-text tabular ${isBallInPlay(match) ? "live-breathe" : ""}`}
+      >
         {label}
       </span>
     );
