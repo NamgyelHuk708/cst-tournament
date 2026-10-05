@@ -17,6 +17,9 @@
     { "match": 14, "home": "BBP", "away": "BLT", "score": [2, 4], "fixture": "Bhutan Board Product Limited (BBPL) v Bhutan Lottery" },
     { "match": 15, "home": "BPC", "away": "ICP", "score": [1, 17], "fixture": "BPC v ICP, Phuentsholing" },
     { "match": 16, "home": "CSK", "away": "ZIM", "score": [6, 6], "fixture": "CST Kangtsey v Zimdra FC" },
-    { "match": 17, "home": "CSU", "away": "PEL", "score": [2, 3], "fixture": "CST United v Pelden Warriors" }
+    { "match": 17, "home": "CSU", "away": "PEL", "score": [2, 3], "fixture": "CST United v Pelden Warriors" },
+    { "match": 18, "home": "FIF", "away": "TCC", "score": [7, 4], "fixture": "FI FC v TCC" },
+    { "match": 19, "home": "DLJ", "away": "570", "score": [3, 2], "fixture": "Druk Larjung v 570 MW" },
+    { "match": 20, "home": "MDP", "away": "FCB", "score": [1, 2], "fixture": "MDP FC v FCB" }
   ]
 }
