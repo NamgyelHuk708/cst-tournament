@@ -63,15 +63,22 @@ export function AdminMatchRow({ match, now, hideGroup = false }: { match: Match;
 
   return (
     <Link href={`/admin/match/${match.id}`} className="flex min-h-16 items-center gap-3 px-4 py-3 active:bg-bg">
-      <span className="w-[4.5rem] shrink-0 leading-tight">
+      {/* Day and kick-off time on every row, whatever its state (as the public match rows). */}
+      <span className="w-[5rem] shrink-0 leading-tight">
         {live ? (
-          <LivePill match={match} />
-        ) : isFinished(match) ? (
-          <span className="font-display text-sm font-semibold text-muted">FT</span>
+          <>
+            <LivePill match={match} />
+            <span className="mt-0.5 block text-[11px] font-medium whitespace-nowrap text-muted tabular">
+              {relativeDay(match.kickoff_at, now)} {formatTime(match.kickoff_at)}
+            </span>
+          </>
         ) : (
           <>
-            <span className="block text-xs font-semibold text-muted">{relativeDay(match.kickoff_at, now)}</span>
-            <span className="block font-display text-[15px] font-semibold tabular">{formatTime(match.kickoff_at)}</span>
+            <span className="block truncate text-xs font-semibold text-muted">{relativeDay(match.kickoff_at, now)}</span>
+            <span className="flex items-baseline gap-1 whitespace-nowrap">
+              <span className={`font-display text-[15px] font-semibold tabular ${isFinished(match) ? "text-muted" : ""}`}>{formatTime(match.kickoff_at)}</span>
+              {isFinished(match) && <span className="font-display text-xs font-bold text-muted">FT</span>}
+            </span>
           </>
         )}
       </span>
