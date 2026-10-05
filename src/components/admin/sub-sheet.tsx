@@ -3,12 +3,11 @@
 import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { uuid } from "@/lib/uuid";
-import type { Match, Substitution } from "@/lib/tournament";
+import { bySquadOrder, type Match, type Substitution } from "@/lib/tournament";
 import { Sheet } from "../sheet";
 import { useTournament } from "../tournament-provider";
 import { MinuteField, useMinuteInput } from "./minute-field";
-
-const NEW = "new";
+import { NEW_PLAYER as NEW, PlayerChips } from "./player-chips";
 
 /**
  * Record or edit a substitution: player off, player on (from the team's players, or a new one with
@@ -31,9 +30,7 @@ export function SubSheet({
   const { players, teamsById, local } = useTournament();
   const supabase = useMemo(() => createClient(), []);
   const team = teamsById.get(teamId);
-  const squad = players
-    .filter((p) => p.team_id === teamId)
-    .sort((a, b) => (a.shirt_number ?? 999) - (b.shirt_number ?? 999) || a.name.localeCompare(b.name));
+  const squad = players.filter((p) => p.team_id === teamId).sort(bySquadOrder);
   const [off, setOff] = useState<string | null>(sub?.player_off ?? null);
   const [on, setOn] = useState<string | null>(sub?.player_on ?? null);
   const [newName, setNewName] = useState("");
@@ -95,22 +92,7 @@ export function SubSheet({
   }
 
   const chips = (selected: string | null, pick: (id: string | null) => void, allowNew: boolean) => (
-    <div className="flex flex-wrap gap-2">
-      <Chip selected={selected === null} onClick={() => pick(null)}>
-        Unknown
-      </Chip>
-      {allowNew && (
-        <Chip selected={selected === NEW} onClick={() => pick(NEW)}>
-          + New player
-        </Chip>
-      )}
-      {squad.map((p) => (
-        <Chip key={p.id} selected={selected === p.id} onClick={() => pick(p.id)}>
-          {p.shirt_number != null && <span className="tabular opacity-60">#{p.shirt_number} </span>}
-          {p.name}
-        </Chip>
-      ))}
-    </div>
+    <PlayerChips squad={squad} selected={selected} onPick={pick} allowNew={allowNew} teamCode={team?.short_code} />
   );
 
   return (
@@ -192,18 +174,5 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       <legend className="mb-2 text-sm font-semibold text-muted">{label}</legend>
       {children}
     </fieldset>
-  );
-}
-
-function Chip({ selected, onClick, children }: { selected: boolean; onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button
-      type="button"
-      aria-pressed={selected}
-      onClick={onClick}
-      className={`h-11 rounded-full px-4 text-sm font-medium ${selected ? "bg-text text-white" : "bg-bg ring-1 ring-border"}`}
-    >
-      {children}
-    </button>
   );
 }

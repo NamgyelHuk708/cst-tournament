@@ -24,7 +24,7 @@ export function MatchDetailsHint() {
   if (!openSheet) return null;
   return (
     <p aria-hidden="true" className="flex h-11 items-center justify-center gap-1 border-t border-border text-[13px] font-semibold text-muted">
-      {process.env.NEXT_PUBLIC_SHOW_LINEUPS === "true" ? "Match details and lineups" : "Match details"}
+      Match details
       <ChevronIcon className="size-4 -rotate-90" />
     </p>
   );

@@ -3,11 +3,12 @@
 import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { uuid } from "@/lib/uuid";
-import { type EventType, type Match, type MatchEvent, type Side } from "@/lib/tournament";
+import { bySquadOrder, type EventType, type Match, type MatchEvent, type Side } from "@/lib/tournament";
 import { useTournament } from "../tournament-provider";
 import { Sheet } from "../sheet";
 import { EditPlayerSheet } from "./edit-player-sheet";
 import { MinuteField, useMinuteInput } from "./minute-field";
+import { NEW_PLAYER, PlayerChips } from "./player-chips";
 
 const TYPES: { type: EventType; label: string }[] = [
   { type: "goal", label: "Goal" },
@@ -15,8 +16,6 @@ const TYPES: { type: EventType; label: string }[] = [
   { type: "yellow_card", label: "Yellow" },
   { type: "red_card", label: "Red" },
 ];
-
-const NEW_PLAYER = "new";
 
 /**
  * Add or change the details of a goal or card. Every field is optional except the team.
@@ -62,9 +61,7 @@ export function EventSheet({
   // The player's own team: for an own goal, the side that conceded.
   const playerSide = type === "own_goal" ? flip(credited) : credited;
   const playerTeamId = teamOn(playerSide);
-  const squad = players
-    .filter((p) => p.team_id === playerTeamId)
-    .sort((a, b) => (a.shirt_number ?? 999) - (b.shirt_number ?? 999) || a.name.localeCompare(b.name));
+  const squad = players.filter((p) => p.team_id === playerTeamId).sort(bySquadOrder);
   const selectedValid = playerId === NEW_PLAYER || playerId === null || squad.some((p) => p.id === playerId);
   const effectivePlayer = selectedValid ? playerId : null;
 
@@ -171,14 +168,7 @@ export function EventSheet({
         </Field>
 
         <Field label={type === "own_goal" ? `Own goal by (${code(playerSide)} player)` : isGoal ? "Scored by" : "Player"}>
-          <div className="flex flex-wrap gap-2">
-            <Chip selected={effectivePlayer === null} onClick={() => setPlayerId(null)}>
-              Unknown
-            </Chip>
-            <Chip selected={effectivePlayer === NEW_PLAYER} onClick={() => setPlayerId(NEW_PLAYER)}>
-              + New player
-            </Chip>
-          </div>
+          <PlayerChips squad={squad} selected={effectivePlayer} onPick={setPlayerId} teamCode={code(playerSide)} />
           {effectivePlayer === NEW_PLAYER && (
             <div className="mt-2 grid grid-cols-[1fr_5.5rem] gap-2">
               <input
@@ -207,16 +197,6 @@ export function EventSheet({
             >
               Edit player&apos;s name or number
             </button>
-          )}
-          {squad.length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-2">
-              {squad.map((p) => (
-                <Chip key={p.id} selected={effectivePlayer === p.id} onClick={() => setPlayerId(p.id)}>
-                  {p.shirt_number != null && <span className="tabular opacity-60">#{p.shirt_number} </span>}
-                  {p.name}
-                </Chip>
-              ))}
-            </div>
           )}
         </Field>
 
@@ -254,18 +234,5 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       <legend className="mb-2 text-sm font-semibold text-muted">{label}</legend>
       {children}
     </fieldset>
-  );
-}
-
-function Chip({ selected, onClick, children }: { selected: boolean; onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button
-      type="button"
-      aria-pressed={selected}
-      onClick={onClick}
-      className={`h-11 rounded-full px-4 text-sm font-medium ${selected ? "bg-text text-white" : "bg-bg ring-1 ring-border"}`}
-    >
-      {children}
-    </button>
   );
 }

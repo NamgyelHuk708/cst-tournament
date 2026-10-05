@@ -577,6 +577,23 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      admin_add_players: {
+        Args: { p_players: Json; p_team: number }
+        Returns: {
+          created_at: string
+          id: string
+          is_demo: boolean
+          name: string
+          shirt_number: number | null
+          team_id: number
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "players"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       admin_add_substitution: {
         Args: {
           p_added: number
@@ -673,6 +690,7 @@ export type Database = {
         }
       }
       admin_fill_round_of_16: { Args: never; Returns: Json }
+      admin_remove_player: { Args: { p_player: string }; Returns: undefined }
       admin_reset_match: {
         Args: { p_match: number }
         Returns: {
@@ -900,6 +918,23 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      admin_update_player: {
+        Args: { p_name: string; p_player: string; p_shirt: number }
+        Returns: {
+          created_at: string
+          id: string
+          is_demo: boolean
+          name: string
+          shirt_number: number | null
+          team_id: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "players"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       admin_update_substitution: {
         Args: {
           p_added: number
@@ -999,6 +1034,7 @@ export type Database = {
       require_admin: { Args: never; Returns: undefined }
       restore_events: { Args: { p_rows: Json }; Returns: undefined }
       slot_name: { Args: { p_slot: string }; Returns: string }
+      tidy_name: { Args: { p_name: string }; Returns: string }
     }
     Enums: {
       event_type: "goal" | "own_goal" | "yellow_card" | "red_card"

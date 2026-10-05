@@ -644,6 +644,11 @@ export type PlayerRef = { name: string; number: number | null };
 
 export type DisplaySub = Substitution & { side: Side; off: PlayerRef | null; on: PlayerRef | null };
 
+/** Squad order: by shirt number, players without one last, then by name. */
+export function bySquadOrder(a: Player, b: Player): number {
+  return (a.shirt_number ?? 999) - (b.shirt_number ?? 999) || a.name.localeCompare(b.name);
+}
+
 /** Substitutions for a match, in time order, with names and numbers. Untimed ones go last. */
 export function subsForMatch(match: Match, subs: Substitution[], playersById: Map<string, Player>): DisplaySub[] {
   const ref = (id: string | null): PlayerRef | null => {

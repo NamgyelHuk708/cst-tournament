@@ -1,6 +1,5 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useCallback, useId, useState } from "react";
 import { formatDay, formatTime } from "@/lib/format";
@@ -21,15 +20,7 @@ import { Sheet } from "../sheet";
 import { useServerNow, useTournament } from "../tournament-provider";
 import { useResolvedSides } from "../use-resolved-sides";
 import { MatchSheetContext } from "./context";
-
-// The Lineups tab exists only when NEXT_PUBLIC_SHOW_LINEUPS is "true" (off in production). The
-// check is written out here so a build with the flag off drops the tab, its code and sample data.
-const LineupsPanel =
-  process.env.NEXT_PUBLIC_SHOW_LINEUPS === "true"
-    ? dynamic(() => import("./lineups-panel").then((m) => m.LineupsPanel), {
-        loading: () => <div className="skeleton h-[420px] rounded-xl" aria-label="Loading lineups" />,
-      })
-    : null;
+import { PlayersPanel } from "./players-panel";
 
 /** One match detail sheet for the public pages; any match opens it via useMatchSheet(). */
 export function MatchSheetProvider({ children }: { children: React.ReactNode }) {
@@ -54,7 +45,7 @@ export function MatchSheetProvider({ children }: { children: React.ReactNode }) 
   );
 }
 
-type Tab = "summary" | "lineups";
+type Tab = "summary" | "players";
 
 function MatchDetail({ match, onLeave }: { match: Match; onLeave: () => void }) {
   const { teamsById, events, playersById } = useTournament();
@@ -106,37 +97,28 @@ function MatchDetail({ match, onLeave }: { match: Match; onLeave: () => void }) 
       )}
       <ScorerColumns events={eventsForMatch(match, events, playersById)} className="mt-4" />
 
-      {/* Without the lineups flag there is only the summary: no tabs. */}
-      {!LineupsPanel ? (
-        <div className="mt-5">
-          <SummaryPanel match={match} />
-        </div>
-      ) : (
-        <>
-          <div role="tablist" aria-label="Match details" className="mt-5 grid grid-cols-2 gap-1 rounded-xl bg-bg p-1 ring-1 ring-border">
-            {(["summary", "lineups"] as const).map((t) => (
-              <button
-                key={t}
-                id={`${tabsId}-${t}`}
-                role="tab"
-                type="button"
-                aria-selected={tab === t}
-                aria-controls={`${tabsId}-panel`}
-                onClick={() => setTab(t)}
-                className={`h-10 rounded-lg font-display text-[15px] font-bold transition-colors ${
-                  tab === t ? "bg-brand text-white shadow-sm" : "text-muted active:bg-card"
-                }`}
-              >
-                {t === "summary" ? "Summary" : "Lineups"}
-              </button>
-            ))}
-          </div>
+      <div role="tablist" aria-label="Match details" className="mt-5 grid grid-cols-2 gap-1 rounded-xl bg-bg p-1 ring-1 ring-border">
+        {(["summary", "players"] as const).map((t) => (
+          <button
+            key={t}
+            id={`${tabsId}-${t}`}
+            role="tab"
+            type="button"
+            aria-selected={tab === t}
+            aria-controls={`${tabsId}-panel`}
+            onClick={() => setTab(t)}
+            className={`h-10 rounded-lg font-display text-[15px] font-bold transition-colors ${
+              tab === t ? "bg-brand text-white shadow-sm" : "text-muted active:bg-card"
+            }`}
+          >
+            {t === "summary" ? "Summary" : "Players"}
+          </button>
+        ))}
+      </div>
 
-          <div id={`${tabsId}-panel`} role="tabpanel" aria-labelledby={`${tabsId}-${tab}`} className="mt-4">
-            {tab === "summary" ? <SummaryPanel match={match} /> : <LineupsPanel match={match} home={home} away={away} />}
-          </div>
-        </>
-      )}
+      <div id={`${tabsId}-panel`} role="tabpanel" aria-labelledby={`${tabsId}-${tab}`} className="mt-4">
+        {tab === "summary" ? <SummaryPanel match={match} /> : <PlayersPanel match={match} home={home} away={away} />}
+      </div>
     </div>
   );
 }

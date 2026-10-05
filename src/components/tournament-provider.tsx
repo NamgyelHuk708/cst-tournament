@@ -35,6 +35,7 @@ type TournamentContextValue = Snapshot & {
     upsertEvent: (row: MatchEvent) => void;
     removeEvent: (id: number) => void;
     upsertPlayer: (row: Player) => void;
+    removePlayer: (id: string) => void;
     upsertSub: (row: Substitution) => void;
     removeSub: (id: number) => void;
     setOfficials: (matchId: number, rows: Official[]) => void;
@@ -228,6 +229,7 @@ export function TournamentProvider({
       upsertEvent: (row) => setData((d) => ({ ...d, events: upsert(d.events, row) })),
       removeEvent: (id) => setData((d) => ({ ...d, events: d.events.filter((e) => e.id !== id) })),
       upsertPlayer: (row) => setData((d) => ({ ...d, players: upsert(d.players, row) })),
+      removePlayer: (id) => setData((d) => ({ ...d, players: d.players.filter((x) => x.id !== id) })),
       upsertSub: (row) => setData((d) => ({ ...d, substitutions: upsert(d.substitutions, row) })),
       removeSub: (id) => setData((d) => ({ ...d, substitutions: d.substitutions.filter((x) => x.id !== id) })),
       setOfficials: (matchId, rows) => setData((d) => ({ ...d, officials: [...d.officials.filter((o) => o.match_id !== matchId), ...rows] })),
