@@ -28,7 +28,6 @@ import { FinalScoreSheet, MoreSheet, ResetSheet, StatusSheet } from "./correctio
 import { TeamsSheet } from "./teams-sheet";
 import { useResolvedSides } from "../use-resolved-sides";
 import { EventLog } from "./event-log";
-import { EditPlayerSheet } from "./edit-player-sheet";
 import { EventSheet } from "./event-sheet";
 import { OfficialsSection } from "./officials";
 import { SubSheet } from "./sub-sheet";
@@ -85,7 +84,6 @@ export function MatchControl({ matchId }: { matchId: number }) {
   const [confirmDelete, setConfirmDelete] = useState<MatchEvent | null>(null);
   const [adding, setAdding] = useState(false);
   const [subbing, setSubbing] = useState<{ teamId: number; sub: Substitution | null } | null>(null);
-  const [editingPlayer, setEditingPlayer] = useState<string | null>(null);
   // Correction tools; errors from them are shown inside their sheet.
   const [tool, setTool] = useState<"more" | "final" | "status" | "reset" | "teams" | null>(null);
   const [toolError, setToolError] = useState<string | null>(null);
@@ -292,7 +290,6 @@ export function MatchControl({ matchId }: { matchId: number }) {
         onEdit={setEditing}
         onDelete={setConfirmDelete}
         onEditSub={(sub) => setSubbing({ teamId: sub.team_id, sub })}
-        onEditPlayer={setEditingPlayer}
       />
 
       <ControlDock
@@ -360,17 +357,6 @@ export function MatchControl({ matchId }: { matchId: number }) {
           }}
         />
       )}
-      {editingPlayer && (
-        <EditPlayerSheet
-          playerId={editingPlayer}
-          matchId={matchId}
-          onClose={() => {
-            setEditingPlayer(null);
-            loadLastAction();
-          }}
-        />
-      )}
-
       {adding && (
         <EventSheet
           event={null}

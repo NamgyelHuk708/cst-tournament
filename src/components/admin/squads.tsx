@@ -59,7 +59,7 @@ export function SquadList() {
 }
 
 /** One team's squad: add, edit and remove players, or paste a whole list at once. */
-export function TeamSquad({ code }: { code: string }) {
+export function TeamSquad({ code, fromMatch }: { code: string; fromMatch?: number }) {
   const { teams, players } = useTournament();
   const team = teams.find((t) => t.short_code === code);
   const [sheet, setSheet] = useState<{ kind: "add" } | { kind: "paste" } | { kind: "edit"; player: Player } | null>(null);
@@ -77,9 +77,12 @@ export function TeamSquad({ code }: { code: string }) {
 
   return (
     <main className="mx-auto max-w-xl px-4 pt-2 pb-10">
-      <Link href="/admin/squads" className="-ml-1 inline-flex h-11 items-center gap-1 px-1 text-sm font-semibold text-brand-text">
+      <Link
+        href={fromMatch ? `/admin/match/${fromMatch}` : "/admin/squads"}
+        className="-ml-1 inline-flex h-12 items-center gap-1 px-1 text-sm font-semibold text-brand-text"
+      >
         <ChevronIcon className="size-4 rotate-90" />
-        All squads
+        {fromMatch ? `Back to match ${fromMatch}` : "All squads"}
       </Link>
       <div className="mt-1 flex items-center gap-3">
         <TeamLogo team={team} size={44} />
@@ -281,6 +284,7 @@ function EditSquadPlayerSheet({ player, squad, onClose }: { player: Player; squa
           save();
         }}
       >
+        <p className="text-sm text-muted">For a misspelt name or wrong number: it changes this player everywhere, on all their goals, cards and substitutions.</p>
         <PlayerFields shirt={shirt} name={name} onShirt={setShirt} onName={setName} />
         {(error ?? problem) && <Problem text={(error ?? problem)!} />}
         {confirmRemove ? (

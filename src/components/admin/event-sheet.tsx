@@ -6,7 +6,6 @@ import { uuid } from "@/lib/uuid";
 import { bySquadOrder, eventMinuteLabel, scoreFromEvents, type EventType, type Match, type MatchEvent, type Side } from "@/lib/tournament";
 import { useTournament } from "../tournament-provider";
 import { Sheet } from "../sheet";
-import { EditPlayerSheet } from "./edit-player-sheet";
 import { MinuteField, useMinuteInput } from "./minute-field";
 import { NEW_PLAYER, PlayerChips } from "./player-chips";
 
@@ -52,7 +51,6 @@ export function EventSheet({
     event ? (event.minute != null ? { minute: event.minute, added: event.added_time ?? 0 } : null) : undefined,
   );
   const { minute, added, problem } = minuteState;
-  const [editingPlayer, setEditingPlayer] = useState(false);
   const [clientId] = useState(() => uuid());
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -76,7 +74,8 @@ export function EventSheet({
     : !event.player_id && (event.type === "goal" || event.type === "own_goal")
       ? `Add scorer to goal${at}`
       : `Edit ${eventNoun}${at}`;
-  const pickHint = event?.player_id ? " · tap another player to change" : "";
+  // Picking someone else changes this event only. Misspelt names are fixed on the Squads page.
+  const pickHint = event?.player_id ? " · tap another player to change this one only" : "";
 
   // Preview of what Save will record, with the score it leads to.
   const picked = effectivePlayer && effectivePlayer !== NEW_PLAYER ? squad.find((p) => p.id === effectivePlayer) : undefined;
@@ -161,9 +160,6 @@ export function EventSheet({
 
   return (
     <Sheet open onClose={onClose} title={title}>
-      {editingPlayer && effectivePlayer && effectivePlayer !== NEW_PLAYER && (
-        <EditPlayerSheet playerId={effectivePlayer} matchId={match.id} onClose={() => setEditingPlayer(false)} />
-      )}
       <div className="space-y-5">
         <Field label="Type">
           <div className="grid grid-cols-4 gap-1.5 rounded-xl bg-bg p-1">
@@ -221,15 +217,6 @@ export function EventSheet({
                 className="h-12 rounded-xl px-3 text-base tabular ring-1 ring-border outline-none focus:ring-2 focus:ring-text"
               />
             </div>
-          )}
-          {effectivePlayer && effectivePlayer !== NEW_PLAYER && (
-            <button
-              type="button"
-              onClick={() => setEditingPlayer(true)}
-              className="mt-2 h-9 text-sm font-medium text-brand-text underline-offset-2 active:underline"
-            >
-              Fix name/number (changes all their events)
-            </button>
           )}
         </Field>
 

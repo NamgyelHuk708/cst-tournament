@@ -1,6 +1,7 @@
 "use client";
 
 import { compareEventTime, eventMinuteLabel, type EventType, type Match, type MatchEvent, type Substitution } from "@/lib/tournament";
+import Link from "next/link";
 import { BallIcon, CardIcon } from "../icons";
 import { useTournament } from "../tournament-provider";
 
@@ -29,7 +30,6 @@ export function EventLog({
   onEdit,
   onDelete,
   onEditSub,
-  onEditPlayer,
 }: {
   events: MatchEvent[];
   subs: Substitution[];
@@ -37,7 +37,6 @@ export function EventLog({
   onEdit: (e: MatchEvent) => void;
   onDelete: (e: MatchEvent) => void;
   onEditSub: (s: Substitution) => void;
-  onEditPlayer: (playerId: string) => void;
 }) {
   const { teamsById, playersById } = useTournament();
   // Newest first; anything without a minute at the bottom.
@@ -56,7 +55,24 @@ export function EventLog({
   return (
     // Bottom padding leaves room for the fixed control dock.
     <section aria-label="Event log" className="px-4 pt-4 pb-[30rem]">
-      <h2 className="mb-2 px-1 text-sm font-semibold text-muted">Event log</h2>
+      <div className="mb-1 flex items-center justify-between gap-2 pl-1">
+        <h2 className="text-sm font-semibold text-muted">Event log</h2>
+        {/* Misspelt names and wrong numbers are fixed in the team's squad; Back there returns here. */}
+        <nav aria-label="Team squads" className="flex">
+          {[match.home_team_id, match.away_team_id].map((id) => {
+            const team = id != null ? teamsById.get(id) : undefined;
+            return team ? (
+              <Link
+                key={team.id}
+                href={`/admin/squads/${encodeURIComponent(team.short_code)}?from=${match.id}`}
+                className="flex h-12 items-center rounded-lg px-2.5 text-sm font-semibold text-brand-text active:bg-card"
+              >
+                {team.short_code} squad
+              </Link>
+            ) : null;
+          })}
+        </nav>
+      </div>
       {ordered.length === 0 ? (
         <p className="rounded-xl bg-card px-4 py-4 text-sm text-muted ring-1 ring-border/60">
           Nothing recorded yet. Goals, cards and substitutions will appear here.
@@ -119,49 +135,25 @@ export function EventLog({
                         `a ${teamsById.get(e.team_id)?.short_code} player`
                       )}
                     </span>
-                    <span className="flex min-w-0 items-baseline gap-2 text-sm text-muted">
-                      <span className="shrink-0">Counts for {teamsById.get(creditedTeamId ?? -1)?.short_code}</span>
-                      {player ? (
-                        <button
-                          type="button"
-                          onClick={() => onEditPlayer(player.id)}
-                          aria-label={`Fix name or number of ${player.name}, on all their events`}
-                          className="shrink-0 font-medium text-brand-text underline-offset-2 active:underline"
-                        >
-                          Fix name/number
-                        </button>
-                      ) : (
-                        <button type="button" onClick={() => onEdit(e)} className="shrink-0 font-medium text-brand-text underline-offset-2 active:underline">
-                          Add player
-                        </button>
-                      )}
-                    </span>
+                    <span className="block text-sm text-muted">Counts for {teamsById.get(creditedTeamId ?? -1)?.short_code}</span>
                   </span>
                 ) : (
                   <span className="min-w-0 flex-1 leading-tight">
                     <span className="block text-sm font-semibold">
                       {LABEL[e.type]} · {teamsById.get(creditedTeamId ?? -1)?.short_code}
                     </span>
-                    {player ? (
-                      <span className="flex min-w-0 items-baseline gap-2 text-sm text-muted">
-                        <span className="min-w-0 truncate">
+                    <span className="block truncate text-sm text-muted">
+                      {player ? (
+                        <>
                           {player.shirt_number != null && <span className="tabular">#{player.shirt_number} </span>}
                           {player.name}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => onEditPlayer(player.id)}
-                          aria-label={`Fix name or number of ${player.name}, on all their events`}
-                          className="shrink-0 font-medium text-brand-text underline-offset-2 active:underline"
-                        >
-                          Fix name/number
-                        </button>
-                      </span>
-                    ) : (
-                      <button type="button" onClick={() => onEdit(e)} className="text-sm font-medium text-brand-text underline-offset-2 active:underline">
-                        {isGoal ? "Add scorer" : "Add player"}
-                      </button>
-                    )}
+                        </>
+                      ) : isGoal ? (
+                        "No scorer yet"
+                      ) : (
+                        "No player yet"
+                      )}
+                    </span>
                   </span>
                 )}
                 <button
