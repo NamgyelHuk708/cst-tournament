@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BracketIcon, LiveIcon, TableIcon } from "./icons";
+import { BracketIcon, LiveIcon, MatchesIcon, TableIcon } from "./icons";
 import { useOptionalTournament } from "./tournament-provider";
 import { isLive } from "@/lib/tournament";
 
 const TABS = [
   { href: "/", label: "Live", Icon: LiveIcon },
+  { href: "/matches", label: "Matches", Icon: MatchesIcon },
   { href: "/groups", label: "Groups", Icon: TableIcon },
   { href: "/knockouts", label: "Knockouts", Icon: BracketIcon },
 ] as const;
@@ -22,7 +23,7 @@ export function BottomNav() {
       aria-label="Sections"
       className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur"
     >
-      <ul className="mx-auto grid h-[var(--nav-height)] max-w-xl grid-cols-3">
+      <ul className="mx-auto grid h-[var(--nav-height)] max-w-xl grid-cols-4">
         {TABS.map(({ href, label, Icon }) => {
           const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
           return (

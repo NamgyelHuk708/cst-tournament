@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { dayKey, formatDay } from "@/lib/format";
-import { isFinished, isLive, type Match } from "@/lib/tournament";
+import { isFinished, isLive, isUpcoming, type Match } from "@/lib/tournament";
+import { ChevronIcon } from "../icons";
 import { MatchRow } from "../match-row";
 import { useServerNow, useTournament } from "../tournament-provider";
 import { useResolvedSides } from "../use-resolved-sides";
@@ -11,8 +13,6 @@ import { LiveHero } from "./live-hero";
 import { NextMatchHero } from "./next-match-hero";
 
 const UP_NEXT_COUNT = 3;
-// A match still "not started" this long after kick-off is a result nobody has entered yet, not "up next".
-const STALE_AFTER_MS = 3 * 60 * 60 * 1000;
 
 export function LiveView() {
   const { matches } = useTournament();
@@ -20,7 +20,7 @@ export function LiveView() {
 
   const live = matches.filter(isLive);
   // Already in kick-off order.
-  const scheduled = matches.filter((m) => m.status === "scheduled" && Date.parse(m.kickoff_at) > now - STALE_AFTER_MS);
+  const scheduled = matches.filter((m) => isUpcoming(m, now));
   // Only results that have actually been played (kick-off in the past).
   const finished = matches.filter((m) => isFinished(m) && Date.parse(m.kickoff_at) <= now);
 
@@ -81,6 +81,15 @@ export function LiveView() {
           <li className="bg-card px-4 py-5 text-sm text-muted">No results yet. Final scores will appear here.</li>
         )}
       </Section>
+      {finished.length > 0 && (
+        <Link
+          href="/matches?view=results"
+          className="-mt-4 flex h-11 items-center justify-end gap-0.5 px-1 text-sm font-semibold text-brand"
+        >
+          See all results
+          <ChevronIcon className="size-4 -rotate-90" />
+        </Link>
+      )}
     </div>
   );
 }

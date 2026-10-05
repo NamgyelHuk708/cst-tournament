@@ -5,6 +5,7 @@ import { QUALIFIERS_PER_GROUP, isLive, type GroupStandings, type StandingRow } f
 import { GroupSwatch } from "../group-tag";
 import { CheckIcon, ChevronIcon } from "../icons";
 import { MatchRow } from "../match-row";
+import { TeamLink } from "../team-link";
 import { useTournament } from "../tournament-provider";
 
 export function GroupCard({ standings }: { standings: GroupStandings }) {
@@ -136,8 +137,12 @@ function Row({ row, afterCut, markTie }: { row: StandingRow; afterCut: boolean; 
       </td>
       <th scope="row" className="max-w-0 pr-2 text-left font-normal">
         <span className="flex items-baseline gap-2">
-          <span className="font-display text-[17px] font-bold tracking-wide">{row.team.short_code}</span>
-          <span className="truncate text-[13px] text-muted">{row.team.name}</span>
+          <TeamLink team={row.team} className="font-display text-[17px] font-bold tracking-wide">
+            {row.team.short_code}
+          </TeamLink>
+          <TeamLink team={row.team} decorative className="truncate text-[13px] text-muted">
+            {row.team.name}
+          </TeamLink>
           {row.orderedByOverride && (
             <span className="text-xs text-muted" title="Order set by the organisers">
               †

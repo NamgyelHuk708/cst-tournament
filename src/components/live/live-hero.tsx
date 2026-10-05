@@ -3,6 +3,7 @@
 import { eventsForMatch, matchClock, slotDisplayName, type Match, type Team } from "@/lib/tournament";
 import { EventColumns } from "../event-list";
 import { GroupTag } from "../group-tag";
+import { TeamLink } from "../team-link";
 import { MatchDetailsHint, OpenMatchOverlay } from "../match-sheet/open-overlay";
 import { useServerNow, useTournament } from "../tournament-provider";
 import { useFlashOnChange } from "../use-flash";
@@ -83,22 +84,31 @@ export function Matchup({
   away,
   placeholders,
   center,
+  linkTeams = false,
   className = "",
 }: {
   home?: Team;
   away?: Team;
   placeholders?: { home?: string; away?: string };
   center: React.ReactNode;
+  /** Code and name link to the team's matches. Not for cards that open the match sheet on tap. */
+  linkTeams?: boolean;
   className?: string;
 }) {
   const code = (team?: Team) => (
     <p className={`self-end text-center font-display text-[34px] leading-none font-bold tracking-wide ${team ? "" : "text-muted"}`}>
-      {team?.short_code ?? "TBD"}
+      {team && linkTeams ? <TeamLink team={team}>{team.short_code}</TeamLink> : (team?.short_code ?? "TBD")}
     </p>
   );
   const name = (team?: Team, placeholder?: string) => (
     <p className={`line-clamp-2 self-start text-center text-[13px] leading-snug text-muted ${team ? "" : "italic"}`}>
-      {team?.name ?? placeholder ?? "To be decided"}
+      {team && linkTeams ? (
+        <TeamLink team={team} decorative>
+          {team.name}
+        </TeamLink>
+      ) : (
+        (team?.name ?? placeholder ?? "To be decided")
+      )}
     </p>
   );
   return (

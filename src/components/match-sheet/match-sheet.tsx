@@ -1,5 +1,7 @@
 "use client";
 
+import dynamic from "next/dynamic";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useCallback, useId, useState } from "react";
 import { formatDay, formatTime } from "@/lib/format";
 import {
@@ -17,23 +19,34 @@ import { Sheet } from "../sheet";
 import { useServerNow, useTournament } from "../tournament-provider";
 import { useResolvedSides } from "../use-resolved-sides";
 import { MatchSheetContext } from "./context";
-import { LineupsPanel } from "./lineups-panel";
+
+// The Lineups tab exists only when NEXT_PUBLIC_SHOW_LINEUPS is "true" (off in production). The
+// check is written out here so a build with the flag off drops the tab, its code and sample data.
+const LineupsPanel =
+  process.env.NEXT_PUBLIC_SHOW_LINEUPS === "true"
+    ? dynamic(() => import("./lineups-panel").then((m) => m.LineupsPanel), {
+        loading: () => <div className="skeleton h-[420px] rounded-xl" aria-label="Loading lineups" />,
+      })
+    : null;
 
 /** One match detail sheet for the public pages; any match opens it via useMatchSheet(). */
 export function MatchSheetProvider({ children }: { children: React.ReactNode }) {
   const { matchesById, teamsById } = useTournament();
-  const [matchId, setMatchId] = useState<number | null>(null);
-  const open = useCallback((id: number) => setMatchId(id), []);
-  const match = matchId != null ? matchesById.get(matchId) : undefined;
+  // The sheet belongs to the page it was opened on: navigating (a team link, Back) closes it.
+  const location = `${usePathname()}?${useSearchParams().toString()}`;
+  const [opened, setOpened] = useState<{ id: number; at: string } | null>(null);
+  const open = useCallback((id: number) => setOpened({ id, at: location }), [location]);
+  const close = useCallback(() => setOpened(null), []);
+  const match = opened && opened.at === location ? matchesById.get(opened.id) : undefined;
   const team = (id: number | null) => (id != null ? teamsById.get(id)?.short_code : undefined);
   const title = match ? `Match ${match.id}: ${team(match.home_team_id) ?? "TBD"} v ${team(match.away_team_id) ?? "TBD"}` : "Match";
 
   return (
     <MatchSheetContext.Provider value={open}>
       {children}
-      <Sheet open={!!match} onClose={() => setMatchId(null)} title={title} hideTitle>
+      <Sheet open={!!match} onClose={close} title={title} hideTitle>
         {/* Keyed so the tab resets when another match opens. */}
-        {match && <MatchDetail key={match.id} match={match} />}
+        {match && <MatchDetail key={match.id} match={match} onLeave={close} />}
       </Sheet>
     </MatchSheetContext.Provider>
   );
@@ -41,7 +54,7 @@ export function MatchSheetProvider({ children }: { children: React.ReactNode }) 
 
 type Tab = "summary" | "lineups";
 
-function MatchDetail({ match }: { match: Match }) {
+function MatchDetail({ match, onLeave }: { match: Match; onLeave: () => void }) {
   const { teamsById } = useTournament();
   const sides = useResolvedSides(match);
   const [tab, setTab] = useState<Tab>("summary");
@@ -51,7 +64,8 @@ function MatchDetail({ match }: { match: Match }) {
   const started = isLive(match) || isFinished(match);
 
   return (
-    <div>
+    // Any link inside (a team's matches) leaves the sheet, even if it points at the current page.
+    <div onClickCapture={(e) => (e.target as Element).closest("a[href]") && onLeave()}>
       <div className="flex items-center justify-between gap-3">
         <span className="flex min-w-0 items-center gap-2 text-xs font-medium text-muted">
           {match.group_code ? (
@@ -70,6 +84,7 @@ function MatchDetail({ match }: { match: Match }) {
         home={home}
         away={away}
         placeholders={{ home: sides.home.placeholder, away: sides.away.placeholder }}
+        linkTeams
         center={
           started ? (
             <p className="flex items-center font-display text-[52px] leading-none font-bold tabular" aria-label={`Score ${match.home_score} to ${match.away_score}`}>
@@ -88,28 +103,37 @@ function MatchDetail({ match }: { match: Match }) {
         </p>
       )}
 
-      <div role="tablist" aria-label="Match details" className="mt-5 grid grid-cols-2 gap-1 rounded-xl bg-bg p-1 ring-1 ring-border">
-        {(["summary", "lineups"] as const).map((t) => (
-          <button
-            key={t}
-            id={`${tabsId}-${t}`}
-            role="tab"
-            type="button"
-            aria-selected={tab === t}
-            aria-controls={`${tabsId}-panel`}
-            onClick={() => setTab(t)}
-            className={`h-10 rounded-lg font-display text-[15px] font-bold transition-colors ${
-              tab === t ? "bg-brand text-white shadow-sm" : "text-muted active:bg-card"
-            }`}
-          >
-            {t === "summary" ? "Summary" : "Lineups"}
-          </button>
-        ))}
-      </div>
+      {/* Without the lineups flag there is only the summary: no tabs. */}
+      {!LineupsPanel ? (
+        <div className="mt-5">
+          <SummaryPanel match={match} />
+        </div>
+      ) : (
+        <>
+          <div role="tablist" aria-label="Match details" className="mt-5 grid grid-cols-2 gap-1 rounded-xl bg-bg p-1 ring-1 ring-border">
+            {(["summary", "lineups"] as const).map((t) => (
+              <button
+                key={t}
+                id={`${tabsId}-${t}`}
+                role="tab"
+                type="button"
+                aria-selected={tab === t}
+                aria-controls={`${tabsId}-panel`}
+                onClick={() => setTab(t)}
+                className={`h-10 rounded-lg font-display text-[15px] font-bold transition-colors ${
+                  tab === t ? "bg-brand text-white shadow-sm" : "text-muted active:bg-card"
+                }`}
+              >
+                {t === "summary" ? "Summary" : "Lineups"}
+              </button>
+            ))}
+          </div>
 
-      <div id={`${tabsId}-panel`} role="tabpanel" aria-labelledby={`${tabsId}-${tab}`} className="mt-4">
-        {tab === "summary" ? <SummaryPanel match={match} /> : <LineupsPanel match={match} home={home} away={away} />}
-      </div>
+          <div id={`${tabsId}-panel`} role="tabpanel" aria-labelledby={`${tabsId}-${tab}`} className="mt-4">
+            {tab === "summary" ? <SummaryPanel match={match} /> : <LineupsPanel match={match} home={home} away={away} />}
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -135,6 +159,7 @@ function Status({ match }: { match: Match }) {
 
 function SummaryPanel({ match }: { match: Match }) {
   const { events, playersById } = useTournament();
+  const now = useServerNow(60_000);
   const matchEvents = eventsForMatch(match, events, playersById);
   const started = isLive(match) || isFinished(match);
 
@@ -144,7 +169,11 @@ function SummaryPanel({ match }: { match: Match }) {
         <EventColumns events={matchEvents} />
       ) : (
         <p className="rounded-xl bg-bg px-4 py-4 text-center text-sm text-muted">
-          {started ? "No goals or cards recorded." : "Goals and cards will appear here once the match starts."}
+          {started
+            ? "No goals or cards recorded."
+            : Date.parse(match.kickoff_at) <= now
+              ? "Result to come. Goals and cards will appear here once it is entered."
+              : "Goals and cards will appear here once the match starts."}
         </p>
       )}
       <dl className="divide-y divide-border rounded-xl text-sm ring-1 ring-border">

@@ -13,6 +13,7 @@ import {
 } from "@/lib/lineups";
 import { isFinished, isLive, type Match, type Side, type Team } from "@/lib/tournament";
 import { BallIcon, CardIcon } from "../icons";
+import { TeamLink } from "../team-link";
 import { useTournament } from "../tournament-provider";
 
 const POSITION_NAME: Record<string, string> = { GK: "goalkeeper", DF: "defender", MF: "midfielder", FW: "forward" };
@@ -84,8 +85,18 @@ function TeamBar({ team, lineup, side }: { team?: Team; lineup?: TeamLineup; sid
     <div className={`flex items-center gap-2 px-1 ${side === "home" ? "pb-2" : "pt-2"}`}>
       <Disc side={side} className="size-4" />
       <p className="flex min-w-0 flex-1 items-baseline gap-2">
-        <span className="font-display text-[17px] leading-none font-bold tracking-wide">{team?.short_code ?? "TBD"}</span>
-        <span className="truncate text-[13px] leading-none text-muted">{team?.name}</span>
+        {team ? (
+          <>
+            <TeamLink team={team} className="font-display text-[17px] leading-none font-bold tracking-wide">
+              {team.short_code}
+            </TeamLink>
+            <TeamLink team={team} decorative className="truncate text-[13px] leading-none text-muted">
+              {team.name}
+            </TeamLink>
+          </>
+        ) : (
+          <span className="font-display text-[17px] leading-none font-bold tracking-wide">TBD</span>
+        )}
       </p>
       {formation && (
         <span className="shrink-0 font-display text-[15px] leading-none font-bold tabular" aria-label={`Formation ${formation}`}>

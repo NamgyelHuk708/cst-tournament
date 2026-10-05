@@ -48,6 +48,17 @@ export function isFinished(match: Pick<Match, "status">): boolean {
   return match.status === "finished";
 }
 
+/**
+ * A match still "not started" this long after kick-off is a result nobody has entered yet:
+ * it is no longer shown as upcoming.
+ */
+export const RESULT_PENDING_AFTER_MS = 3 * 60 * 60 * 1000;
+
+/** Not started, and not so long past kick-off that it is really a missing result. */
+export function isUpcoming(match: Pick<Match, "status" | "kickoff_at">, now: number): boolean {
+  return match.status === "scheduled" && Date.parse(match.kickoff_at) > now - RESULT_PENDING_AFTER_MS;
+}
+
 export function isKnockout(match: Pick<Match, "stage">): boolean {
   return match.stage !== "group";
 }

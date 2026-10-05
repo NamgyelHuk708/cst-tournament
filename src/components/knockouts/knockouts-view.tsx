@@ -4,6 +4,7 @@ import { useState } from "react";
 import { formatDay } from "@/lib/format";
 import { KNOCKOUT_ROUNDS, currentRound, matchOutcome, type KnockoutRound, type Match } from "@/lib/tournament";
 import { TrophyIcon } from "../icons";
+import { TeamLink } from "../team-link";
 import { useTournament } from "../tournament-provider";
 import { KnockoutCard } from "./knockout-card";
 
@@ -64,7 +65,10 @@ export function KnockoutsView() {
                 <div>
                   <p className="text-[11px] font-semibold text-white/70">Champions</p>
                   <p className="font-display text-2xl leading-tight font-bold">
-                    {champion.short_code} <span className="text-base font-semibold text-white/80">{champion.name}</span>
+                    <TeamLink team={champion}>{champion.short_code}</TeamLink>{" "}
+                    <TeamLink team={champion} decorative className="text-base font-semibold text-white/80">
+                      {champion.name}
+                    </TeamLink>
                   </p>
                 </div>
               </div>

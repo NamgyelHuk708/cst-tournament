@@ -1,9 +1,7 @@
 "use client";
 
-import { useId, useState } from "react";
 import { formatTime, relativeDay } from "@/lib/format";
 import {
-  eventsForMatch,
   isFinished,
   isLive,
   matchClock,
@@ -12,7 +10,6 @@ import {
   type Side,
   type Team,
 } from "@/lib/tournament";
-import { EventColumns } from "./event-list";
 import { useMatchSheet } from "./match-sheet/context";
 import { ChevronIcon } from "./icons";
 import { useServerNow, useTournament } from "./tournament-provider";
@@ -28,17 +25,13 @@ type Props = {
 
 /**
  * One match as a compact, stacked row: status on the left, a line per team,
- * scores right-aligned. Finished and live matches expand to show events.
+ * scores right-aligned. Tapping it opens the match sheet.
  */
 export function MatchRow({ match, showDay = false, placeholders }: Props) {
-  const { teamsById, events, playersById } = useTournament();
-  const [open, setOpen] = useState(false);
-  const detailsId = useId();
+  const { teamsById } = useTournament();
   const openSheet = useMatchSheet();
 
-  const matchEvents = eventsForMatch(match, events, playersById);
   const started = isFinished(match) || isLive(match);
-  const expandable = started && matchEvents.length > 0;
   const outcome = matchOutcome(match);
 
   const home = match.home_team_id != null ? teamsById.get(match.home_team_id) : undefined;
@@ -53,13 +46,7 @@ export function MatchRow({ match, showDay = false, placeholders }: Props) {
         <TeamLine team={away} placeholder={placeholders?.away} score={started ? match.away_score : null}
           pens={match.away_pens} state={lineState(outcome?.winner, "away")} />
       </div>
-      {openSheet ? (
-        <ChevronIcon className="size-4 shrink-0 -rotate-90 text-muted" />
-      ) : expandable ? (
-        <ChevronIcon open={open} className="size-4 shrink-0 text-muted" />
-      ) : (
-        <span className="w-4 shrink-0" />
-      )}
+      <ChevronIcon className="size-4 shrink-0 -rotate-90 text-muted" />
     </>
   );
 
@@ -74,23 +61,8 @@ export function MatchRow({ match, showDay = false, placeholders }: Props) {
         >
           {body}
         </button>
-      ) : expandable ? (
-        <button
-          type="button"
-          onClick={() => setOpen((o) => !o)}
-          aria-expanded={open}
-          aria-controls={detailsId}
-          className="flex min-h-[60px] w-full items-center gap-3 px-4 py-2.5 text-left active:bg-bg"
-        >
-          {body}
-        </button>
       ) : (
         <div className="flex min-h-[60px] items-center gap-3 px-4 py-2.5">{body}</div>
-      )}
-      {!openSheet && expandable && open && (
-        <div id={detailsId} className="border-t border-dashed border-border px-4 py-3">
-          <EventColumns events={matchEvents} size="sm" />
-        </div>
       )}
     </li>
   );

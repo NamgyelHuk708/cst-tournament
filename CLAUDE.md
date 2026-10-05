@@ -14,7 +14,9 @@
 
 **Tests borrow fixtures:** `test:admin` temporarily uses match 52 and all of Group G and the knockout stage (flagged demo, restored exactly). Once any of those are played, move the test fixtures to unplayed ones or the tests will refuse to run.
 
-**Lineups (sample data, behind a flag):** the match detail sheet (tap any match: Summary and Lineups tabs) only exists when `NEXT_PUBLIC_SHOW_LINEUPS=true` (set in `.env.local`, never in Vercel, so it is off in production). Lineups currently use made-up sample data from `src/data/lineups.sample.json`, labelled "Sample lineup", read only through `getLineup()` in `src/lib/lineups.ts`. Real lineup data (database storage, admin entry) is still to be designed; when it is, change `getLineup()` and keep the UI.
+**Match sheet and Matches tab:** tapping any match on the public pages opens the match detail sheet (`src/components/match-sheet/`). The Matches tab (`/matches`) lists results and upcoming fixtures with filters kept in the URL (`?view=upcoming`, `?group=A`, `?stage=knockouts`, `?team=DBR`); team codes and names elsewhere link to `/matches?team=<code>`.
+
+**Lineups (sample data, behind a flag):** the sheet's Lineups tab only exists when `NEXT_PUBLIC_SHOW_LINEUPS=true` (set in `.env.local`, never in Vercel, so it is off in production); without it the sheet shows the summary only, and the build contains no lineup code. Lineups currently use made-up sample data from `src/data/lineups.sample.json`, labelled "Sample lineup", read only through `getLineup()` in `src/lib/lineups.ts`. Real lineup data (database storage, admin entry) is still to be designed; when it is, change `getLineup()` and keep the UI.
 
 **Open items:** `design/DESIGN.md` and `design/screens/` were never provided. Half length (45 min) to be confirmed with the organisers. Supabase is in Sydney (~0.5 s per round trip from Bhutan). Some networks block database ports 5432/6543 (needed only for `npm run db:push`).
 
