@@ -41,6 +41,15 @@ function rng(seed: number) {
 async function main() {
   const cleared = await resetDemo();
   console.log(`Cleared previous demo data (${cleared.matches} matches, knockout stage cleared).`);
+  // The demo takes over the whole knockout stage, so it must not hold real teams yet (e.g. a Round of 16
+  // filled by the admin): reset:demo would clear them afterwards.
+  const realTeams = check(
+    await admin.from("matches").select("id").neq("stage", "group").eq("is_demo", false).or("home_team_id.not.is.null,away_team_id.not.is.null"),
+    "Check knockout teams",
+  );
+  if (realTeams.length > 0) {
+    throw new Error(`Knockout ties already have real teams (matches ${realTeams.map((m) => m.id).join(", ")}). seed:demo won't use the knockout stage.`);
+  }
   const prepared = await admin.rpc("demo_prepare_knockouts");
   if (prepared.error) throw new Error(prepared.error.message);
 

@@ -22,6 +22,21 @@
 
 **Open items:** `design/DESIGN.md` and `design/screens/` were never provided. Half length (45 min) to be confirmed with the organisers. Supabase is in Sydney (~0.5 s per round trip from Bhutan). Some networks block database ports 5432/6543 (needed only for `npm run db:push`).
 
+## Live-testing rules (every database change)
+
+Database features are built and tested on the live Supabase project while the site runs on Vercel. Follow all of these, every time:
+
+1. **Backup first.** Before any migration or test data: `npm run backup:live`. It writes `~/cst-live-backups/live-<date>.json` (every public table and view, read-only via the API) and, when `SUPABASE_DB_PASSWORD` is set in `.env.local`, a `pg_dump` of schema and data next to it (`.schema.sql`, `.data.sql`, via the Supabase CLI so the pg_dump version matches the server). Tell the user the file path.
+2. **Additive only.** Migrations may only add (tables, columns, functions). Nothing may change or remove existing data or behaviour. Show every migration to the user before applying it.
+3. **Backward compatible.** The code deployed on Vercel (the latest pushed commit on `main`) must keep working exactly as before. New features go in new tables, never as new enum values or rows in existing tables the deployed code reads. No constraints that could reject what the deployed admin can still do; put new validation inside new functions.
+4. **Check against the deployed commit.** After applying a migration, run that commit locally (read-only, no admin actions) against the live database and confirm Live, Matches, Groups, Knockouts and the match sheet show exactly what they did before.
+5. **Order of release.** Migration first, confirm the live site is unaffected, and only then does the user push the new code.
+6. **Match hours.** Apply migrations or write test data only after the user confirms it is outside match hours (no match between 4 and 10 PM Bhutan time).
+7. **Test data** is always flagged `is_demo`, so `npm run reset:demo` removes exactly it. Prefer new tables the deployed site doesn't display. Never test on a match that is live, about to start or already finished; use group matches at least several days away.
+8. **Clean-up.** After testing: `npm run reset:demo`, then `npm run compare:live -- <backup .json>`. Match statuses, scores, goal events, players and standings must be identical. Report the comparison before calling it clean.
+
+`reset:demo` only touches demo-flagged rows: it deletes `is_demo` rows in every table with that column (new tables included automatically), resets demo matches, clears undo history only for demo matches, clears the knockout stage only when every tie is demo-flagged, and fails loudly if any real match, event or player changed. `seed:demo` refuses to take over a knockout stage that already has real teams. Any new table that can hold test data must have an `is_demo boolean not null default false` column.
+
 ## Purpose
 
 A live score dashboard for the CST Silver Jubilee Departmental Football Tournament (CST Artificial Turf, 26 Sep – 31 Oct 2026).
