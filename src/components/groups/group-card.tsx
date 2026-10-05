@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useId, useState } from "react";
+import { useId, useState } from "react";
 import { QUALIFIERS_PER_GROUP, isLive, teamForm, type FormSlot, type GroupStandings, type StandingRow } from "@/lib/tournament";
 import { GroupSwatch } from "../group-tag";
 import { CheckIcon, ChevronIcon } from "../icons";
@@ -101,15 +101,7 @@ export function GroupCard({ standings }: { standings: GroupStandings }) {
           </thead>
           <tbody>
             {rows.map((row) => (
-              <Fragment key={row.team.id}>
-                <Row
-                  row={row}
-                  form={teamForm(row.team, matches, teamsById)}
-                  afterCut={row.position === QUALIFIERS_PER_GROUP + 1}
-                  markTie={unresolvedTie}
-                />
-                {row.position === QUALIFIERS_PER_GROUP && rows.length > QUALIFIERS_PER_GROUP && <CutLine />}
-              </Fragment>
+              <Row key={row.team.id} row={row} form={teamForm(row.team, matches, teamsById)} markTie={unresolvedTie} />
             ))}
           </tbody>
         </table>
@@ -169,16 +161,18 @@ function Th({ children, label, className = "w-6 sm:w-7" }: { children: React.Rea
   );
 }
 
-function Row({ row, form, afterCut, markTie }: { row: StandingRow; form: FormSlot[]; afterCut: boolean; markTie: boolean }) {
+function Row({ row, form, markTie }: { row: StandingRow; form: FormSlot[]; markTie: boolean }) {
   const gd = row.goalDifference > 0 ? `+${row.goalDifference}` : String(row.goalDifference);
   return (
-    <tr className={`h-12 first:border-t-0 ${afterCut ? "" : "border-t border-border/70"}`}>
+    <tr className="h-12 border-t border-border/70 first:border-t-0">
       <td className={`${STICKY_POS} pl-4`}>
         {row.qualifying && <span aria-hidden="true" className="absolute inset-y-1.5 left-0 w-1 rounded-r bg-win" />}
         <span className={`font-display text-base font-bold ${row.qualifying ? "text-win-text" : "text-muted"}`}>
           {markTie && row.tiedUnresolved && <span aria-label="level with a neighbour">=</span>}
           {row.position}
         </span>
+        {/* The green bar and number mark the qualifying places; screen readers hear it in words. */}
+        {row.qualifying && !row.qualified && <span className="sr-only">, qualifying place</span>}
       </td>
       <th scope="row" className={`${STICKY_TEAM} max-w-0 py-2 pr-2 text-left font-normal`}>
         <span className="flex items-center gap-2">
@@ -218,21 +212,6 @@ function Row({ row, form, afterCut, markTie }: { row: StandingRow; form: FormSlo
       </td>
       <td className={`${PHONE_ONLY} text-center`}>{row.goalsFor}</td>
       <td className="pr-4 text-center sm:hidden">{row.goalsAgainst}</td>
-    </tr>
-  );
-}
-
-/** The qualification line: labelled, so it doesn't rely on colour. */
-function CutLine() {
-  return (
-    <tr aria-hidden="true">
-      <td colSpan={11} className="p-0">
-        {/* Pinned to the visible width, so the label stays in view while the table scrolls. */}
-        <div className="sticky left-0 flex w-[calc(100vw-2rem)] max-w-[544px] items-center gap-2 px-4 sm:w-auto sm:max-w-none">
-          <span className="h-0 flex-1 border-t-2 border-dashed border-win/60" />
-          <span className="text-[11px] font-bold text-win-text">Qualify ↑</span>
-        </div>
-      </td>
     </tr>
   );
 }

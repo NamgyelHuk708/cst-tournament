@@ -89,6 +89,10 @@ export function GroupsView() {
             <span aria-hidden="true" className="inline-block size-3.5 rounded-full border-2 border-accent" /> not played
           </span>
         </p>
+        <p className="flex items-center gap-1.5">
+          <span aria-hidden="true" className="inline-block h-3.5 w-1 rounded-sm bg-win" />
+          Green bar: qualifying places (top 2)
+        </p>
         <p className="sm:hidden">Swipe a table sideways for GF and GA.</p>
       </div>
     </div>

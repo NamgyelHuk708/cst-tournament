@@ -135,7 +135,10 @@ function AdminGroupCard({ standings }: { standings: GroupStandings }) {
           <tbody>
             {rows.map((r) => (
               <tr key={r.team.id} className="h-10 border-t border-border/70">
-                <td className={`pl-4 font-display font-bold ${r.qualifying ? "text-win-text" : "text-muted"}`}>{r.position}</td>
+                <td className={`relative pl-4 font-display font-bold ${r.qualifying ? "text-win-text" : "text-muted"}`}>
+                  {r.qualifying && <span aria-hidden="true" className="absolute inset-y-1.5 left-0 w-1 rounded-r bg-win" />}
+                  {r.position}
+                </td>
                 <th scope="row" className="text-left font-normal">
                   <span className="font-display text-base font-bold">{r.team.short_code}</span>
                   {r.qualifying && <span className="ml-2 text-xs text-win-text">{r.qualified ? "Qualified" : "Qualifying"}</span>}
