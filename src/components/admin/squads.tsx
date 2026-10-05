@@ -62,7 +62,9 @@ export function SquadList() {
 export function TeamSquad({ code, fromMatch }: { code: string; fromMatch?: number }) {
   const { teams, players } = useTournament();
   const team = teams.find((t) => t.short_code === code);
-  const [sheet, setSheet] = useState<{ kind: "add" } | { kind: "paste" } | { kind: "edit"; player: Player } | null>(null);
+  const [sheet, setSheet] = useState<
+    { kind: "add" } | { kind: "paste" } | { kind: "edit"; player: Player } | { kind: "remove"; player: Player } | null
+  >(null);
   if (!team) {
     return (
       <main className="mx-auto max-w-xl px-4 pt-6">
@@ -106,17 +108,28 @@ export function TeamSquad({ code, fromMatch }: { code: string; fromMatch?: numbe
       {squad.length > 0 ? (
         <ul className="mt-4 divide-y divide-border rounded-xl bg-card ring-1 ring-border/60">
           {squad.map((p) => (
-            <li key={p.id}>
-              <button
-                type="button"
-                onClick={() => setSheet({ kind: "edit", player: p })}
-                aria-label={`Edit ${p.shirt_number != null ? `#${p.shirt_number} ` : ""}${p.name}`}
-                className="flex min-h-12 w-full items-center gap-3 px-4 py-2 text-left active:bg-bg"
-              >
-                <span className="w-7 shrink-0 text-right font-display text-lg font-bold text-muted tabular">{p.shirt_number ?? "–"}</span>
-                <span className="min-w-0 flex-1 truncate font-medium">{p.name}</span>
-                <span className="shrink-0 text-sm font-semibold text-brand-text">Edit</span>
-              </button>
+            <li key={p.id} className="flex min-h-14 items-center gap-3 py-1.5 pr-1.5 pl-4">
+              <span className="w-7 shrink-0 text-right font-display text-lg font-bold text-muted tabular">{p.shirt_number ?? "–"}</span>
+              <span className="min-w-0 flex-1 truncate font-medium">{p.name}</span>
+              {/* Edit and delete apart, like the event log, so one isn't tapped for the other. */}
+              <span className="flex shrink-0 items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setSheet({ kind: "edit", player: p })}
+                  aria-label={`Edit ${playerLabel(p)}`}
+                  className="h-11 rounded-lg px-3 text-sm font-semibold text-brand-text active:bg-bg"
+                >
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSheet({ kind: "remove", player: p })}
+                  aria-label={`Remove ${playerLabel(p)}`}
+                  className="grid size-11 place-items-center rounded-lg text-muted active:bg-bg"
+                >
+                  <TrashIcon />
+                </button>
+              </span>
             </li>
           ))}
         </ul>
@@ -128,7 +141,15 @@ export function TeamSquad({ code, fromMatch }: { code: string; fromMatch?: numbe
 
       {sheet?.kind === "add" && <AddPlayerSheet team={team} squad={squad} onClose={() => setSheet(null)} />}
       {sheet?.kind === "paste" && <PasteListSheet team={team} squad={squad} onClose={() => setSheet(null)} />}
-      {sheet?.kind === "edit" && <EditSquadPlayerSheet player={sheet.player} squad={squad} onClose={() => setSheet(null)} />}
+      {sheet?.kind === "edit" && <EditSquadPlayerSheet player={sheet.player} team={team} squad={squad} onClose={() => setSheet(null)} />}
+      {sheet?.kind === "remove" && (
+        <RemovePlayerSheet
+          player={sheet.player}
+          team={team}
+          onClose={() => setSheet(null)}
+          onEdit={() => setSheet({ kind: "edit", player: sheet.player })}
+        />
+      )}
     </main>
   );
 }
@@ -242,9 +263,11 @@ function AddPlayerSheet({ team, squad, onClose }: { team: Team; squad: Player[];
   );
 }
 
-function EditSquadPlayerSheet({ player, squad, onClose }: { player: Player; squad: Player[]; onClose: () => void }) {
+function EditSquadPlayerSheet({ player, team, squad, onClose }: { player: Player; team: Team; squad: Player[]; onClose: () => void }) {
   const { local } = useTournament();
   const supabase = useMemo(() => createClient(), []);
+  const blocked = useRemovalBlock(player);
+  const remove = useRemovePlayer(player, onClose);
   const [shirt, setShirt] = useState(player.shirt_number != null ? String(player.shirt_number) : "");
   const [name, setName] = useState(player.name);
   const [saving, setSaving] = useState(false);
@@ -264,17 +287,6 @@ function EditSquadPlayerSheet({ player, squad, onClose }: { player: Player; squa
     onClose();
   }
 
-  async function remove() {
-    setSaving(true);
-    setError(null);
-    const { error } = await supabase.rpc("admin_remove_player", { p_player: player.id });
-    setSaving(false);
-    setConfirmRemove(false);
-    if (error) return setError(message(error));
-    local.removePlayer(player.id);
-    onClose();
-  }
-
   return (
     <Sheet open onClose={onClose} title="Edit player">
       <form
@@ -287,14 +299,19 @@ function EditSquadPlayerSheet({ player, squad, onClose }: { player: Player; squa
         <p className="text-sm text-muted">For a misspelt name or wrong number: it changes this player everywhere, on all their goals, cards and substitutions.</p>
         <PlayerFields shirt={shirt} name={name} onShirt={setShirt} onName={setName} />
         {(error ?? problem) && <Problem text={(error ?? problem)!} />}
-        {confirmRemove ? (
+        {remove.error && <Problem text={remove.error} />}
+        {confirmRemove && blocked ? (
+          <Problem text={blocked} />
+        ) : confirmRemove ? (
           <div className="flex items-center gap-2 rounded-xl bg-bg px-3 py-2">
-            <span className="flex-1 text-sm font-medium">Remove {player.name} from the squad?</span>
+            <span className="flex-1 text-sm font-medium">
+              Remove {playerLabel(player)} from {team.name}?
+            </span>
             <button type="button" onClick={() => setConfirmRemove(false)} className="h-11 rounded-lg px-3 text-sm font-semibold ring-1 ring-border">
-              Keep
+              Cancel
             </button>
-            <button type="button" onClick={remove} disabled={saving} className="h-11 rounded-lg bg-text px-3 text-sm font-semibold text-white">
-              Remove
+            <button type="button" onClick={remove.run} disabled={remove.busy} className="h-11 rounded-lg bg-text px-3 text-sm font-semibold text-white">
+              {remove.busy ? "Removing…" : "Remove"}
             </button>
           </div>
         ) : (
@@ -305,6 +322,95 @@ function EditSquadPlayerSheet({ player, squad, onClose }: { player: Player; squa
         <SheetButtons onClose={onClose} closeLabel="Cancel" saveLabel={saving ? "Saving…" : "Save"} disabled={saving || !!problem} submit />
       </form>
     </Sheet>
+  );
+}
+
+const playerLabel = (p: Player) => `${p.shirt_number != null ? `#${p.shirt_number} ` : ""}${p.name}`;
+
+/**
+ * Why a player can't be removed, or null if they can: anyone named on a goal, card or substitution
+ * stays (the database refuses too). "#7 nana has 3 goals recorded, so they can't be removed. …"
+ */
+function useRemovalBlock(player: Player): string | null {
+  const { events, substitutions } = useTournament();
+  const n = { goal: 0, own_goal: 0, card: 0, sub: 0 };
+  for (const e of events) {
+    if (e.player_id !== player.id) continue;
+    if (e.type === "goal") n.goal++;
+    else if (e.type === "own_goal") n.own_goal++;
+    else n.card++;
+  }
+  for (const x of substitutions) if (x.player_on === player.id || x.player_off === player.id) n.sub++;
+  const parts = [
+    [n.goal, "goal"],
+    [n.own_goal, "own goal"],
+    [n.card, "card"],
+    [n.sub, "substitution"],
+  ]
+    .filter(([c]) => (c as number) > 0)
+    .map(([c, w]) => `${c} ${w}${c === 1 ? "" : "s"}`);
+  if (!parts.length) return null;
+  const list = parts.length === 1 ? parts[0] : `${parts.slice(0, -1).join(", ")} and ${parts.at(-1)}`;
+  return `${playerLabel(player)} has ${list} recorded, so they can't be removed. Edit their name or number instead.`;
+}
+
+/** Remove a player through the database function, then drop them from the list straight away. */
+function useRemovePlayer(player: Player, onDone: () => void) {
+  const { local } = useTournament();
+  const supabase = useMemo(() => createClient(), []);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  async function run() {
+    setBusy(true);
+    setError(null);
+    const { error } = await supabase.rpc("admin_remove_player", { p_player: player.id });
+    setBusy(false);
+    // The database's own reason (e.g. still in a match's undo history) is shown as it is.
+    if (error) return setError(message(error));
+    local.removePlayer(player.id);
+    onDone();
+  }
+  return { run, busy, error };
+}
+
+function RemovePlayerSheet({ player, team, onClose, onEdit }: { player: Player; team: Team; onClose: () => void; onEdit: () => void }) {
+  const blocked = useRemovalBlock(player);
+  const remove = useRemovePlayer(player, onClose);
+  return (
+    <Sheet open onClose={onClose} title={blocked ? "Can't remove this player" : "Remove player?"}>
+      <div className="space-y-4">
+        {blocked ? (
+          <p className="text-base">{blocked}</p>
+        ) : (
+          <p className="text-base">
+            Remove <strong className="font-semibold">{playerLabel(player)}</strong> from {team.name}?
+          </p>
+        )}
+        {remove.error && <Problem text={remove.error} />}
+        <div className="grid grid-cols-2 gap-3 pb-[env(safe-area-inset-bottom)]">
+          <button type="button" onClick={onClose} className="h-14 rounded-xl font-semibold ring-1 ring-border active:bg-bg">
+            Cancel
+          </button>
+          {blocked ? (
+            <button type="button" onClick={onEdit} className="h-14 rounded-xl bg-text font-semibold text-white active:opacity-90">
+              Edit
+            </button>
+          ) : (
+            <button type="button" onClick={remove.run} disabled={remove.busy} className="h-14 rounded-xl bg-text font-semibold text-white active:opacity-90 disabled:opacity-60">
+              {remove.busy ? "Removing…" : "Remove"}
+            </button>
+          )}
+        </div>
+      </div>
+    </Sheet>
+  );
+}
+
+function TrashIcon() {
+  return (
+    <svg viewBox="0 0 20 20" className="size-5" aria-hidden="true">
+      <path d="M4 6h12M8 6V4h4v2M6 6l1 10h6l1-10" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" strokeLinecap="round" />
+    </svg>
   );
 }
 
