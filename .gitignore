@@ -49,3 +49,6 @@ next-env.d.ts
 
 # throwaway local scripts
 /scripts/.*.tmp.ts
+
+# logo audit contact sheets (local review only)
+/design/team-logos-audit/

@@ -4,6 +4,7 @@ import { eventsForMatch, matchClock, slotDisplayName, type Match, type Team } fr
 import { EventColumns } from "../event-list";
 import { GroupTag } from "../group-tag";
 import { TeamLink } from "../team-link";
+import { TeamLogo } from "../team-logo";
 import { MatchDetailsHint, OpenMatchOverlay } from "../match-sheet/open-overlay";
 import { useServerNow, useTournament } from "../tournament-provider";
 import { useFlashOnChange } from "../use-flash";
@@ -96,9 +97,12 @@ export function Matchup({
   className?: string;
 }) {
   const code = (team?: Team) => (
-    <p className={`self-end text-center font-display text-[34px] leading-none font-bold tracking-wide ${team ? "" : "text-muted"}`}>
-      {team && linkTeams ? <TeamLink team={team}>{team.short_code}</TeamLink> : (team?.short_code ?? "TBD")}
-    </p>
+    <div className="flex flex-col items-center gap-2 self-end">
+      {team && <TeamLogo team={team} size={48} />}
+      <p className={`text-center font-display text-[34px] leading-none font-bold tracking-wide ${team ? "" : "text-muted"}`}>
+        {team && linkTeams ? <TeamLink team={team}>{team.short_code}</TeamLink> : (team?.short_code ?? "TBD")}
+      </p>
+    </div>
   );
   const name = (team?: Team, placeholder?: string) => (
     <p className={`line-clamp-2 self-start text-center text-[13px] leading-snug text-muted ${team ? "" : "italic"}`}>

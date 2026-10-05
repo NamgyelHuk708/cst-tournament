@@ -5,6 +5,7 @@ import { formatDay } from "@/lib/format";
 import { KNOCKOUT_ROUNDS, currentRound, matchOutcome, slotDisplayName, winnerGoesTo, type KnockoutRound, type Match } from "@/lib/tournament";
 import { TrophyIcon } from "../icons";
 import { TeamLink } from "../team-link";
+import { TeamLogo } from "../team-logo";
 import { useTournament } from "../tournament-provider";
 import { KnockoutCard } from "./knockout-card";
 
@@ -58,8 +59,9 @@ export function KnockoutsView() {
           <div className="space-y-3">
             {champion && (
               <div className="flex items-center gap-3 rounded-2xl bg-brand px-4 py-4 text-white">
-                <span className="grid size-11 place-items-center rounded-full border-2 border-accent">
-                  <TrophyIcon className="size-6" />
+                <span className="relative">
+                  <TeamLogo team={champion} size={44} className="ring-2 ring-accent" />
+                  <TrophyIcon className="absolute -right-1.5 -bottom-1 size-5 rounded-full bg-brand p-0.5" />
                 </span>
                 <div>
                   <p className="text-[11px] font-semibold text-white/70">Champions</p>

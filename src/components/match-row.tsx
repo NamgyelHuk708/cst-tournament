@@ -12,6 +12,7 @@ import {
 } from "@/lib/tournament";
 import { useMatchSheet } from "./match-sheet/context";
 import { ChevronIcon } from "./icons";
+import { TeamLogo } from "./team-logo";
 import { useServerNow, useTournament } from "./tournament-provider";
 import { useFlashOnChange } from "./use-flash";
 
@@ -93,12 +94,15 @@ function TeamLine({
   return (
     <div className="flex items-center gap-2">
       {team ? (
-        <p className={`flex min-w-0 flex-1 items-baseline gap-2 ${tone}`}>
-          <span className={`font-display text-[17px] leading-none tracking-wide ${state === "winner" ? "font-bold" : "font-semibold"}`}>
-            {team.short_code}
+        <span className="flex min-w-0 flex-1 items-center gap-2">
+          <TeamLogo team={team} size={20} />
+          <span className={`flex min-w-0 flex-1 items-baseline gap-2 ${tone}`}>
+            <span className={`font-display text-[17px] leading-none tracking-wide ${state === "winner" ? "font-bold" : "font-semibold"}`}>
+              {team.short_code}
+            </span>
+            <span className="truncate text-[13px] leading-none text-muted">{team.name}</span>
           </span>
-          <span className="truncate text-[13px] leading-none text-muted">{team.name}</span>
-        </p>
+        </span>
       ) : (
         <p className="min-w-0 flex-1 truncate text-[13px] leading-none text-muted italic">{placeholder ?? "To be decided"}</p>
       )}

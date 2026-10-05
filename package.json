@@ -20,7 +20,8 @@
     "demo": "next build && next start -H 0.0.0.0 -p 3000",
     "rehearsal": "tsx --env-file=.env.local scripts/rehearsal.ts",
     "seed:results": "tsx --env-file=.env.local scripts/seed-results.ts",
-    "admin:update": "tsx --env-file=.env.local scripts/update-admin.ts"
+    "admin:update": "tsx --env-file=.env.local scripts/update-admin.ts",
+    "logos": "tsx scripts/team-logos.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

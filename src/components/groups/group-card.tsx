@@ -6,6 +6,7 @@ import { GroupSwatch } from "../group-tag";
 import { CheckIcon, ChevronIcon } from "../icons";
 import { MatchRow } from "../match-row";
 import { TeamLink } from "../team-link";
+import { TeamLogo } from "../team-logo";
 import { useTournament } from "../tournament-provider";
 
 export function GroupCard({ standings }: { standings: GroupStandings }) {
@@ -136,11 +137,13 @@ function Row({ row, afterCut, markTie }: { row: StandingRow; afterCut: boolean; 
         </span>
       </td>
       <th scope="row" className="max-w-0 pr-2 text-left font-normal">
-        <span className="flex items-baseline gap-2">
+        <span className="flex items-center gap-2">
+          <TeamLogo team={row.team} size={20} className="self-center" />
           <TeamLink team={row.team} className="font-display text-[17px] font-bold tracking-wide">
             {row.team.short_code}
           </TeamLink>
-          <TeamLink team={row.team} decorative className="truncate text-[13px] text-muted">
+          {/* Full name only where there is room for it; on phones the code is the label. */}
+          <TeamLink team={row.team} decorative className="hidden truncate text-[13px] text-muted sm:inline">
             {row.team.name}
           </TeamLink>
           {row.orderedByOverride && (

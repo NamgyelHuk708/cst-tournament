@@ -13,6 +13,7 @@ import {
 } from "@/lib/tournament";
 import { CheckIcon, ChevronIcon, TrophyIcon } from "../icons";
 import { GroupSwatch } from "../group-tag";
+import { TeamLogo } from "../team-logo";
 import { useMatchSheet } from "../match-sheet/context";
 import { OpenMatchOverlay } from "../match-sheet/open-overlay";
 import { useServerNow, useTournament } from "../tournament-provider";
@@ -103,7 +104,8 @@ function SideLine({
       {side.team ?? (side.projectionFinal ? side.projected : null) ? (
         <div className="min-w-0 flex-1 leading-tight">
           {!side.team && <span className="block truncate text-[11px] text-muted">{side.placeholder}</span>}
-          <p className="flex min-w-0 items-baseline gap-2 overflow-hidden">
+          <p className="flex min-w-0 items-center gap-2 overflow-hidden">
+            <TeamLogo team={(side.team ?? side.projected)!} size={20} />
             <span className={`font-display text-[17px] tracking-wide ${isWinner ? "font-bold" : "font-semibold"}`}>
               {(side.team ?? side.projected)!.short_code}
             </span>

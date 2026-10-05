@@ -14,6 +14,7 @@ import {
 import { GroupSwatch } from "../group-tag";
 import { CheckIcon, ChevronIcon } from "../icons";
 import { useMatchSheet } from "../match-sheet/context";
+import { TeamLogo } from "../team-logo";
 import { useServerNow } from "../tournament-provider";
 import { useResolvedSides } from "../use-resolved-sides";
 
@@ -121,6 +122,7 @@ function SideCell({ side, which, winner }: { side: ResolvedSide; which: Side; wi
   return (
     <span className={`flex min-w-0 flex-1 flex-col gap-0.5 ${align}`}>
       <span className={`flex items-center gap-1 ${which === "home" ? "flex-row-reverse" : ""}`}>
+        <TeamLogo team={side.team} size={20} className={which === "home" ? "ml-0.5" : "mr-0.5"} />
         <span
           className={`font-display text-[17px] leading-none tracking-wide ${isWinner ? "font-bold" : "font-semibold"} ${
             isLoser ? "text-muted" : "text-text"

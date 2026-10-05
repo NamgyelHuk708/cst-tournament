@@ -7,6 +7,7 @@ import { GROUP_CODES, isFinished, isLive, isUpcoming, type GroupCode, type Match
 import { GroupSwatch } from "../group-tag";
 import { CloseIcon, SearchIcon } from "../icons";
 import { useServerNow, useTournament } from "../tournament-provider";
+import { TeamLogo } from "../team-logo";
 import { MatchListRow } from "./match-list-row";
 
 type View = "results" | "upcoming";
@@ -257,7 +258,8 @@ function FilterChips({ filter, onChange }: { filter: Filter; onChange: (f: Filte
 
 function TeamChipLabel({ team }: { team: Team }) {
   return (
-    <span className="flex max-w-[13rem] items-baseline gap-1.5">
+    <span className="flex max-w-[14rem] items-center gap-1.5">
+      <TeamLogo team={team} size={20} className="-ml-1.5 ring-0" />
       <span className="font-display text-[15px] font-bold tracking-wide">{team.short_code}</span>
       <span className="truncate text-[13px] font-medium opacity-80">{team.name}</span>
     </span>
@@ -312,6 +314,7 @@ function TeamSearch({ teams, onPick }: { teams: Team[]; onPick: (team: Team) => 
             hits.map((t) => (
               <li key={t.id} role="option" aria-selected={false}>
                 <button type="button" onClick={() => pick(t)} className="flex h-12 w-full items-center gap-3 px-4 text-left active:bg-bg">
+                  <TeamLogo team={t} size={24} />
                   <span className="w-10 shrink-0 font-display text-[17px] font-bold tracking-wide">{t.short_code}</span>
                   <span className="min-w-0 flex-1 truncate text-sm text-muted">{t.name}</span>
                   <GroupSwatch group={t.group_code} className="size-2.5" />
