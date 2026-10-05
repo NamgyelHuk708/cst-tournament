@@ -13,7 +13,7 @@
     { "match": 10, "home": "OGU", "away": "DFA", "score": [5, 2], "fixture": "OG United v DFAL" },
     { "match": 11, "home": "BCC", "away": "STC", "score": [9, 1], "fixture": "BCCL v STCBL" },
     { "match": 12, "home": "GCB", "away": "PHO", "score": [2, 1], "fixture": "GCBS v Pling Hospital" },
-    { "match": 13, "home": "DBR", "away": "BFA", "score": [7, 0], "fixture": "BBPL (Bhutan Brewary / Druk Beer) v BFAL" },
+    { "match": 13, "home": "DBR", "away": "BFA", "score": [7, 0], "fixture": "BBPL (Bhutan Brewary Private Limited) v BFAL" },
     { "match": 14, "home": "BBP", "away": "BLT", "score": [2, 4], "fixture": "Bhutan Board Product Limited (BBPL) v Bhutan Lottery" },
     { "match": 15, "home": "BPC", "away": "ICP", "score": [1, 17], "fixture": "BPC v ICP, Phuentsholing" },
     { "match": 16, "home": "CSK", "away": "ZIM", "score": [6, 6], "fixture": "CST Kangtsey v Zimdra FC" },
