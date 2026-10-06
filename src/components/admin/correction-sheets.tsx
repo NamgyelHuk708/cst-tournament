@@ -9,8 +9,12 @@ import {
   type MatchStatus,
   type Player,
   type Team,
+  HALF_LENGTH_MINUTES,
+  MAX_STOPPAGE_MINUTES,
+  clockMinute,
 } from "@/lib/tournament";
 import { Sheet } from "../sheet";
+import { useServerNow } from "../tournament-provider";
 import { teamShort } from "@/data/team-names";
 
 const BTN_SECONDARY = "h-14 rounded-xl font-semibold ring-1 ring-border active:bg-bg";
@@ -34,13 +38,19 @@ export function MoreSheet({
   onClose,
   onPick,
   eventCount,
+  inPlay = false,
 }: {
   open: boolean;
   onClose: () => void;
-  onPick: (tool: "final" | "status" | "reset") => void;
+  onPick: (tool: "final" | "status" | "reset" | "clock") => void;
   eventCount: number;
+  /** A half is being played, so the clock can be corrected. */
+  inPlay?: boolean;
 }) {
   const items = [
+    ...(inPlay
+      ? [{ tool: "clock" as const, label: "Correct clock", hint: "Set the minute being played now, e.g. after an accidental undo of kick-off." }]
+      : []),
     { tool: "final" as const, label: "Set final score", hint: "Enter a result such as 3–1. Adds goals with no scorer." },
     { tool: "status" as const, label: "Change status", hint: "Correct the status, e.g. reopen a finished match." },
     {
@@ -386,5 +396,94 @@ export function ResetSheet({
         </button>
       </div>
     </Sheet>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Correct clock
+// ---------------------------------------------------------------------------
+
+/**
+ * Set the minute of the half being played; the clock continues from there for everyone. The sheet is
+ * the confirmation: it says what the clock will show, and the button names the minute.
+ * First half: 1–45, plus up to 30 added at 45. Second half: 46–90, plus up to 30 added at 90.
+ */
+export function ClockSheet({
+  match,
+  error,
+  busy,
+  onClose,
+  onSubmit,
+}: {
+  match: Match;
+  error: string | null;
+  busy: boolean;
+  onClose: () => void;
+  onSubmit: (minute: number) => void;
+}) {
+  const now = useServerNow(5_000);
+  const second = match.status === "second_half";
+  const first = second ? HALF_LENGTH_MINUTES + 1 : 1;
+  const end = second ? HALF_LENGTH_MINUTES * 2 : HALF_LENGTH_MINUTES;
+  const current = clockMinute(match, now);
+  const [minute, setMinute] = useState(current?.minute ?? first);
+  const [added, setAdded] = useState(current?.added ?? 0);
+  const atEnd = minute === end;
+  const shown = atEnd && added > 0 ? `${end}+${added}'` : `${minute}'`;
+  const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+  return (
+    <Sheet open onClose={onClose} title="Correct the clock">
+      <p className="text-sm text-muted">
+        {second ? "Second half" : "First half"} · the clock shows <strong className="font-display text-base text-text tabular">{current ? (current.added ? `${current.minute}+${current.added}'` : `${current.minute}'`) : "–"}</strong> now.
+      </p>
+      <div className="mt-4 flex items-center justify-center gap-3">
+        <Nudge label="Minute" value={minute} onChange={(v) => setMinute(clamp(v, first, end))} />
+        <span className={`text-2xl font-semibold ${atEnd ? "text-muted" : "text-border"}`}>+</span>
+        <Nudge label="Added minutes" value={atEnd ? added : 0} disabled={!atEnd} onChange={(v) => setAdded(clamp(v, 0, MAX_STOPPAGE_MINUTES))} />
+      </div>
+      <p className="mt-2 text-center text-xs text-muted">
+        {first}–{end}; added time only at {end}.
+      </p>
+      <p className="mt-4 rounded-xl bg-bg px-4 py-3 text-base">
+        The clock will show <strong className="font-display text-xl tabular">{shown}</strong> now and keep running from there, for everyone
+        watching. You can undo this.
+      </p>
+      {error && (
+        <p role="alert" className="mt-3 rounded-xl border-l-4 border-text bg-card px-4 py-3 text-sm font-medium ring-1 ring-border">
+          {error}
+        </p>
+      )}
+      <div className="mt-4 grid grid-cols-2 gap-3">
+        <button type="button" onClick={onClose} className={BTN_SECONDARY}>
+          Cancel
+        </button>
+        <button type="button" disabled={busy} onClick={() => onSubmit(atEnd ? end + added : minute)} className={BTN_PRIMARY}>
+          {busy ? "Saving…" : `Set clock to ${shown}`}
+        </button>
+      </div>
+    </Sheet>
+  );
+}
+
+function Nudge({ label, value, onChange, disabled = false }: { label: string; value: number; onChange: (v: number) => void; disabled?: boolean }) {
+  return (
+    <div className={`flex items-center rounded-xl ring-1 ring-border ${disabled ? "opacity-40" : ""}`} role="group" aria-label={label}>
+      <button type="button" disabled={disabled} onClick={() => onChange(value - 1)} aria-label={`${label} minus one`} className="size-12 text-2xl font-bold active:bg-bg">
+        −
+      </button>
+      <input
+        value={value}
+        disabled={disabled}
+        inputMode="numeric"
+        pattern="[0-9]*"
+        aria-label={label}
+        onChange={(e) => onChange(Number(e.target.value.replace(/\D/g, "").slice(0, 3) || 0))}
+        onFocus={(e) => e.target.select()}
+        className="w-12 bg-transparent text-center font-display text-3xl font-bold tabular outline-none"
+      />
+      <button type="button" disabled={disabled} onClick={() => onChange(value + 1)} aria-label={`${label} plus one`} className="size-12 text-2xl font-bold active:bg-bg">
+        +
+      </button>
+    </div>
   );
 }

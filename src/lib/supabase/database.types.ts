@@ -67,6 +67,44 @@ export type Database = {
         }
         Relationships: []
       }
+      clock_actions: {
+        Row: {
+          created_at: string
+          id: number
+          is_demo: boolean
+          match_id: number
+          new_period_started_at: string
+          prev_period_started_at: string | null
+          undone_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: never
+          is_demo?: boolean
+          match_id: number
+          new_period_started_at: string
+          prev_period_started_at?: string | null
+          undone_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: never
+          is_demo?: boolean
+          match_id?: number
+          new_period_started_at?: string
+          prev_period_started_at?: string | null
+          undone_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clock_actions_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       match_actions: {
         Row: {
           created_at: string
@@ -471,6 +509,96 @@ export type Database = {
           },
         ]
       }
+      team_display_names: {
+        Row: {
+          full_name: string | null
+          id: number
+          is_demo: boolean
+          short_name: string
+          team_id: number
+          updated_at: string
+        }
+        Insert: {
+          full_name?: string | null
+          id?: never
+          is_demo?: boolean
+          short_name: string
+          team_id: number
+          updated_at?: string
+        }
+        Update: {
+          full_name?: string | null
+          id?: never
+          is_demo?: boolean
+          short_name?: string
+          team_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_display_names_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "group_standings"
+            referencedColumns: ["team_id"]
+          },
+          {
+            foreignKeyName: "team_display_names_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_staff: {
+        Row: {
+          created_at: string
+          custom_role: string | null
+          id: number
+          is_demo: boolean
+          name: string
+          position: number
+          role: string
+          team_id: number
+        }
+        Insert: {
+          created_at?: string
+          custom_role?: string | null
+          id?: never
+          is_demo?: boolean
+          name: string
+          position?: number
+          role: string
+          team_id: number
+        }
+        Update: {
+          created_at?: string
+          custom_role?: string | null
+          id?: never
+          is_demo?: boolean
+          name?: string
+          position?: number
+          role?: string
+          team_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_staff_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "group_standings"
+            referencedColumns: ["team_id"]
+          },
+          {
+            foreignKeyName: "team_staff_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       teams: {
         Row: {
           group_code: string
@@ -628,6 +756,39 @@ export type Database = {
       admin_clear_qualifier_order: {
         Args: { p_group: string }
         Returns: undefined
+      }
+      admin_correct_clock: {
+        Args: { p_match: number; p_minute: number }
+        Returns: {
+          away_pens: number | null
+          away_score: number
+          away_source: Database["public"]["Enums"]["slot_source"] | null
+          away_source_group: string | null
+          away_source_match: number | null
+          away_team_id: number | null
+          group_code: string | null
+          home_pens: number | null
+          home_score: number
+          home_source: Database["public"]["Enums"]["slot_source"] | null
+          home_source_group: string | null
+          home_source_match: number | null
+          home_team_id: number | null
+          id: number
+          is_demo: boolean
+          kickoff_at: string
+          notes: string | null
+          period_started_at: string | null
+          slot_label: string | null
+          stage: Database["public"]["Enums"]["match_stage"]
+          status: Database["public"]["Enums"]["match_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "matches"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       admin_correct_status: {
         Args: {
@@ -921,7 +1082,81 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      admin_set_team_name: {
+        Args: {
+          p_demo?: boolean
+          p_full: string
+          p_short: string
+          p_team: number
+        }
+        Returns: {
+          full_name: string | null
+          id: number
+          is_demo: boolean
+          short_name: string
+          team_id: number
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "team_display_names"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      admin_set_team_staff: {
+        Args: { p_demo?: boolean; p_staff: Json; p_team: number }
+        Returns: {
+          created_at: string
+          custom_role: string | null
+          id: number
+          is_demo: boolean
+          name: string
+          position: number
+          role: string
+          team_id: number
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "team_staff"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       admin_undo: { Args: { p_match: number }; Returns: Json }
+      admin_undo_clock: {
+        Args: { p_match: number }
+        Returns: {
+          away_pens: number | null
+          away_score: number
+          away_source: Database["public"]["Enums"]["slot_source"] | null
+          away_source_group: string | null
+          away_source_match: number | null
+          away_team_id: number | null
+          group_code: string | null
+          home_pens: number | null
+          home_score: number
+          home_source: Database["public"]["Enums"]["slot_source"] | null
+          home_source_group: string | null
+          home_source_match: number | null
+          home_team_id: number | null
+          id: number
+          is_demo: boolean
+          kickoff_at: string
+          notes: string | null
+          period_started_at: string | null
+          slot_label: string | null
+          stage: Database["public"]["Enums"]["match_stage"]
+          status: Database["public"]["Enums"]["match_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "matches"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       admin_undo_extra: { Args: { p_match: number }; Returns: string }
       admin_update_event: {
         Args: {

@@ -6,7 +6,10 @@ import { teamShort } from "../data/team-names";
 type Tables = Database["public"]["Tables"];
 type Enums = Database["public"]["Enums"];
 
-export type Team = Pick<Tables["teams"]["Row"], "id" | "slot" | "group_code" | "short_code" | "name" | "tiebreak_rank">;
+export type Team = Pick<Tables["teams"]["Row"], "id" | "slot" | "group_code" | "short_code" | "name" | "tiebreak_rank"> & {
+  /** Display names set by the admin (team_display_names); absent: src/data/team-names.ts is used. */
+  display?: { short: string; full: string | null };
+};
 export type Match = Tables["matches"]["Row"];
 export type MatchEvent = Pick<
   Tables["match_events"]["Row"],
@@ -19,6 +22,9 @@ export type Substitution = Pick<
   Tables["substitutions"]["Row"],
   "id" | "match_id" | "team_id" | "player_off" | "player_on" | "minute" | "added_time" | "client_id"
 >;
+export type StaffRole = "manager" | "coach" | "assistant_coach" | "other";
+export type TeamStaff = { id: number; team_id: number; role: StaffRole; custom_role: string | null; name: string; position: number; is_demo: boolean };
+export type TeamDisplayName = { id: number; team_id: number; short_name: string; full_name: string | null; is_demo: boolean };
 export type EventType = Enums["event_type"];
 export type MatchStatus = Enums["match_status"];
 export type MatchStage = Enums["match_stage"];
@@ -31,7 +37,43 @@ export type Snapshot = {
   players: Player[];
   substitutions: Substitution[];
   officials: Official[];
+  staff: TeamStaff[];
+  displayNames: TeamDisplayName[];
 };
+
+/** Staff roles in their standard order, with labels. */
+export const STAFF_ROLES: { role: StaffRole; label: string; plural: string }[] = [
+  { role: "manager", label: "Manager", plural: "Managers" },
+  { role: "coach", label: "Coach", plural: "Coaches" },
+  { role: "assistant_coach", label: "Assistant coach", plural: "Assistant coaches" },
+  { role: "other", label: "Other", plural: "Other" },
+];
+
+/** A team's staff as lines in the standard role order: "Manager: Sonam Dorji", "Coaches: A, B". Demo rows, when present, replace the real ones (testing). */
+export function staffLines(staff: TeamStaff[], teamId: number): { label: string; names: string[] }[] {
+  const mine = staff.filter((s) => s.team_id === teamId);
+  const rows = mine.some((s) => s.is_demo) ? mine.filter((s) => s.is_demo) : mine;
+  const lines = new Map<string, string[]>();
+  const sorted = [...rows].sort((a, b) => STAFF_ROLES.findIndex((r) => r.role === a.role) - STAFF_ROLES.findIndex((r) => r.role === b.role) || a.position - b.position);
+  for (const s of sorted) {
+    const key = s.role === "other" ? (s.custom_role ?? "Other") : s.role;
+    lines.set(key, [...(lines.get(key) ?? []), s.name]);
+  }
+  return [...lines].map(([key, names]) => {
+    const role = STAFF_ROLES.find((r) => r.role === key);
+    return { label: role ? (names.length > 1 ? role.plural : role.label) : key, names };
+  });
+}
+
+/** Teams with the admin's display names attached (a demo row, when present, wins: testing). */
+export function withDisplayNames(teams: Team[], rows: TeamDisplayName[]): Team[] {
+  const byTeam = new Map<number, TeamDisplayName>();
+  for (const r of rows) if (!byTeam.has(r.team_id) || r.is_demo) byTeam.set(r.team_id, r);
+  return teams.map((t) => {
+    const r = byTeam.get(t.id);
+    return r ? { ...t, display: { short: r.short_name, full: r.full_name } } : t;
+  });
+}
 
 /** Officials' roles in the standard order, with their labels. */
 export const OFFICIAL_ROLES: { role: OfficialRole; label: string; plural: string }[] = [

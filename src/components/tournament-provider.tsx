@@ -15,6 +15,9 @@ import {
   type Snapshot,
   type Substitution,
   type Team,
+  type TeamDisplayName,
+  type TeamStaff,
+  withDisplayNames,
 } from "@/lib/tournament";
 
 export type ConnectionState = "connecting" | "live" | "reconnecting";
@@ -39,6 +42,8 @@ type TournamentContextValue = Snapshot & {
     upsertSub: (row: Substitution) => void;
     removeSub: (id: number) => void;
     setOfficials: (matchId: number, rows: Official[]) => void;
+    setStaff: (teamId: number, rows: TeamStaff[]) => void;
+    upsertDisplayName: (row: TeamDisplayName) => void;
     refresh: () => Promise<void>;
   };
 };
@@ -155,6 +160,12 @@ export function TournamentProvider({
         .on<Official>("postgres_changes", { event: "*", schema: "public", table: "match_officials" }, (p) =>
           apply((d) => ({ ...d, officials: applyChange(d.officials, p) })),
         )
+        .on<TeamStaff>("postgres_changes", { event: "*", schema: "public", table: "team_staff" }, (p) =>
+          apply((d) => ({ ...d, staff: applyChange(d.staff, p) })),
+        )
+        .on<TeamDisplayName>("postgres_changes", { event: "*", schema: "public", table: "team_display_names" }, (p) =>
+          apply((d) => ({ ...d, displayNames: applyChange(d.displayNames, p) })),
+        )
         .subscribe((status) => {
           // Ignore callbacks from channels we have already replaced (removing one fires CLOSED).
           if (disposed || current !== channel) return;
@@ -233,25 +244,30 @@ export function TournamentProvider({
       upsertSub: (row) => setData((d) => ({ ...d, substitutions: upsert(d.substitutions, row) })),
       removeSub: (id) => setData((d) => ({ ...d, substitutions: d.substitutions.filter((x) => x.id !== id) })),
       setOfficials: (matchId, rows) => setData((d) => ({ ...d, officials: [...d.officials.filter((o) => o.match_id !== matchId), ...rows] })),
+      // A save replaces the team's real rows (the function returns the team's demo rows too).
+      setStaff: (teamId, rows) => setData((d) => ({ ...d, staff: [...d.staff.filter((x) => x.team_id !== teamId), ...rows] })),
+      upsertDisplayName: (row) => setData((d) => ({ ...d, displayNames: upsert(d.displayNames, row) })),
       refresh,
     }),
     [refresh],
   );
 
-  const value = useMemo<TournamentContextValue>(
-    () => ({
+  const value = useMemo<TournamentContextValue>(() => {
+    // Teams carry the admin's display names, so every view (tables, rows, search) uses them.
+    const teams = withDisplayNames(data.teams, data.displayNames);
+    return {
       ...data,
-      teamsById: new Map(data.teams.map((t) => [t.id, t])),
+      teams,
+      teamsById: new Map(teams.map((t) => [t.id, t])),
       matchesById: new Map(data.matches.map((m) => [m.id, m])),
       playersById: new Map(data.players.map((p) => [p.id, p])),
-      standings: computeStandings(data.teams, data.matches),
+      standings: computeStandings(teams, data.matches),
       connection,
       clockOffset,
       renderedAt,
       local,
-    }),
-    [data, connection, clockOffset, renderedAt, local],
-  );
+    };
+  }, [data, connection, clockOffset, renderedAt, local]);
 
   return <TournamentContext.Provider value={value}>{children}</TournamentContext.Provider>;
 }

@@ -7,6 +7,7 @@ import { uuid } from "@/lib/uuid";
 import {
   displaySlotLabels,
   eventMinuteLabel,
+  isBallInPlay,
   isKnockout,
   isLive,
   nextStatusStep,
@@ -23,7 +24,7 @@ import {
 import { ChevronIcon } from "../icons";
 import { useTournament } from "../tournament-provider";
 import { ControlDock } from "./control-dock";
-import { FinalScoreSheet, MoreSheet, ResetSheet, StatusSheet } from "./correction-sheets";
+import { ClockSheet, FinalScoreSheet, MoreSheet, ResetSheet, StatusSheet } from "./correction-sheets";
 import { TeamsSheet } from "./teams-sheet";
 import { useResolvedSides } from "../use-resolved-sides";
 import { EventLog } from "./event-log";
@@ -45,7 +46,9 @@ type LastAction =
       created_at: string;
     }
   // Player edits and substitutions keep their own undo history (admin_actions).
-  | { source: "extra"; id: number; kind: "player_edit" | "sub_add" | "sub_edit" | "sub_delete"; created_at: string };
+  | { source: "extra"; id: number; kind: "player_edit" | "sub_add" | "sub_edit" | "sub_delete"; created_at: string }
+  // Clock corrections keep their own history too (clock_actions).
+  | { source: "clock"; id: number; kind: "clock"; created_at: string };
 
 const EVENT_NOUN: Record<EventType, string> = {
   goal: "Goal",
@@ -87,7 +90,7 @@ export function MatchControl({ matchId }: { matchId: number }) {
   const [adding, setAdding] = useState(false);
   const [subbing, setSubbing] = useState<{ teamId: number; sub: Substitution | null } | null>(null);
   // Correction tools; errors from them are shown inside their sheet.
-  const [tool, setTool] = useState<"more" | "final" | "status" | "reset" | "teams" | null>(null);
+  const [tool, setTool] = useState<"more" | "final" | "status" | "reset" | "teams" | "clock" | null>(null);
   const [toolError, setToolError] = useState<string | null>(null);
 
   const matchEvents = useMemo(() => events.filter((e) => e.match_id === matchId), [events, matchId]);
@@ -119,9 +122,9 @@ export function MatchControl({ matchId }: { matchId: number }) {
   // Taps still in flight: shown in the score until their event arrives.
   const inFlight = pending.filter((p) => !matchEvents.some((e) => e.client_id === p.clientId));
 
-  // The newest open action across both undo histories: one Undo button reverses whichever is more recent.
+  // The newest open action across the undo histories: one Undo button reverses whichever is most recent.
   const loadLastAction = useCallback(async () => {
-    const [main, extra] = await Promise.all([
+    const [main, extra, clockRow] = await Promise.all([
       supabase
         .from("match_actions")
         .select("id, kind, event_id, new_status, created_at")
@@ -138,10 +141,21 @@ export function MatchControl({ matchId }: { matchId: number }) {
         .order("id", { ascending: false })
         .limit(1)
         .maybeSingle(),
+      supabase
+        .from("clock_actions")
+        .select("id, created_at")
+        .eq("match_id", matchId)
+        .is("undone_at", null)
+        .order("id", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
     ]);
-    const a = main.data ? ({ source: "match", ...main.data } as LastAction) : null;
-    const b = extra.data ? ({ source: "extra", ...extra.data } as LastAction) : null;
-    setLastAction(a && b ? (a.created_at > b.created_at ? a : b) : (a ?? b));
+    const candidates = [
+      main.data ? ({ source: "match", ...main.data } as LastAction) : null,
+      extra.data ? ({ source: "extra", ...extra.data } as LastAction) : null,
+      clockRow.data ? ({ source: "clock", kind: "clock", ...clockRow.data } as LastAction) : null,
+    ].filter((x): x is LastAction => x != null);
+    setLastAction(candidates.reduce<LastAction | null>((best, x) => (!best || x.created_at > best.created_at ? x : best), null));
   }, [supabase, matchId]);
 
   // Refresh the undo label whenever the match changes (here or on another device).
@@ -237,7 +251,9 @@ export function MatchControl({ matchId }: { matchId: number }) {
       () =>
         lastAction?.source === "extra"
           ? supabase.rpc("admin_undo_extra", { p_match: matchId })
-          : supabase.rpc("admin_undo", { p_match: matchId }),
+          : lastAction?.source === "clock"
+            ? supabase.rpc("admin_undo_clock", { p_match: matchId })
+            : supabase.rpc("admin_undo", { p_match: matchId }),
       () => {
         setToast(null);
         local.refresh();
@@ -317,7 +333,9 @@ export function MatchControl({ matchId }: { matchId: number }) {
           setToast(null);
         }}
         // Undoing a goal, card or sub stays one tap; undoing a status change asks first.
-        onUndo={() => (lastAction?.source === "match" && lastAction.kind === "status" ? setConfirmUndo(true) : undo())}
+        onUndo={() =>
+          (lastAction?.source === "match" && lastAction.kind === "status") || lastAction?.source === "clock" ? setConfirmUndo(true) : undo()
+        }
         // Every status change is confirmed: it moves the clock for everyone watching.
         onStep={() => step && setConfirmStatus(true)}
         onPens={setPens}
@@ -369,7 +387,16 @@ export function MatchControl({ matchId }: { matchId: number }) {
         />
       )}
 
-      <MoreSheet open={tool === "more"} onClose={() => setTool(null)} onPick={openTool} eventCount={matchEvents.length} />
+      <MoreSheet open={tool === "more"} onClose={() => setTool(null)} onPick={openTool} eventCount={matchEvents.length} inPlay={isBallInPlay(match)} />
+      {tool === "clock" && (
+        <ClockSheet
+          match={match}
+          error={toolError}
+          busy={busy}
+          onClose={() => setTool(null)}
+          onSubmit={(minute) => runTool(() => supabase.rpc("admin_correct_clock", { p_match: matchId, p_minute: minute }))}
+        />
+      )}
       {tool === "final" && home && away && (
         <FinalScoreSheet
           open
@@ -547,6 +574,13 @@ const STATUS_CONFIRM: Record<MatchStatus, { title: string; body: string; action:
 
 /** The stronger warning before undoing a status change: what happens to the clock and the match. */
 function undoStatusText(action: LastAction | null): { title: string; body: string; action: string } {
+  if (action?.source === "clock") {
+    return {
+      title: "Undo the clock correction?",
+      body: "The clock goes back to what it showed before the correction, for everyone watching, and keeps running from there.",
+      action: "Undo clock correction",
+    };
+  }
   const to = action?.source === "match" ? action.new_status : null;
   switch (to) {
     case "first_half":
@@ -590,6 +624,7 @@ function undoStatusText(action: LastAction | null): { title: string; body: strin
 
 function describeUndo(action: LastAction | null, events: MatchEvent[], shortCode: (id: number) => string): string | null {
   if (!action) return null;
+  if (action.source === "clock") return "Undo clock correction";
   if (action.source === "extra") {
     return { player_edit: "Undo player edit", sub_add: "Undo substitution", sub_edit: "Undo substitution change", sub_delete: "Undo deleting the substitution" }[action.kind];
   }

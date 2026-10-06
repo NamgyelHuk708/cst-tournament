@@ -65,7 +65,7 @@ const matches: Match[] = [
   match("2026-10-08T12:00:00Z", "scheduled", 3, 1),
   match("2026-10-08T14:00:00Z", "scheduled", 4, 2),
 ];
-const snapshot: Snapshot = { teams, matches, events: [], players: [], substitutions: [], officials: [] };
+const snapshot: Snapshot = { teams, matches, events: [], players: [], substitutions: [], officials: [], staff: [], displayNames: [] };
 
 const DAY = /\b(Today|Tomorrow|Yesterday|(Mon|Tue|Wed|Thu|Fri|Sat|Sun) \d{1,2} (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sept?|Oct|Nov|Dec))\b/;
 const TIME = /\b\d{1,2}:\d{2}\s?(AM|PM)\b/;

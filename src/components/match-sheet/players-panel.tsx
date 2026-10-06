@@ -1,6 +1,6 @@
 "use client";
 
-import { byShirtOrder, type Match, type Player, type Team } from "@/lib/tournament";
+import { byShirtOrder, staffLines, type Match, type Player, type Team } from "@/lib/tournament";
 import { BallIcon, CardIcon } from "../icons";
 import { TeamLink } from "../team-link";
 import { TeamLogo } from "../team-logo";
@@ -53,6 +53,7 @@ export function PlayersPanel({ match, home, away }: { match: Match; home?: Team;
 }
 
 function TeamPlayers({ team, players, tally }: { team: Team; players: Player[]; tally: Map<string, Tally> }) {
+  const staff = staffLines(useTournament().staff, team.id);
   const headingId = `players-${team.id}`;
   return (
     <section aria-labelledby={headingId}>
@@ -75,6 +76,17 @@ function TeamPlayers({ team, players, tally }: { team: Team; players: Player[]; 
             </li>
           ))}
         </ul>
+      )}
+      {/* Team staff under the players, "Manager: Sonam Dorji"; nothing when none are entered. */}
+      {staff.length > 0 && (
+        <dl className="mt-2 space-y-0.5 px-1 text-sm">
+          {staff.map((l) => (
+            <div key={l.label} className="flex gap-1.5">
+              <dt className="shrink-0 text-muted">{l.label}:</dt>
+              <dd className="min-w-0 font-medium">{l.names.join(", ")}</dd>
+            </div>
+          ))}
+        </dl>
       )}
     </section>
   );

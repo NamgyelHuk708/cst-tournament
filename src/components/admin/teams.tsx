@@ -10,6 +10,8 @@ import { Sheet } from "../sheet";
 import { TeamLogo } from "../team-logo";
 import { useTournament } from "../tournament-provider";
 import { teamShort, teamSub } from "@/data/team-names";
+import { TeamNameSection } from "./team-name";
+import { StaffSection } from "./team-staff";
 
 const MAX_NAME = 80;
 
@@ -97,7 +99,10 @@ export function TeamPage({ code, fromMatch }: { code: string; fromMatch?: number
         </div>
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-2">
+      <TeamNameSection team={team} />
+
+      <h2 className="mt-6 px-1 text-sm font-semibold text-muted">Players</h2>
+      <div className="mt-2 grid grid-cols-2 gap-2">
         <button type="button" onClick={() => setSheet({ kind: "add" })} className="h-12 rounded-xl bg-brand font-semibold text-white active:opacity-90">
           + Add player
         </button>
@@ -139,6 +144,8 @@ export function TeamPage({ code, fromMatch }: { code: string; fromMatch?: number
           No players yet. Add them one by one, or paste the team sheet with one player per line, like &ldquo;10 Sonam Wangchuk&rdquo;.
         </p>
       )}
+
+      <StaffSection team={team} />
 
       {sheet?.kind === "add" && <AddPlayerSheet team={team} teamPlayers={teamPlayers} onClose={() => setSheet(null)} />}
       {sheet?.kind === "paste" && <PasteListSheet team={team} teamPlayers={teamPlayers} onClose={() => setSheet(null)} />}

@@ -43,16 +43,18 @@ export const TEAM_NAMES: Record<string, { short: string; sub?: string }> = {
   PTD: { short: "PTDP" },
 };
 
-type Named = { short_code: string; name: string };
+/** Display names set in the admin (database) win over this file; the file is the fallback. */
+type Named = { short_code: string; name: string; display?: { short: string; full: string | null } };
 
 /** The team's short display name ("BBPL Brewery"); the official name if it isn't in the list; `fallback` with no team. */
 export function teamShort(team: Named | null | undefined, fallback = ""): string {
   if (!team) return fallback;
-  return TEAM_NAMES[team.short_code]?.short ?? team.name;
+  return team.display?.short ?? TEAM_NAMES[team.short_code]?.short ?? team.name;
 }
 
 /** The optional second line ("Bhutan Brewary Private Limited"), or null. */
 export function teamSub(team: Named): string | null {
+  if (team.display) return team.display.full;
   return TEAM_NAMES[team.short_code]?.sub ?? null;
 }
 
