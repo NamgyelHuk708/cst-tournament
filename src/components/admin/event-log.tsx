@@ -57,17 +57,17 @@ export function EventLog({
     <section aria-label="Event log" className="px-4 pt-4 pb-[30rem]">
       <div className="mb-1 flex items-center justify-between gap-2 pl-1">
         <h2 className="text-sm font-semibold text-muted">Event log</h2>
-        {/* Misspelt names and wrong numbers are fixed in the team's squad; Back there returns here. */}
-        <nav aria-label="Team squads" className="flex">
+        {/* Misspelt names and wrong numbers are fixed on the team's page; Back there returns here. */}
+        <nav aria-label="Team players" className="flex">
           {[match.home_team_id, match.away_team_id].map((id) => {
             const team = id != null ? teamsById.get(id) : undefined;
             return team ? (
               <Link
                 key={team.id}
-                href={`/admin/squads/${encodeURIComponent(team.short_code)}?from=${match.id}`}
+                href={`/admin/teams/${encodeURIComponent(team.short_code)}?from=${match.id}`}
                 className="flex h-12 items-center rounded-lg px-2.5 text-sm font-semibold text-brand-text active:bg-card"
               >
-                {team.short_code} squad
+                {team.short_code} team
               </Link>
             ) : null;
           })}

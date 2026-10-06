@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { GROUP_CODES, bySquadOrder, type Player, type Team } from "@/lib/tournament";
+import { GROUP_CODES, byShirtOrder, type Player, type Team } from "@/lib/tournament";
 import { ChevronIcon } from "../icons";
 import { GroupSwatch } from "../group-tag";
 import { Sheet } from "../sheet";
@@ -17,17 +17,17 @@ const message = (e: { message?: string } | null) =>
 
 const tidy = (name: string) => name.trim().replace(/\s+/g, " ");
 
-/** Every team by group, with how many players it has; one tap opens the team's squad. */
-export function SquadList() {
+/** Every team by group, with how many players it has; one tap opens the team's players. */
+export function TeamList() {
   const { teams, players } = useTournament();
   const counts = new Map<number, number>();
   for (const p of players) counts.set(p.team_id, (counts.get(p.team_id) ?? 0) + 1);
   return (
     <main className="mx-auto max-w-xl space-y-5 px-4 pt-4 pb-10">
-      <h1 className="sr-only">Squads</h1>
+      <h1 className="sr-only">Teams</h1>
       {GROUP_CODES.map((g) => (
-        <section key={g} aria-labelledby={`squads-${g}`}>
-          <h2 id={`squads-${g}`} className="mb-2 flex items-center gap-2 px-1 text-sm font-semibold text-muted">
+        <section key={g} aria-labelledby={`teams-${g}`}>
+          <h2 id={`teams-${g}`} className="mb-2 flex items-center gap-2 px-1 text-sm font-semibold text-muted">
             <GroupSwatch group={g} />
             Group {g}
           </h2>
@@ -39,7 +39,7 @@ export function SquadList() {
                 const n = counts.get(t.id) ?? 0;
                 return (
                   <li key={t.id}>
-                    <Link href={`/admin/squads/${encodeURIComponent(t.short_code)}`} className="flex min-h-14 items-center gap-3 px-4 py-2 active:bg-bg">
+                    <Link href={`/admin/teams/${encodeURIComponent(t.short_code)}`} className="flex min-h-14 items-center gap-3 px-4 py-2 active:bg-bg">
                       <TeamLogo team={t} size={28} />
                       <span className="min-w-0 flex-1">
                         <span className="block font-display font-bold">{t.short_code}</span>
@@ -58,8 +58,8 @@ export function SquadList() {
   );
 }
 
-/** One team's squad: add, edit and remove players, or paste a whole list at once. */
-export function TeamSquad({ code, fromMatch }: { code: string; fromMatch?: number }) {
+/** One team's players: add, edit and remove players, or paste a whole list at once. */
+export function TeamPage({ code, fromMatch }: { code: string; fromMatch?: number }) {
   const { teams, players } = useTournament();
   const team = teams.find((t) => t.short_code === code);
   const [sheet, setSheet] = useState<
@@ -69,29 +69,29 @@ export function TeamSquad({ code, fromMatch }: { code: string; fromMatch?: numbe
     return (
       <main className="mx-auto max-w-xl px-4 pt-6">
         <p className="text-sm">No team with code {code}.</p>
-        <Link href="/admin/squads" className="mt-3 inline-flex h-12 items-center font-semibold text-brand-text">
-          ‹ All squads
+        <Link href="/admin/teams" className="mt-3 inline-flex h-12 items-center font-semibold text-brand-text">
+          ‹ All teams
         </Link>
       </main>
     );
   }
-  const squad = players.filter((p) => p.team_id === team.id).sort(bySquadOrder);
+  const teamPlayers = players.filter((p) => p.team_id === team.id).sort(byShirtOrder);
 
   return (
     <main className="mx-auto max-w-xl px-4 pt-2 pb-10">
       <Link
-        href={fromMatch ? `/admin/match/${fromMatch}` : "/admin/squads"}
+        href={fromMatch ? `/admin/match/${fromMatch}` : "/admin/teams"}
         className="-ml-1 inline-flex h-12 items-center gap-1 px-1 text-sm font-semibold text-brand-text"
       >
         <ChevronIcon className="size-4 rotate-90" />
-        {fromMatch ? `Back to match ${fromMatch}` : "All squads"}
+        {fromMatch ? `Back to match ${fromMatch}` : "All teams"}
       </Link>
       <div className="mt-1 flex items-center gap-3">
         <TeamLogo team={team} size={44} />
         <div className="min-w-0">
           <h1 className="font-display text-xl leading-tight font-bold">{team.name}</h1>
           <p className="text-sm text-muted">
-            {team.short_code} · Group {team.group_code} · {squad.length ? `${squad.length} player${squad.length === 1 ? "" : "s"}` : "No players yet"}
+            {team.short_code} · Group {team.group_code} · {teamPlayers.length ? `${teamPlayers.length} player${teamPlayers.length === 1 ? "" : "s"}` : "No players yet"}
           </p>
         </div>
       </div>
@@ -105,9 +105,9 @@ export function TeamSquad({ code, fromMatch }: { code: string; fromMatch?: numbe
         </button>
       </div>
 
-      {squad.length > 0 ? (
+      {teamPlayers.length > 0 ? (
         <ul className="mt-4 divide-y divide-border rounded-xl bg-card ring-1 ring-border/60">
-          {squad.map((p) => (
+          {teamPlayers.map((p) => (
             <li key={p.id} className="flex min-h-14 items-center gap-3 py-1.5 pr-1.5 pl-4">
               <span className="w-7 shrink-0 text-right font-display text-lg font-bold text-muted tabular">{p.shirt_number ?? "–"}</span>
               <span className="min-w-0 flex-1 truncate font-medium">{p.name}</span>
@@ -139,9 +139,9 @@ export function TeamSquad({ code, fromMatch }: { code: string; fromMatch?: numbe
         </p>
       )}
 
-      {sheet?.kind === "add" && <AddPlayerSheet team={team} squad={squad} onClose={() => setSheet(null)} />}
-      {sheet?.kind === "paste" && <PasteListSheet team={team} squad={squad} onClose={() => setSheet(null)} />}
-      {sheet?.kind === "edit" && <EditSquadPlayerSheet player={sheet.player} team={team} squad={squad} onClose={() => setSheet(null)} />}
+      {sheet?.kind === "add" && <AddPlayerSheet team={team} teamPlayers={teamPlayers} onClose={() => setSheet(null)} />}
+      {sheet?.kind === "paste" && <PasteListSheet team={team} teamPlayers={teamPlayers} onClose={() => setSheet(null)} />}
+      {sheet?.kind === "edit" && <EditTeamPlayerSheet player={sheet.player} team={team} teamPlayers={teamPlayers} onClose={() => setSheet(null)} />}
       {sheet?.kind === "remove" && (
         <RemovePlayerSheet
           player={sheet.player}
@@ -193,20 +193,20 @@ function PlayerFields({
 }
 
 /** The same rules as the database, checked as the admin types so problems show before saving. */
-function playerProblem(shirt: number | null, name: string, squad: Player[], except?: string): string | null {
+function playerProblem(shirt: number | null, name: string, teamPlayers: Player[], except?: string): string | null {
   const n = tidy(name);
   if (shirt == null) return "Enter a shirt number (1 to 99).";
   if (shirt < 1 || shirt > 99) return "Shirt numbers go from 1 to 99.";
   if (!n) return "Enter the player's name.";
   if (n.length > MAX_NAME) return "The name is too long (80 characters at most).";
-  const byNumber = squad.find((p) => p.id !== except && p.shirt_number === shirt);
+  const byNumber = teamPlayers.find((p) => p.id !== except && p.shirt_number === shirt);
   if (byNumber) return `#${shirt} is already ${byNumber.name}.`;
-  const byName = squad.find((p) => p.id !== except && p.name.toLowerCase() === n.toLowerCase());
-  if (byName) return `${byName.name} is already in the squad${byName.shirt_number != null ? ` as #${byName.shirt_number}` : ""}.`;
+  const byName = teamPlayers.find((p) => p.id !== except && p.name.toLowerCase() === n.toLowerCase());
+  if (byName) return `${byName.name} is already in the team${byName.shirt_number != null ? ` as #${byName.shirt_number}` : ""}.`;
   return null;
 }
 
-function AddPlayerSheet({ team, squad, onClose }: { team: Team; squad: Player[]; onClose: () => void }) {
+function AddPlayerSheet({ team, teamPlayers, onClose }: { team: Team; teamPlayers: Player[]; onClose: () => void }) {
   const { local } = useTournament();
   const supabase = useMemo(() => createClient(), []);
   const [shirt, setShirt] = useState("");
@@ -216,10 +216,10 @@ function AddPlayerSheet({ team, squad, onClose }: { team: Team; squad: Player[];
   const [added, setAdded] = useState<string | null>(null);
   const shirtNo = shirt === "" ? null : Number(shirt);
   // While typing, only flag real clashes, not fields that simply aren't filled in yet.
-  const taken = shirtNo != null ? squad.find((p) => p.shirt_number === shirtNo) : undefined;
+  const taken = shirtNo != null ? teamPlayers.find((p) => p.shirt_number === shirtNo) : undefined;
   const problem =
     shirt !== "" && name.trim()
-      ? playerProblem(shirtNo, name, squad)
+      ? playerProblem(shirtNo, name, teamPlayers)
       : taken
         ? `#${shirtNo} is already ${taken.name}.`
         : shirtNo === 0
@@ -227,7 +227,7 @@ function AddPlayerSheet({ team, squad, onClose }: { team: Team; squad: Player[];
           : null;
 
   async function save() {
-    const p = playerProblem(shirtNo, name, squad);
+    const p = playerProblem(shirtNo, name, teamPlayers);
     if (p) return setError(p);
     setSaving(true);
     setError(null);
@@ -235,7 +235,7 @@ function AddPlayerSheet({ team, squad, onClose }: { team: Team; squad: Player[];
     setSaving(false);
     if (error || !data) return setError(message(error));
     for (const row of data) local.upsertPlayer(row);
-    // Stay open for the next player: entering a squad is a run of adds.
+    // Stay open for the next player: entering a team is a run of adds.
     setAdded(`Added #${shirtNo} ${tidy(name)}.`);
     setShirt("");
     setName("");
@@ -263,7 +263,7 @@ function AddPlayerSheet({ team, squad, onClose }: { team: Team; squad: Player[];
   );
 }
 
-function EditSquadPlayerSheet({ player, team, squad, onClose }: { player: Player; team: Team; squad: Player[]; onClose: () => void }) {
+function EditTeamPlayerSheet({ player, team, teamPlayers, onClose }: { player: Player; team: Team; teamPlayers: Player[]; onClose: () => void }) {
   const { local } = useTournament();
   const supabase = useMemo(() => createClient(), []);
   const remove = useRemovePlayer(player, onClose);
@@ -274,7 +274,7 @@ function EditSquadPlayerSheet({ player, team, squad, onClose }: { player: Player
   const [error, setError] = useState<string | null>(null);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const shirtNo = shirt === "" ? null : Number(shirt);
-  const problem = playerProblem(shirtNo, name, squad, player.id);
+  const problem = playerProblem(shirtNo, name, teamPlayers, player.id);
 
   async function save() {
     if (problem) return setError(problem);
@@ -315,7 +315,7 @@ function EditSquadPlayerSheet({ player, team, squad, onClose }: { player: Player
           </div>
         ) : (
           <button type="button" onClick={() => setConfirmRemove(true)} className="h-11 text-sm font-semibold underline-offset-2 active:underline">
-            Remove from squad
+            Remove from team
           </button>
         )}
         <SheetButtons onClose={onClose} closeLabel="Cancel" saveLabel={saving ? "Saving…" : "Save"} disabled={saving || !!problem} submit />
@@ -417,10 +417,10 @@ type PastedLine = { line: number; text: string; shirt: number | null; name: stri
 
 /**
  * Lines like "10 Sonam Wangchuk", "#10 Sonam Wangchuk", "10. Sonam Wangchuk" or
- * "Sonam Wangchuk 10". Blank lines are skipped. Each line is checked against the squad and the
+ * "Sonam Wangchuk 10". Blank lines are skipped. Each line is checked against the team and the
  * rest of the list, so every problem shows in the preview before anything is saved.
  */
-function parseList(text: string, squad: Player[]): PastedLine[] {
+function parseList(text: string, teamPlayers: Player[]): PastedLine[] {
   const rows: PastedLine[] = [];
   text.split(/\r?\n/).forEach((raw, i) => {
     const t = raw.trim();
@@ -432,7 +432,7 @@ function parseList(text: string, squad: Player[]): PastedLine[] {
     rows.push({ line: i + 1, text: t, shirt, name, problem: null });
   });
   for (const r of rows) {
-    r.problem = r.shirt == null ? "No shirt number" : playerProblem(r.shirt, r.name, squad);
+    r.problem = r.shirt == null ? "No shirt number" : playerProblem(r.shirt, r.name, teamPlayers);
     if (r.problem) continue;
     const first = rows.find((o) => o !== r && (o.shirt === r.shirt || o.name.toLowerCase() === r.name.toLowerCase()));
     if (first && rows.indexOf(first) < rows.indexOf(r)) {
@@ -442,13 +442,13 @@ function parseList(text: string, squad: Player[]): PastedLine[] {
   return rows;
 }
 
-function PasteListSheet({ team, squad, onClose }: { team: Team; squad: Player[]; onClose: () => void }) {
+function PasteListSheet({ team, teamPlayers, onClose }: { team: Team; teamPlayers: Player[]; onClose: () => void }) {
   const { local } = useTournament();
   const supabase = useMemo(() => createClient(), []);
   const [text, setText] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const rows = useMemo(() => parseList(text, squad), [text, squad]);
+  const rows = useMemo(() => parseList(text, teamPlayers), [text, teamPlayers]);
   const problems = rows.filter((r) => r.problem).length;
 
   async function save() {

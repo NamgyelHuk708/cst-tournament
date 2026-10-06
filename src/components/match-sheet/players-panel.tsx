@@ -1,6 +1,6 @@
 "use client";
 
-import { bySquadOrder, type Match, type Player, type Team } from "@/lib/tournament";
+import { byShirtOrder, type Match, type Player, type Team } from "@/lib/tournament";
 import { BallIcon, CardIcon } from "../icons";
 import { TeamLink } from "../team-link";
 import { TeamLogo } from "../team-logo";
@@ -40,7 +40,7 @@ export function PlayersPanel({ match, home, away }: { match: Match; home?: Team;
     <div className="space-y-5">
       {[home, away].map((team, i) =>
         team ? (
-          <TeamPlayers key={team.id} team={team} players={players.filter((p) => p.team_id === team.id).sort(bySquadOrder)} tally={tally} />
+          <TeamPlayers key={team.id} team={team} players={players.filter((p) => p.team_id === team.id).sort(byShirtOrder)} tally={tally} />
         ) : (
           <p key={i} className="rounded-xl bg-bg px-4 py-4 text-center text-sm text-muted">
             {i === 0 ? "Home" : "Away"} team not decided yet.

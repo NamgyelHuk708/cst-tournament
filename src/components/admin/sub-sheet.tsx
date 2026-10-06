@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { uuid } from "@/lib/uuid";
-import { bySquadOrder, type Match, type Substitution } from "@/lib/tournament";
+import { byShirtOrder, type Match, type Substitution } from "@/lib/tournament";
 import { Sheet } from "../sheet";
 import { useTournament } from "../tournament-provider";
 import { MinuteField, useMinuteInput } from "./minute-field";
@@ -30,7 +30,7 @@ export function SubSheet({
   const { players, teamsById, local } = useTournament();
   const supabase = useMemo(() => createClient(), []);
   const team = teamsById.get(teamId);
-  const squad = players.filter((p) => p.team_id === teamId).sort(bySquadOrder);
+  const teamPlayers = players.filter((p) => p.team_id === teamId).sort(byShirtOrder);
   const [off, setOff] = useState<string | null>(sub?.player_off ?? null);
   const [on, setOn] = useState<string | null>(sub?.player_on ?? null);
   const [newName, setNewName] = useState("");
@@ -92,7 +92,7 @@ export function SubSheet({
   }
 
   const chips = (selected: string | null, pick: (id: string | null) => void, allowNew: boolean) => (
-    <PlayerChips squad={squad} selected={selected} onPick={pick} allowNew={allowNew} teamCode={team?.short_code} />
+    <PlayerChips teamPlayers={teamPlayers} selected={selected} onPick={pick} allowNew={allowNew} teamCode={team?.short_code} />
   );
 
   return (

@@ -86,7 +86,7 @@ async function main() {
     await admin.from("players").select("id, team_id").in("team_id", teamIds).in("name", PLAYER_NAMES),
     "Load demo players",
   );
-  const squad = (teamId: number) => players.filter((p) => p.team_id === teamId).map((p) => p.id);
+  const teamPlayers = (teamId: number) => players.filter((p) => p.team_id === teamId).map((p) => p.id);
 
   const events: EventInsert[] = [];
   for (const match of targets) {
@@ -100,7 +100,7 @@ async function main() {
     const away = match.away_team_id!;
 
     const add = (type: EventType, teamId: number) =>
-      events.push({ match_id: match.id, type, team_id: teamId, player_id: pick(squad(teamId)), minute: minute(), is_demo: true });
+      events.push({ match_id: match.id, type, team_id: teamId, player_id: pick(teamPlayers(teamId)), minute: minute(), is_demo: true });
 
     for (let i = 0; i < homeGoals; i++) {
       // One own goal in the demo: match 7's fourth home goal is put in by the away side.

@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { uuid } from "@/lib/uuid";
-import { bySquadOrder, eventMinuteLabel, scoreFromEvents, type EventType, type Match, type MatchEvent, type Side } from "@/lib/tournament";
+import { byShirtOrder, eventMinuteLabel, scoreFromEvents, type EventType, type Match, type MatchEvent, type Side } from "@/lib/tournament";
 import { useTournament } from "../tournament-provider";
 import { Sheet } from "../sheet";
 import { MinuteField, useMinuteInput } from "./minute-field";
@@ -61,8 +61,8 @@ export function EventSheet({
   // Who the goal counts for: an own goal counts for the other team.
   const credited = ownGoal ? flip(teamSide) : teamSide;
   const playerTeamId = teamOn(playerSide);
-  const squad = players.filter((p) => p.team_id === playerTeamId).sort(bySquadOrder);
-  const selectedValid = playerId === NEW_PLAYER || playerId === null || squad.some((p) => p.id === playerId);
+  const teamPlayers = players.filter((p) => p.team_id === playerTeamId).sort(byShirtOrder);
+  const selectedValid = playerId === NEW_PLAYER || playerId === null || teamPlayers.some((p) => p.id === playerId);
   const effectivePlayer = selectedValid ? playerId : null;
 
   const code = (side: Side) => teamsById.get(teamOn(side))?.short_code ?? "";
@@ -74,11 +74,11 @@ export function EventSheet({
     : !event.player_id && (event.type === "goal" || event.type === "own_goal")
       ? `Add scorer to goal${at}`
       : `Edit ${eventNoun}${at}`;
-  // Picking someone else changes this event only. Misspelt names are fixed on the Squads page.
+  // Picking someone else changes this event only. Misspelt names are fixed on the Teams page.
   const pickHint = event?.player_id ? " · tap another player to change this one only" : "";
 
   // Preview of what Save will record, with the score it leads to.
-  const picked = effectivePlayer && effectivePlayer !== NEW_PLAYER ? squad.find((p) => p.id === effectivePlayer) : undefined;
+  const picked = effectivePlayer && effectivePlayer !== NEW_PLAYER ? teamPlayers.find((p) => p.id === effectivePlayer) : undefined;
   const who = picked
     ? `${picked.shirt_number != null ? `#${picked.shirt_number} ` : ""}${picked.name} (${code(playerSide)})`
     : effectivePlayer === NEW_PLAYER && newName.trim()
@@ -197,7 +197,7 @@ export function EventSheet({
         </Field>
 
         <Field label={`${ownGoal ? `Own goal by (${code(playerSide)} player)` : isGoal ? "Scored by" : "Player"}${pickHint}`}>
-          <PlayerChips squad={squad} selected={effectivePlayer} onPick={setPlayerId} teamCode={code(playerSide)} />
+          <PlayerChips teamPlayers={teamPlayers} selected={effectivePlayer} onPick={setPlayerId} teamCode={code(playerSide)} />
           {effectivePlayer === NEW_PLAYER && (
             <div className="mt-2 grid grid-cols-[1fr_5.5rem] gap-2">
               <input

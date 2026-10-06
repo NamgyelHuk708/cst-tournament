@@ -7,7 +7,7 @@ const TABS = [
   { href: "/admin", label: "Today" },
   { href: "/admin/groups", label: "Groups" },
   { href: "/admin/knockouts", label: "Knockouts" },
-  { href: "/admin/squads", label: "Squads" },
+  { href: "/admin/teams", label: "Teams" },
 ] as const;
 
 /** Section switch for the admin. Hidden on a match page, where the controls need the room. */

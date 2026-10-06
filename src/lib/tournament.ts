@@ -660,8 +660,8 @@ export type PlayerRef = { name: string; number: number | null };
 
 export type DisplaySub = Substitution & { side: Side; off: PlayerRef | null; on: PlayerRef | null };
 
-/** Squad order: by shirt number, players without one last, then by name. */
-export function bySquadOrder(a: Player, b: Player): number {
+/** Shirt order: by shirt number, players without one last, then by name. */
+export function byShirtOrder(a: Player, b: Player): number {
   return (a.shirt_number ?? 999) - (b.shirt_number ?? 999) || a.name.localeCompare(b.name);
 }
 

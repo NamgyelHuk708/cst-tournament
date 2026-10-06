@@ -5,17 +5,17 @@ import type { Player } from "@/lib/tournament";
 export const NEW_PLAYER = "new";
 
 /**
- * Pick a player: the team's squad first (by number), then "Unknown" and "+ New player" as the
- * fallback for someone not in the squad yet. `selected` is a player id, NEW_PLAYER or null (unknown).
+ * Pick a player: the team's players first (by number), then "Unknown" and "+ New player" as the
+ * fallback for someone not in the team yet. `selected` is a player id, NEW_PLAYER or null (unknown).
  */
 export function PlayerChips({
-  squad,
+  teamPlayers,
   selected,
   onPick,
   allowNew = true,
   teamCode,
 }: {
-  squad: Player[];
+  teamPlayers: Player[];
   selected: string | null;
   onPick: (id: string | null) => void;
   allowNew?: boolean;
@@ -23,9 +23,9 @@ export function PlayerChips({
 }) {
   return (
     <div className="space-y-2">
-      {squad.length > 0 ? (
+      {teamPlayers.length > 0 ? (
         <div className="flex flex-wrap gap-2">
-          {squad.map((p) => (
+          {teamPlayers.map((p) => (
             <Chip key={p.id} selected={selected === p.id} onClick={() => onPick(p.id)}>
               {p.shirt_number != null && <span className="tabular opacity-60">#{p.shirt_number} </span>}
               {p.name}
@@ -34,7 +34,7 @@ export function PlayerChips({
         </div>
       ) : (
         <p className="text-sm text-muted">
-          No squad for {teamCode ?? "this team"} yet (add it in the Squads tab). Use + New player for now.
+          No players for {teamCode ?? "this team"} yet (add them in the Teams tab). Use + New player for now.
         </p>
       )}
       <div className="flex flex-wrap gap-2 border-t border-border pt-2">
