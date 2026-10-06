@@ -5,6 +5,7 @@ import { BallIcon, CardIcon } from "../icons";
 import { TeamLink } from "../team-link";
 import { TeamLogo } from "../team-logo";
 import { useTournament } from "../tournament-provider";
+import { teamShort } from "@/data/team-names";
 
 type Tally = { goals: number; ownGoals: number; yellow: number; red: number; on: boolean; off: boolean };
 
@@ -58,7 +59,7 @@ function TeamPlayers({ team, players, tally }: { team: Team; players: Player[]; 
       <h3 id={headingId} className="mb-2 flex items-center gap-2 px-1 text-sm font-semibold">
         <TeamLogo team={team} size={20} />
         <TeamLink team={team} className="min-w-0 truncate">
-          {team.name}
+          {teamShort(team)}
         </TeamLink>
         {players.length > 0 && <span className="ml-auto shrink-0 text-xs font-medium text-muted tabular">{players.length}</span>}
       </h3>

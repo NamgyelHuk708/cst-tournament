@@ -4,6 +4,7 @@ import { isLive, type EventType, type Match, type StatusStep, type Team } from "
 import { BallIcon, CardIcon } from "../icons";
 import { useServerNow } from "../tournament-provider";
 import type { PendingTap } from "./match-control";
+import { teamShort } from "@/data/team-names";
 
 type Props = {
   match: Match;
@@ -133,7 +134,9 @@ export function ControlDock(props: Props) {
             <div className="grid grid-cols-2 gap-3">
               {[home, away].map((team, i) => (
                 <div key={team?.id ?? i} className="space-y-2">
-                  <p className="text-center font-display text-lg leading-none font-bold">{team?.short_code ?? "TBD"}</p>
+                  <p className="flex h-10 items-center justify-center text-center font-display text-base leading-tight font-bold text-balance break-words">
+                    {teamShort(team, "TBD")}
+                  </p>
                   <button
                     type="button"
                     disabled={!team || !inPlay}
@@ -230,8 +233,8 @@ function PenaltyControls({
     <div className="grid grid-cols-2 gap-3">
       {sides.map(({ team, value, set }, i) => (
         <div key={team?.id ?? i} className="space-y-2 text-center">
-          <p className="font-display text-lg leading-none font-bold">{team?.short_code}</p>
-          <p className="font-display text-4xl leading-none font-bold tabular" aria-label={`${team?.short_code} penalties scored`}>
+          <p className="flex h-10 items-center justify-center font-display text-base leading-tight font-bold text-balance break-words">{teamShort(team)}</p>
+          <p className="font-display text-4xl leading-none font-bold tabular" aria-label={`${team?.name ?? ""} penalties scored`}>
             {value}
           </p>
           <div className="grid grid-cols-[3rem_1fr] gap-2">
@@ -239,7 +242,7 @@ function PenaltyControls({
               type="button"
               disabled={busy || value === 0}
               onClick={() => set(value - 1)}
-              aria-label={`Remove a penalty for ${team?.short_code}`}
+              aria-label={`Remove a penalty for ${team?.name ?? ""}`}
               className="h-14 rounded-xl text-2xl font-bold ring-1 ring-border active:bg-bg disabled:opacity-40"
             >
               −

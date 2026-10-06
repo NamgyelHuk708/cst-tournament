@@ -1,6 +1,7 @@
 // All tournament logic: standings, qualification, knockout resolution, match clock.
 // Pure functions only, shared by server components, client components and scripts.
 import type { Database } from "./supabase/database.types";
+import { teamShort } from "../data/team-names";
 
 type Tables = Database["public"]["Tables"];
 type Enums = Database["public"]["Enums"];
@@ -574,7 +575,7 @@ export type DisplayEvent = MatchEvent & {
   playerName: string | null;
   /** Shirt number, when recorded. */
   playerNumber: number | null;
-  /** Short code of the player's own team ("BSM"), shown with own goals: "Dorji (BSM) 37' (OG)". */
+  /** The player's own team's short name, shown with own goals: "Dorji (BSMPL) 37' (OG)". */
   playerTeamCode: string | null;
 };
 
@@ -583,7 +584,7 @@ export function eventsForMatch(
   match: Match,
   events: MatchEvent[],
   playersById: Map<string, Player>,
-  teamsById?: Map<number, Pick<Team, "short_code">>,
+  teamsById?: Map<number, Pick<Team, "short_code" | "name">>,
 ): DisplayEvent[] {
   return events
     .filter((e) => e.match_id === match.id)
@@ -594,7 +595,7 @@ export function eventsForMatch(
         side: e.type === "own_goal" ? otherSide(ownSide) : ownSide,
         playerName: e.player_id ? playersById.get(e.player_id)?.name ?? null : null,
         playerNumber: e.player_id ? playersById.get(e.player_id)?.shirt_number ?? null : null,
-        playerTeamCode: teamsById?.get(e.team_id)?.short_code ?? null,
+        playerTeamCode: teamsById?.get(e.team_id) ? teamShort(teamsById.get(e.team_id)!) : null,
       };
     })
     .sort(compareEventTime);
@@ -621,7 +622,7 @@ export type ScorerLine = {
   /** Shirt number, when recorded. */
   number: number | null;
   ownGoal: boolean;
-  /** For own goals: the scorer's own team ("BSM"), the side the line is not listed under. */
+  /** For own goals: the scorer's own team's short name, the side the line is not listed under. */
   teamCode: string | null;
   /** Minutes in order ("10'", "45+2'"); goals without a minute are counted in `untimed`. */
   minutes: string[];

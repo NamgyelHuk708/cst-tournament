@@ -46,7 +46,7 @@ export function NextMatchHero({ match, placeholders }: { match: Match; placehold
         </div>
       </div>
       <MatchDetailsHint />
-      <OpenMatchOverlay matchId={match.id} label={`Match details: ${home?.short_code ?? "TBD"} v ${away?.short_code ?? "TBD"}`} />
+      <OpenMatchOverlay matchId={match.id} label={`Match details: ${home?.name ?? "TBD"} v ${away?.name ?? "TBD"}`} />
     </article>
   );
 }

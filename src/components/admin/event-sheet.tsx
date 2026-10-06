@@ -8,6 +8,7 @@ import { useTournament } from "../tournament-provider";
 import { Sheet } from "../sheet";
 import { MinuteField, useMinuteInput } from "./minute-field";
 import { NEW_PLAYER, PlayerChips } from "./player-chips";
+import { teamShort } from "@/data/team-names";
 
 const TYPES: { type: EventType; label: string }[] = [
   { type: "goal", label: "Goal" },
@@ -65,7 +66,7 @@ export function EventSheet({
   const selectedValid = playerId === NEW_PLAYER || playerId === null || teamPlayers.some((p) => p.id === playerId);
   const effectivePlayer = selectedValid ? playerId : null;
 
-  const code = (side: Side) => teamsById.get(teamOn(side))?.short_code ?? "";
+  const code = (side: Side) => teamShort(teamsById.get(teamOn(side)));
   // Name the one event being changed, so it can't be mistaken for fixing the player everywhere.
   const eventNoun = event ? { goal: "goal", own_goal: "own goal", yellow_card: "yellow card", red_card: "red card" }[event.type] : "";
   const at = event ? (event.minute != null ? ` at ${eventMinuteLabel(event)}` : " (minute not known)") : "";

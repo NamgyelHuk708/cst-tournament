@@ -7,6 +7,7 @@ import { GroupSwatch } from "../group-tag";
 import { ChevronIcon } from "../icons";
 import { useServerNow, useTournament } from "../tournament-provider";
 import { LivePill } from "../live-pill";
+import { teamShort } from "@/data/team-names";
 
 const RECENT_COUNT = 6;
 const UPCOMING_COUNT = 6;
@@ -93,10 +94,10 @@ export function AdminMatchRow({ match, now, hideGroup = false }: { match: Match;
           )}
           {!hideGroup && <span aria-hidden="true">·</span>} Match {match.id}
         </span>
-        <span className="mt-0.5 flex items-baseline gap-2 font-display text-xl font-bold tracking-wide">
-          {home?.short_code ?? "TBD"}
+        <span className="mt-0.5 flex flex-wrap items-baseline gap-x-2 font-display text-lg leading-tight font-bold tracking-wide">
+          {teamShort(home, "TBD")}
           <span className="tabular">{started ? `${match.home_score}–${match.away_score}` : <span className="text-base font-semibold text-muted">v</span>}</span>
-          {away?.short_code ?? "TBD"}
+          {teamShort(away, "TBD")}
         </span>
       </span>
       <ChevronIcon className="size-5 -rotate-90 text-muted" />

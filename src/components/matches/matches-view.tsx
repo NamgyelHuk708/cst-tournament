@@ -9,6 +9,7 @@ import { CloseIcon, SearchIcon } from "../icons";
 import { useServerNow, useTournament } from "../tournament-provider";
 import { TeamLogo } from "../team-logo";
 import { MatchListRow } from "./match-list-row";
+import { teamSearchText, teamShort, teamSub } from "@/data/team-names";
 
 type View = "results" | "upcoming";
 type Filter = { kind: "all" } | { kind: "group"; group: GroupCode } | { kind: "knockouts" } | { kind: "team"; team: Team };
@@ -214,7 +215,7 @@ function FilterChips({ filter, onChange }: { filter: Filter; onChange: (f: Filte
 
   const options: { filter: Filter; label: React.ReactNode; aria: string }[] = [
     ...(filter.kind === "team"
-      ? [{ filter, label: <TeamChipLabel team={filter.team} />, aria: `Team ${filter.team.short_code} ${filter.team.name}` }]
+      ? [{ filter, label: <TeamChipLabel team={filter.team} />, aria: `Team ${filter.team.name}` }]
       : []),
     { filter: { kind: "all" }, label: "All", aria: "All matches" },
     ...GROUP_CODES.map((g) => ({
@@ -260,18 +261,17 @@ function TeamChipLabel({ team }: { team: Team }) {
   return (
     <span className="flex max-w-[14rem] items-center gap-1.5">
       <TeamLogo team={team} size={20} className="-ml-1.5 ring-0" />
-      <span className="font-display text-[15px] font-bold tracking-wide">{team.short_code}</span>
-      <span className="truncate text-[13px] font-medium opacity-80">{team.name}</span>
+      <span className="truncate font-display text-[15px] font-bold tracking-wide">{teamShort(team)}</span>
     </span>
   );
 }
 
-/** Find a team by code or name; picking one filters both views to its matches. */
+/** Find a team by short name, second line, official name or code; picking one filters both views. */
 function TeamSearch({ teams, onPick }: { teams: Team[]; onPick: (team: Team) => void }) {
   const [query, setQuery] = useState("");
   const listId = useId();
   const q = query.trim().toLowerCase();
-  const hits = q ? teams.filter((t) => t.short_code.toLowerCase().includes(q) || t.name.toLowerCase().includes(q)).slice(0, 6) : [];
+  const hits = q ? teams.filter((t) => teamSearchText(t).includes(q)).slice(0, 6) : [];
 
   const pick = (team: Team) => {
     setQuery("");
@@ -315,8 +315,10 @@ function TeamSearch({ teams, onPick }: { teams: Team[]; onPick: (team: Team) => 
               <li key={t.id} role="option" aria-selected={false}>
                 <button type="button" onClick={() => pick(t)} className="flex h-12 w-full items-center gap-3 px-4 text-left active:bg-bg">
                   <TeamLogo team={t} size={24} />
-                  <span className="w-10 shrink-0 font-display text-[17px] font-bold tracking-wide">{t.short_code}</span>
-                  <span className="min-w-0 flex-1 truncate text-sm text-muted">{t.name}</span>
+                  <span className="min-w-0 flex-1 leading-tight">
+                    <span className="block truncate font-display text-[16px] font-bold tracking-wide">{teamShort(t)}</span>
+                    {teamSub(t) && <span className="block truncate text-xs text-muted">{teamSub(t)}</span>}
+                  </span>
                   <GroupSwatch group={t.group_code} className="size-2.5" />
                   <span className="text-xs font-medium text-muted">{t.group_code}</span>
                 </button>

@@ -33,6 +33,7 @@ import { OfficialsSection } from "./officials";
 import { SubSheet } from "./sub-sheet";
 import { Sheet } from "../sheet";
 import { LivePill } from "../live-pill";
+import { fitNameSize, teamShort } from "@/data/team-names";
 
 export type PendingTap = { clientId: string; matchId: number; teamId: number; type: EventType };
 type LastAction =
@@ -107,7 +108,7 @@ export function MatchControl({ matchId }: { matchId: number }) {
         const oldId = old?.[i + 1] ? Number(old[i + 1]) : null;
         const newId = d[`${side}_team_id`];
         if (oldId === newId) return;
-        const code = (id: number | null) => (id != null ? teamsById.get(id)?.short_code : undefined);
+        const code = (id: number | null) => (id != null ? teamShort(teamsById.get(id)) : undefined);
         const into = d.slot_label === "3RD" ? "the 3rd place match" : d.slot_label === "FINAL" ? "the Final" : slotDisplayName(d.slot_label ?? "");
         if (newId != null) notes.push(`${code(newId)} goes through to ${into}${oldId != null ? ` in place of ${code(oldId)}` : ""}.`);
         else if (oldId != null) notes.push(`${code(oldId)} removed from ${into} until this tie has a winner.`);
@@ -162,7 +163,7 @@ export function MatchControl({ matchId }: { matchId: number }) {
   const home = match.home_team_id != null ? teamsById.get(match.home_team_id) : undefined;
   const away = match.away_team_id != null ? teamsById.get(match.away_team_id) : undefined;
 
-  const shortCode = (teamId: number) => teamsById.get(teamId)?.short_code ?? "";
+  const shortCode = (teamId: number) => teamShort(teamsById.get(teamId));
 
   async function sendTap(tap: PendingTap) {
     setFailed(null);
@@ -437,7 +438,7 @@ export function MatchControl({ matchId }: { matchId: number }) {
         <p className="text-base">
           {step?.to === "penalties" ? "Level at full time: " : "Final score: "}
           <strong className="font-display text-2xl tabular">
-            {home?.short_code} {score.home}–{score.away} {away?.short_code}
+            {teamShort(home)} {score.home}–{score.away} {teamShort(away)}
           </strong>
           {match.status === "penalties" && (
             <span className="block text-sm text-muted">
@@ -564,6 +565,7 @@ function Scoreboard({
   const now = useServerNow(5_000);
   const clock = matchClock(match, now);
   const live = isLive(match);
+  const nameSize = fitNameSize([teamShort(home, "TBD"), teamShort(away, "TBD")], 24);
   const statusText: Record<MatchStatus, string> = {
     scheduled: "Not started",
     first_half: "First half",
@@ -579,14 +581,23 @@ function Scoreboard({
         {live ? <LivePill match={match} size="md" /> : <span className="font-semibold text-muted">{statusText[match.status]}</span>}
         {live && clock.running && <span className="font-display text-2xl leading-none font-bold tabular">{clock.label}</span>}
       </div>
-      <div className="mt-1 grid grid-cols-[1fr_auto_1fr] items-center">
-        <p className="font-display text-3xl font-bold">{home?.short_code ?? "TBD"}</p>
+      {/* Short names wrap onto two lines rather than pushing the score aside. */}
+      <div className="mt-1 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-x-2">
+        <div className="[container-type:inline-size]">
+          <p style={{ fontSize: nameSize }} className="font-display leading-tight font-bold text-balance">
+            {teamShort(home, "TBD")}
+          </p>
+        </div>
         <p className="font-display text-5xl leading-none font-bold tabular" aria-live="polite">
           {score.home}
           <span className="px-2 text-3xl text-muted">–</span>
           {score.away}
         </p>
-        <p className="text-right font-display text-3xl font-bold">{away?.short_code ?? "TBD"}</p>
+        <div className="[container-type:inline-size]">
+          <p style={{ fontSize: nameSize }} className="text-right font-display leading-tight font-bold text-balance">
+            {teamShort(away, "TBD")}
+          </p>
+        </div>
       </div>
       {isKnockout(match) && match.home_pens != null && (
         <p className="mt-1 text-center text-sm font-semibold text-muted tabular">

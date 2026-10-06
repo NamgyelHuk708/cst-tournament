@@ -19,6 +19,7 @@ import { useTournament } from "../tournament-provider";
 import { useResolvedSides } from "../use-resolved-sides";
 import { useFlashOnChange } from "../use-flash";
 import { LivePill } from "../live-pill";
+import { teamShort } from "@/data/team-names";
 
 export function KnockoutCard({ match, featured = false }: { match: Match; featured?: boolean }) {
   const sides = useResolvedSides(match);
@@ -59,7 +60,7 @@ export function KnockoutCard({ match, featured = false }: { match: Match; featur
 
       {outcome?.decidedOnPenalties && winnerTeam && hasPens && (
         <p className="border-t border-border bg-bg/60 px-3.5 py-1.5 text-xs font-medium text-muted">
-          {winnerTeam.short_code} win {Math.max(match.home_pens!, match.away_pens!)}–{Math.min(match.home_pens!, match.away_pens!)} on penalties
+          {teamShort(winnerTeam)} win {Math.max(match.home_pens!, match.away_pens!)}–{Math.min(match.home_pens!, match.away_pens!)} on penalties
         </p>
       )}
       <OpenMatchOverlay matchId={match.id} label={`Match details: ${slotDisplayName(match.slot_label ?? "")}`} />
@@ -100,12 +101,12 @@ function SideLine({
       {side.team ?? (side.projectionFinal ? side.projected : null) ? (
         <div className="min-w-0 flex-1 leading-tight">
           {!side.team && <span className="block truncate text-[11px] text-muted">{side.placeholder}</span>}
-          <p className="flex min-w-0 items-center gap-2 overflow-hidden">
+          {/* Short name only in bracket ties; it wraps rather than being cut. */}
+          <p className="flex min-w-0 items-center gap-2">
             <TeamLogo team={(side.team ?? side.projected)!} size={20} />
-            <span className={`font-display text-[17px] tracking-wide ${isWinner ? "font-bold" : "font-semibold"}`}>
-              {(side.team ?? side.projected)!.short_code}
+            <span className={`min-w-0 font-display text-[16px] tracking-wide break-words ${isWinner ? "font-bold" : "font-semibold"}`}>
+              {teamShort((side.team ?? side.projected)!)}
             </span>
-            <span className="truncate text-[13px] text-muted">{(side.team ?? side.projected)!.name}</span>
             {isWinner && <span className="sr-only">(winner)</span>}
           </p>
         </div>
@@ -114,7 +115,7 @@ function SideLine({
           <span className="block truncate text-[13px] text-muted italic">{side.placeholder}</span>
           {side.projected && (
             <span className="block truncate text-[11px] font-semibold tracking-wide text-text/80">
-              Currently <span className="font-display text-[13px] font-bold">{side.projected.short_code}</span>
+              Currently <span className="font-display text-[13px] font-bold">{teamShort(side.projected)}</span>
             </span>
           )}
         </p>

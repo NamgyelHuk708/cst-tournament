@@ -2,6 +2,7 @@
 
 import { isBallInPlay, matchClock, type Match, type Team } from "@/lib/tournament";
 import { useServerNow } from "./tournament-provider";
+import { teamShort } from "@/data/team-names";
 
 /** Pill width per place, fixed so the scroll never moves anything around it. */
 const SIZES = {
@@ -37,7 +38,7 @@ export function LivePill({
   const clock = matchClock(match, now);
   const scrolling = isBallInPlay(match);
   const score =
-    size === "lg" && home && away ? `${home.short_code} ${match.home_score}–${match.away_score} ${away.short_code}` : null;
+    size === "lg" && home && away ? `${teamShort(home)} ${match.home_score}–${match.away_score} ${teamShort(away)}` : null;
 
   const pause = match.status === "half_time" ? "HALF-TIME" : match.status === "penalties" ? "PENALTIES" : "LIVE";
   const minute = clock.label.endsWith("'") ? clock.label : null;
@@ -53,7 +54,7 @@ export function LivePill({
   const spoken = [
     match.status === "half_time" ? "Half-time" : match.status === "penalties" ? "Penalties" : "Live",
     scrolling ? spokenMinute : null,
-    score && home && away ? `${home.short_code} ${match.home_score}, ${away.short_code} ${match.away_score}` : null,
+    score && home && away ? `${home.name} ${match.home_score}, ${away.name} ${match.away_score}` : null,
   ]
     .filter(Boolean)
     .join(", ");

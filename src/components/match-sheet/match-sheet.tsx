@@ -31,7 +31,7 @@ export function MatchSheetProvider({ children }: { children: React.ReactNode }) 
   const open = useCallback((id: number) => setOpened({ id, at: location }), [location]);
   const close = useCallback(() => setOpened(null), []);
   const match = opened && opened.at === location ? matchesById.get(opened.id) : undefined;
-  const team = (id: number | null) => (id != null ? teamsById.get(id)?.short_code : undefined);
+  const team = (id: number | null) => (id != null ? teamsById.get(id)?.name : undefined); // dialog title, read aloud
   const title = match ? `Match ${match.id}: ${team(match.home_team_id) ?? "TBD"} v ${team(match.away_team_id) ?? "TBD"}` : "Match";
 
   return (

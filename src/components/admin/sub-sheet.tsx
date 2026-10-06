@@ -8,6 +8,7 @@ import { Sheet } from "../sheet";
 import { useTournament } from "../tournament-provider";
 import { MinuteField, useMinuteInput } from "./minute-field";
 import { NEW_PLAYER as NEW, PlayerChips } from "./player-chips";
+import { teamShort } from "@/data/team-names";
 
 /**
  * Record or edit a substitution: player off, player on (from the team's players, or a new one with
@@ -92,11 +93,11 @@ export function SubSheet({
   }
 
   const chips = (selected: string | null, pick: (id: string | null) => void, allowNew: boolean) => (
-    <PlayerChips teamPlayers={teamPlayers} selected={selected} onPick={pick} allowNew={allowNew} teamCode={team?.short_code} />
+    <PlayerChips teamPlayers={teamPlayers} selected={selected} onPick={pick} allowNew={allowNew} teamCode={teamShort(team)} />
   );
 
   return (
-    <Sheet open onClose={onClose} title={`${sub ? "Edit substitution" : "Substitution"} · ${team?.short_code ?? ""}`}>
+    <Sheet open onClose={onClose} title={`${sub ? "Edit substitution" : "Substitution"} · ${teamShort(team)}`}>
       <div className="space-y-5">
         <Field label="Player off">{chips(off, setOff, false)}</Field>
         <Field label="Player on">

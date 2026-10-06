@@ -25,7 +25,7 @@ export function TeamLink({
     <Link
       href={teamMatchesHref(team)}
       className={`underline-offset-2 hover:underline ${className}`}
-      aria-label={decorative ? undefined : `${team.short_code} ${team.name}: all matches`}
+      aria-label={decorative ? undefined : `${team.name}: all matches`}
       tabIndex={decorative ? -1 : undefined}
       aria-hidden={decorative || undefined}
     >

@@ -4,6 +4,7 @@ import { compareEventTime, eventMinuteLabel, type EventType, type Match, type Ma
 import Link from "next/link";
 import { BallIcon, CardIcon } from "../icons";
 import { useTournament } from "../tournament-provider";
+import { teamShort } from "@/data/team-names";
 
 const LABEL: Record<EventType, string> = {
   goal: "Goal",
@@ -55,19 +56,21 @@ export function EventLog({
   return (
     // Bottom padding leaves room for the fixed control dock.
     <section aria-label="Event log" className="px-4 pt-4 pb-[30rem]">
-      <div className="mb-1 flex items-center justify-between gap-2 pl-1">
-        <h2 className="text-sm font-semibold text-muted">Event log</h2>
-        {/* Misspelt names and wrong numbers are fixed on the team's page; Back there returns here. */}
-        <nav aria-label="Team players" className="flex">
+      <h2 className="px-1 text-sm font-semibold text-muted">Event log</h2>
+      {/* Misspelt names and wrong numbers are fixed on the team's page; Back there returns here. */}
+      <div className="mb-1 flex flex-wrap items-center gap-x-1 pl-1">
+        <span className="text-xs text-muted">Fix a name or number:</span>
+        <nav aria-label="Team players" className="flex flex-wrap">
           {[match.home_team_id, match.away_team_id].map((id) => {
             const team = id != null ? teamsById.get(id) : undefined;
             return team ? (
               <Link
                 key={team.id}
                 href={`/admin/teams/${encodeURIComponent(team.short_code)}?from=${match.id}`}
-                className="flex h-12 items-center rounded-lg px-2.5 text-sm font-semibold text-brand-text active:bg-card"
+                className="flex h-12 items-center gap-0.5 rounded-lg px-2 text-sm font-semibold text-brand-text active:bg-card"
+                aria-label={`${team.name} players`}
               >
-                {team.short_code} team
+                {teamShort(team)} ›
               </Link>
             ) : null;
           })}
@@ -91,7 +94,7 @@ export function EventLog({
                     ⇅
                   </span>
                   <span className="min-w-0 flex-1 leading-tight">
-                    <span className="block text-sm font-semibold">Substitution · {teamsById.get(s.team_id)?.short_code}</span>
+                    <span className="block text-sm font-semibold">Substitution · {teamShort(teamsById.get(s.team_id))}</span>
                     <span className="block truncate text-sm text-muted">
                       <span className="font-semibold text-win-text">↑</span> {playerLine(s.player_on)} <span className="font-semibold">↓</span> {playerLine(s.player_off)}
                     </span>
@@ -129,18 +132,18 @@ export function EventLog({
                       {player ? (
                         <>
                           {player.shirt_number != null && <span className="tabular">#{player.shirt_number} </span>}
-                          {player.name} ({teamsById.get(e.team_id)?.short_code})
+                          {player.name} ({teamShort(teamsById.get(e.team_id))})
                         </>
                       ) : (
-                        `a ${teamsById.get(e.team_id)?.short_code} player`
+                        `a ${teamShort(teamsById.get(e.team_id))} player`
                       )}
                     </span>
-                    <span className="block text-sm text-muted">Counts for {teamsById.get(creditedTeamId ?? -1)?.short_code}</span>
+                    <span className="block text-sm text-muted">Counts for {teamShort(teamsById.get(creditedTeamId ?? -1))}</span>
                   </span>
                 ) : (
                   <span className="min-w-0 flex-1 leading-tight">
                     <span className="block text-sm font-semibold">
-                      {LABEL[e.type]} · {teamsById.get(creditedTeamId ?? -1)?.short_code}
+                      {LABEL[e.type]} · {teamShort(teamsById.get(creditedTeamId ?? -1))}
                     </span>
                     <span className="block truncate text-sm text-muted">
                       {player ? (

@@ -7,6 +7,7 @@ import { GROUP_BG, GroupSwatch } from "../group-tag";
 import { useServerNow, useTournament } from "../tournament-provider";
 import { AdminMatchRow } from "./match-list";
 import { QualifierSheet } from "./qualifier-sheet";
+import { teamShort } from "@/data/team-names";
 
 /** Every group: a compact table (always calculated) and its matches, each one tap from editing. */
 export function AdminGroups() {
@@ -53,7 +54,7 @@ function AdminGroupCard({ standings }: { standings: GroupStandings }) {
   // An order the admin has set that is currently deciding positions.
   const decided = levelClusters(rows).filter((c) => c.every((r) => r.orderedByOverride));
   const hasOverride = rows.some((r) => r.team.tiebreak_rank != null);
-  const codes = (c: StandingRow[]) => c.map((r) => r.team.short_code).join(", ").replace(/, ([^,]*)$/, " and $1");
+  const codes = (c: StandingRow[]) => c.map((r) => teamShort(r.team)).join(", ").replace(/, ([^,]*)$/, " and $1");
 
   async function call(fn: () => PromiseLike<{ error: { message: string } | null }>) {
     setBusy(true);
@@ -140,7 +141,7 @@ function AdminGroupCard({ standings }: { standings: GroupStandings }) {
                   {r.position}
                 </td>
                 <th scope="row" className="text-left font-normal">
-                  <span className="font-display text-base font-bold">{r.team.short_code}</span>
+                  <span className="font-display text-base font-bold">{teamShort(r.team)}</span>
                   {r.qualifying && <span className="ml-2 text-xs text-win-text">{r.qualified ? "Qualified" : "Qualifying"}</span>}
                   {complete && r.tiedUnresolved && <span className="ml-2 text-xs font-semibold">Level</span>}
                 </th>

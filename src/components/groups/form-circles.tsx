@@ -16,7 +16,7 @@ export function FormCircles({ slots, size = 20 }: { slots: FormSlot[]; size?: nu
   return (
     <ol aria-label="Form, oldest first" className="flex items-center gap-1">
       {slots.map((s) => {
-        const opponent = s.opponent?.short_code ?? "TBD";
+        const opponent = s.opponent?.name ?? "TBD"; // official name for screen readers
         const style = { width: size, height: size };
         if (!s.result) {
           const live = isLive(s.match);

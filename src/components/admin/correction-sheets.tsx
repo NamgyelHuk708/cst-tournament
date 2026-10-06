@@ -11,6 +11,7 @@ import {
   type Team,
 } from "@/lib/tournament";
 import { Sheet } from "../sheet";
+import { teamShort } from "@/data/team-names";
 
 const BTN_SECONDARY = "h-14 rounded-xl font-semibold ring-1 ring-border active:bg-bg";
 const BTN_PRIMARY = "h-14 rounded-xl bg-text font-semibold text-white active:opacity-90 disabled:opacity-40";
@@ -122,7 +123,7 @@ export function FinalScoreSheet({
   const [ap, setAp] = useState(match.away_pens ?? 0);
 
   const needsPens = isKnockout(match) && h === a;
-  const plans = [planSide(match, events, home.id, away.id, home.short_code, h), planSide(match, events, away.id, home.id, away.short_code, a)];
+  const plans = [planSide(match, events, home.id, away.id, teamShort(home), h), planSide(match, events, away.id, home.id, teamShort(away), a)];
   const blocked = plans.find((p) => p.blocked);
   const pensInvalid = needsPens && hp === ap;
   // Who goes through now and with the new score (knockouts only).
@@ -152,18 +153,18 @@ export function FinalScoreSheet({
   return (
     <Sheet open={open} onClose={onClose} title="Set final score">
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-        <ScoreInput label={home.short_code} value={h} onChange={setH} />
+        <ScoreInput label={teamShort(home)} value={h} onChange={setH} />
         <span className="pt-6 font-display text-2xl text-muted">–</span>
-        <ScoreInput label={away.short_code} value={a} onChange={setA} />
+        <ScoreInput label={teamShort(away)} value={a} onChange={setA} />
       </div>
 
       {needsPens && (
         <div className="mt-4 rounded-xl bg-bg p-3">
           <p className="mb-2 text-sm font-semibold">Level, so enter the penalty score</p>
           <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-            <ScoreInput label={`${home.short_code} pens`} value={hp} onChange={setHp} small />
+            <ScoreInput label={`${teamShort(home)} pens`} value={hp} onChange={setHp} small />
             <span className="pt-6 text-muted">–</span>
-            <ScoreInput label={`${away.short_code} pens`} value={ap} onChange={setAp} small />
+            <ScoreInput label={`${teamShort(away)} pens`} value={ap} onChange={setAp} small />
           </div>
         </div>
       )}
@@ -325,7 +326,7 @@ export function ResetSheet({
   return (
     <Sheet open={open} onClose={onClose} title="Reset this match?">
       <p className="text-base">
-        {home?.short_code} {match.home_score}–{match.away_score} {away?.short_code} will go back to not started.
+        {teamShort(home)} {match.home_score}–{match.away_score} {teamShort(away)} will go back to not started.
       </p>
       <p className="mt-1 text-sm text-muted">
         {eventCount

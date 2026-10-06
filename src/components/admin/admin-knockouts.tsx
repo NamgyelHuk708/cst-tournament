@@ -17,6 +17,7 @@ import {
 import { KnockoutCard } from "../knockouts/knockout-card";
 import { useTournament } from "../tournament-provider";
 import { Sheet } from "../sheet";
+import { teamShort } from "@/data/team-names";
 
 export function AdminKnockouts() {
   const { matches, events, standings, teamsById, matchesById, local } = useTournament();
@@ -106,7 +107,7 @@ export function AdminKnockouts() {
             const r = resolveSide(m, side, ctx);
             // A slot whose team no longer matches the final group standings.
             return r.team && r.projected && r.projectionFinal && r.team.id !== r.projected.id && m.stage === "round_of_16"
-              ? [`${r.placeholder} is now ${r.projected.short_code}, not ${r.team.short_code}.`]
+              ? [`${r.placeholder} is now ${teamShort(r.projected)}, not ${teamShort(r.team)}.`]
               : [];
           });
           return (
@@ -138,11 +139,11 @@ export function AdminKnockouts() {
                 <span className="block truncate text-muted">{p.placeholder}</span>
                 {p.outcome === "filled" ? (
                   <span className="block font-semibold">
-                    {p.team?.short_code}
-                    {p.current && <span className="font-normal text-muted"> (replaces {p.current.short_code})</span>}
+                    {teamShort(p.team)}
+                    {p.current && <span className="font-normal text-muted"> (replaces {teamShort(p.current)})</span>}
                   </span>
                 ) : p.outcome === "unchanged" ? (
-                  <span className="block text-muted">{p.team?.short_code} · already set</span>
+                  <span className="block text-muted">{teamShort(p.team)} · already set</span>
                 ) : (
                   <span className="block text-muted">Skipped: {p.reason}</span>
                 )}

@@ -9,6 +9,7 @@ import { MatchDetailsHint, OpenMatchOverlay } from "../match-sheet/open-overlay"
 import { useTournament } from "../tournament-provider";
 import { useFlashOnChange } from "../use-flash";
 import { LivePill } from "../live-pill";
+import { fitNameSize, teamShort, teamSub } from "@/data/team-names";
 
 /** The live match, readable from arm's length: big score, teal LED status with the minute. */
 export function LiveHero({ match }: { match: Match }) {
@@ -53,12 +54,12 @@ export function LiveHero({ match }: { match: Match }) {
         {(matchEvents.length > 0 || latestSub) && (
           <div className="mt-5 space-y-3 border-t border-border pt-4">
             <ScorerColumns events={matchEvents} />
-            {latestSub && <LatestSub sub={latestSub} team={teamsById.get(latestSub.team_id)?.short_code ?? ""} />}
+            {latestSub && <LatestSub sub={latestSub} team={teamsById.get(latestSub.team_id) ? teamShort(teamsById.get(latestSub.team_id)!) : ""} />}
           </div>
         )}
       </div>
       <MatchDetailsHint />
-      <OpenMatchOverlay matchId={match.id} label={`Match details: ${home?.short_code ?? "TBD"} v ${away?.short_code ?? "TBD"}`} />
+      <OpenMatchOverlay matchId={match.id} label={`Match details: ${home?.name ?? "TBD"} v ${away?.name ?? "TBD"}`} />
     </article>
   );
 }
@@ -72,8 +73,9 @@ function StageTag({ match }: { match: Match }) {
 }
 
 /**
- * Two teams either side of a centre piece (score or "vs"). Codes share the centre's row so
- * they always line up, whatever the length of the full names underneath.
+ * Two teams either side of a centre piece (score or "vs"): logos on one row, short names on the next,
+ * second lines under those, so logos and names line up whatever their length. A short name wraps
+ * between words and shrinks until its longest word fits its column; it is never cut or split.
  */
 export function Matchup({
   home,
@@ -87,36 +89,53 @@ export function Matchup({
   away?: Team;
   placeholders?: { home?: string; away?: string };
   center: React.ReactNode;
-  /** Code and name link to the team's matches. Not for cards that open the match sheet on tap. */
+  /** Names link to the team's matches. Not for cards that open the match sheet on tap. */
   linkTeams?: boolean;
   className?: string;
 }) {
-  const code = (team?: Team) => (
-    <div className="flex flex-col items-center gap-2 self-end">
-      {team && <TeamLogo team={team} size={48} />}
-      <p className={`text-center font-display text-[34px] leading-none font-bold tracking-wide ${team ? "" : "text-muted"}`}>
-        {team && linkTeams ? <TeamLink team={team}>{team.short_code}</TeamLink> : (team?.short_code ?? "TBD")}
+  // One size for both names, so neither side looks more important.
+  // Up to 34px when both names are short, 28px otherwise, smaller if a word wouldn't fit.
+  const names = [teamShort(home, "TBD"), teamShort(away, "TBD")];
+  const size = fitNameSize(names, names.every((n) => n.length <= 5) ? 34 : 28, 0.45);
+  const logo = (team?: Team) => <div className="grid h-12 place-items-center">{team && <TeamLogo team={team} size={48} />}</div>;
+  const short = (team?: Team) => {
+    const text = teamShort(team, "TBD");
+    return (
+      <div className="self-start [container-type:inline-size]">
+        <p
+          style={{ fontSize: size }}
+          className={`text-center font-display leading-[1.05] font-bold tracking-wide text-balance ${team ? "" : "text-muted"}`}
+        >
+          {team && linkTeams ? <TeamLink team={team}>{text}</TeamLink> : text}
+        </p>
+      </div>
+    );
+  };
+  const sub = (team?: Team, placeholder?: string) => {
+    // The second line, if the team has one; the placeholder ("Winner Group A") when there's no team yet.
+    const text = team ? teamSub(team) : (placeholder ?? "To be decided");
+    if (!text) return <span />;
+    return (
+      <p className={`line-clamp-3 self-start text-center text-[13px] leading-snug text-muted ${team ? "" : "italic"}`}>
+        {team && linkTeams ? (
+          <TeamLink team={team} decorative>
+            {text}
+          </TeamLink>
+        ) : (
+          text
+        )}
       </p>
-    </div>
-  );
-  const name = (team?: Team, placeholder?: string) => (
-    <p className={`line-clamp-2 self-start text-center text-[13px] leading-snug text-muted ${team ? "" : "italic"}`}>
-      {team && linkTeams ? (
-        <TeamLink team={team} decorative>
-          {team.name}
-        </TeamLink>
-      ) : (
-        (team?.name ?? placeholder ?? "To be decided")
-      )}
-    </p>
-  );
+    );
+  };
   return (
-    <div className={`grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-x-2 gap-y-1 ${className}`}>
-      {code(home)}
-      <div className="row-span-2 self-center">{center}</div>
-      {code(away)}
-      {name(home, placeholders?.home)}
-      {name(away, placeholders?.away)}
+    <div className={`grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-x-2 gap-y-1.5 ${className}`}>
+      {logo(home)}
+      <div className="row-span-3 self-center">{center}</div>
+      {logo(away)}
+      {short(home)}
+      {short(away)}
+      {sub(home, placeholders?.home)}
+      {sub(away, placeholders?.away)}
     </div>
   );
 }

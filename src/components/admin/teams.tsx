@@ -9,6 +9,7 @@ import { GroupSwatch } from "../group-tag";
 import { Sheet } from "../sheet";
 import { TeamLogo } from "../team-logo";
 import { useTournament } from "../tournament-provider";
+import { teamShort, teamSub } from "@/data/team-names";
 
 const MAX_NAME = 80;
 
@@ -42,8 +43,8 @@ export function TeamList() {
                     <Link href={`/admin/teams/${encodeURIComponent(t.short_code)}`} className="flex min-h-14 items-center gap-3 px-4 py-2 active:bg-bg">
                       <TeamLogo team={t} size={28} />
                       <span className="min-w-0 flex-1">
-                        <span className="block font-display font-bold">{t.short_code}</span>
-                        <span className="block truncate text-xs text-muted">{t.name}</span>
+                        <span className="block font-display font-bold">{teamShort(t)}</span>
+                        {teamSub(t) && <span className="block truncate text-xs text-muted">{teamSub(t)}</span>}
                       </span>
                       <span className={`shrink-0 text-sm tabular ${n ? "font-semibold" : "text-muted"}`}>{n ? `${n} players` : "No players"}</span>
                       <ChevronIcon className="size-4 shrink-0 -rotate-90 text-muted" />
@@ -89,9 +90,9 @@ export function TeamPage({ code, fromMatch }: { code: string; fromMatch?: number
       <div className="mt-1 flex items-center gap-3">
         <TeamLogo team={team} size={44} />
         <div className="min-w-0">
-          <h1 className="font-display text-xl leading-tight font-bold">{team.name}</h1>
+          <h1 className="font-display text-xl leading-tight font-bold">{teamShort(team)}</h1>
           <p className="text-sm text-muted">
-            {team.short_code} · Group {team.group_code} · {teamPlayers.length ? `${teamPlayers.length} player${teamPlayers.length === 1 ? "" : "s"}` : "No players yet"}
+            {teamSub(team) ? `${teamSub(team)} · ` : ""}Group {team.group_code} · {teamPlayers.length ? `${teamPlayers.length} player${teamPlayers.length === 1 ? "" : "s"}` : "No players yet"}
           </p>
         </div>
       </div>
@@ -242,7 +243,7 @@ function AddPlayerSheet({ team, teamPlayers, onClose }: { team: Team; teamPlayer
   }
 
   return (
-    <Sheet open onClose={onClose} title={`Add player · ${team.short_code}`}>
+    <Sheet open onClose={onClose} title={`Add player · ${teamShort(team)}`}>
       <form
         className="space-y-4"
         onSubmit={(e) => {
@@ -465,7 +466,7 @@ function PasteListSheet({ team, teamPlayers, onClose }: { team: Team; teamPlayer
   }
 
   return (
-    <Sheet open onClose={onClose} title={`Paste list · ${team.short_code}`}>
+    <Sheet open onClose={onClose} title={`Paste list · ${teamShort(team)}`}>
       <div className="space-y-4">
         <label className="block">
           <span className="mb-2 block text-sm font-semibold text-muted">One player per line: number, then name</span>

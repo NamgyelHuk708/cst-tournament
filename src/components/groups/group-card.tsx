@@ -9,6 +9,7 @@ import { TeamLink } from "../team-link";
 import { TeamLogo } from "../team-logo";
 import { useTournament } from "../tournament-provider";
 import { FormCircles } from "./form-circles";
+import { teamShort, teamSub } from "@/data/team-names";
 
 export function GroupCard({ standings }: { standings: GroupStandings }) {
   const { group, rows, matchesPlayed, matchesTotal, complete } = standings;
@@ -177,8 +178,8 @@ function Row({ row, form, markTie }: { row: StandingRow; form: FormSlot[]; markT
       <th scope="row" className={`${STICKY_TEAM} max-w-0 py-2 pr-2 text-left font-normal`}>
         <span className="flex items-center gap-2">
           <TeamLogo team={row.team} size={20} />
-          <TeamLink team={row.team} className="font-display text-[17px] leading-none font-bold tracking-wide">
-            {row.team.short_code}
+          <TeamLink team={row.team} className="min-w-0 font-display text-[16px] leading-tight font-bold tracking-wide break-words">
+            {teamShort(row.team)}
           </TeamLink>
           {row.orderedByOverride && (
             <span className="text-xs text-muted" title="Order set by the organisers">
@@ -191,10 +192,12 @@ function Row({ row, form, markTie }: { row: StandingRow; form: FormSlot[]; markT
             </span>
           )}
         </span>
-        {/* The full name on its own line, wrapping rather than cut short, so fans needn't know the codes. */}
-        <TeamLink team={row.team} decorative className="mt-1 block text-xs leading-tight text-muted [overflow-wrap:anywhere]">
-          {row.team.name}
-        </TeamLink>
+        {/* The second line, where a team has one (e.g. "Bhutan Brewary Private Limited"), truncated if long. */}
+        {teamSub(row.team) && (
+          <TeamLink team={row.team} decorative className="mt-0.5 block truncate text-xs leading-tight text-muted">
+            {teamSub(row.team)}
+          </TeamLink>
+        )}
         <div className="mt-1.5 sm:hidden">
           <FormCircles slots={form} size={18} />
         </div>

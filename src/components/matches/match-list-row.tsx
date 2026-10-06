@@ -18,6 +18,7 @@ import { TeamLogo } from "../team-logo";
 import { useServerNow } from "../tournament-provider";
 import { useResolvedSides } from "../use-resolved-sides";
 import { LivePill } from "../live-pill";
+import { fitNameSize, teamShort, teamSub } from "@/data/team-names";
 
 /**
  * One match as a result line: "THS 4–2 IMM", match number and stage on the left.
@@ -36,7 +37,8 @@ export function MatchListRow({ match }: { match: Match }) {
   const time = formatTime(match.kickoff_at);
   const clock = live ? (match.status === "half_time" ? "HT" : match.status === "penalties" ? "Pens" : matchClock(match, now).label) : null;
 
-  const name = (s: ResolvedSide) => s.team?.short_code ?? s.placeholder ?? "To be decided";
+  // Screen readers hear the official name.
+  const name = (s: ResolvedSide) => s.team?.name ?? s.placeholder ?? "To be decided";
   const label = [
     `Match ${match.id}`,
     started
@@ -134,19 +136,22 @@ function SideCell({ side, which, winner }: { side: ResolvedSide; which: Side; wi
   const isWinner = winner === which;
   const isLoser = winner != null && !isWinner;
   return (
-    <span className={`flex min-w-0 flex-1 flex-col gap-0.5 ${align}`}>
+    // Logo (and the winner's tick) above the name, so the name has the side's full width and wraps
+    // between words; the second line truncates.
+    <span className={`flex min-w-0 flex-1 flex-col gap-1 [container-type:inline-size] ${align}`}>
       <span className={`flex items-center gap-1 ${which === "home" ? "flex-row-reverse" : ""}`}>
-        <TeamLogo team={side.team} size={20} className={which === "home" ? "ml-0.5" : "mr-0.5"} />
-        <span
-          className={`font-display text-[17px] leading-none tracking-wide ${isWinner ? "font-bold" : "font-semibold"} ${
-            isLoser ? "text-muted" : "text-text"
-          }`}
-        >
-          {side.team.short_code}
-        </span>
+        <TeamLogo team={side.team} size={20} />
         {isWinner && <CheckIcon className="size-3.5 shrink-0 text-win-text" />}
       </span>
-      <span className="max-w-full truncate text-xs leading-tight text-muted">{side.team.name}</span>
+      <span
+        style={{ fontSize: fitNameSize([teamShort(side.team)], 15, 0.5) }}
+        className={`max-w-full font-display leading-tight tracking-wide text-balance ${isWinner ? "font-bold" : "font-semibold"} ${
+          isLoser ? "text-muted" : "text-text"
+        }`}
+      >
+        {teamShort(side.team)}
+      </span>
+      {teamSub(side.team) && <span className="max-w-full truncate text-xs leading-tight text-muted">{teamSub(side.team)}</span>}
     </span>
   );
 }

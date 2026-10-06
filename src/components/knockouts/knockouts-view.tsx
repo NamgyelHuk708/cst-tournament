@@ -8,6 +8,7 @@ import { TeamLink } from "../team-link";
 import { TeamLogo } from "../team-logo";
 import { useTournament } from "../tournament-provider";
 import { KnockoutCard } from "./knockout-card";
+import { teamShort, teamSub } from "@/data/team-names";
 
 export function KnockoutsView() {
   const { matches, teamsById } = useTournament();
@@ -66,10 +67,12 @@ export function KnockoutsView() {
                 <div>
                   <p className="text-[11px] font-semibold text-white/70">Champions</p>
                   <p className="font-display text-2xl leading-tight font-bold">
-                    <TeamLink team={champion}>{champion.short_code}</TeamLink>{" "}
-                    <TeamLink team={champion} decorative className="text-base font-semibold text-white/80">
-                      {champion.name}
-                    </TeamLink>
+                    <TeamLink team={champion}>{teamShort(champion)}</TeamLink>
+                    {teamSub(champion) && (
+                      <TeamLink team={champion} decorative className="block text-base font-semibold text-white/80">
+                        {teamSub(champion)}
+                      </TeamLink>
+                    )}
                   </p>
                 </div>
               </div>

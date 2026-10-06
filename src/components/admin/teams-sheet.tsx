@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { GROUP_CODES, slotDisplayName, type Match, type ResolvedSide, type Team } from "@/lib/tournament";
 import { Sheet } from "../sheet";
+import { teamShort } from "@/data/team-names";
 
 /** Choose the two teams of a knockout tie. Suggestions come from the bracket; any team can be picked. */
 export function TeamsSheet({
@@ -90,7 +91,7 @@ function TeamPicker({
               .filter((t) => t.group_code === g)
               .map((t) => (
                 <option key={t.id} value={t.id}>
-                  {t.short_code} · {t.name}
+                  {teamShort(t)} · {t.name}
                 </option>
               ))}
           </optgroup>
@@ -102,7 +103,7 @@ function TeamPicker({
           onClick={() => onChange(suggestion.id)}
           className="mt-2 h-10 rounded-full bg-bg px-4 text-sm font-medium ring-1 ring-border"
         >
-          Use {suggestion.short_code} ({side.projectionFinal ? side.placeholder : `currently ${side.placeholder.toLowerCase()}`})
+          Use {teamShort(suggestion)} ({side.projectionFinal ? side.placeholder : `currently ${side.placeholder.toLowerCase()}`})
         </button>
       )}
     </fieldset>

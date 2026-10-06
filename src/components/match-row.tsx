@@ -15,6 +15,7 @@ import { TeamLogo } from "./team-logo";
 import { useServerNow, useTournament } from "./tournament-provider";
 import { useFlashOnChange } from "./use-flash";
 import { LivePill } from "./live-pill";
+import { teamShort, teamSub } from "@/data/team-names";
 
 type Props = {
   match: Match;
@@ -94,11 +95,14 @@ function TeamLine({
       {team ? (
         <span className="flex min-w-0 flex-1 items-center gap-2">
           <TeamLogo team={team} size={20} />
-          <span className={`flex min-w-0 flex-1 items-baseline gap-2 ${tone}`}>
-            <span className={`font-display text-[17px] leading-none tracking-wide ${state === "winner" ? "font-bold" : "font-semibold"}`}>
-              {team.short_code}
+          {/* The short name may wrap; the second line goes underneath if needed and truncates. */}
+          <span className={`flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2 gap-y-0.5 ${tone}`}>
+            <span
+              className={`font-display text-[17px] leading-tight tracking-wide break-words ${state === "winner" ? "font-bold" : "font-semibold"}`}
+            >
+              {teamShort(team)}
             </span>
-            <span className="truncate text-[13px] leading-none text-muted">{team.name}</span>
+            {teamSub(team) && <span className="max-w-full min-w-0 truncate text-[13px] leading-tight text-muted">{teamSub(team)}</span>}
           </span>
         </span>
       ) : (

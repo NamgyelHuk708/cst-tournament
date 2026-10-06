@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { QUALIFIERS_PER_GROUP, type StandingRow } from "@/lib/tournament";
 import { Sheet } from "../sheet";
+import { teamShort } from "@/data/team-names";
 
 const ordinal = (n: number) => `${n}${n === 1 ? "st" : n === 2 ? "nd" : n === 3 ? "rd" : "th"}`;
 
@@ -51,7 +52,7 @@ export function QualifierSheet({
                   idx >= 0 ? "bg-text text-white" : "bg-card ring-1 ring-border active:bg-bg"
                 }`}
               >
-                <span className="font-display text-xl font-bold">{r.team.short_code}</span>
+                <span className="font-display text-xl font-bold">{teamShort(r.team)}</span>
                 <span className={`min-w-0 flex-1 truncate text-sm ${idx >= 0 ? "text-white/75" : "text-muted"}`}>{r.team.name}</span>
                 {place != null && (
                   <span className="text-sm font-semibold">
