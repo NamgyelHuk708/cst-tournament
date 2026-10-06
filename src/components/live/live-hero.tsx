@@ -116,7 +116,7 @@ export function Matchup({
     const text = team ? teamSub(team) : (placeholder ?? "To be decided");
     if (!text) return <span />;
     return (
-      <p className={`line-clamp-3 self-start text-center text-[13px] leading-snug text-muted ${team ? "" : "italic"}`}>
+      <p className={`self-start text-center text-[13px] leading-snug text-balance text-muted ${team ? "" : "italic"}`}>
         {team && linkTeams ? (
           <TeamLink team={team} decorative>
             {text}

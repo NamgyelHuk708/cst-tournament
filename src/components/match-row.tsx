@@ -95,14 +95,14 @@ function TeamLine({
       {team ? (
         <span className="flex min-w-0 flex-1 items-center gap-2">
           <TeamLogo team={team} size={20} />
-          {/* The short name may wrap; the second line goes underneath if needed and truncates. */}
+          {/* The short name, with the full name underneath; both wrap between words, never cut. */}
           <span className={`flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2 gap-y-0.5 ${tone}`}>
             <span
               className={`font-display text-[17px] leading-tight tracking-wide break-words ${state === "winner" ? "font-bold" : "font-semibold"}`}
             >
               {teamShort(team)}
             </span>
-            {teamSub(team) && <span className="max-w-full min-w-0 truncate text-[13px] leading-tight text-muted">{teamSub(team)}</span>}
+            {teamSub(team) && <span className="basis-full text-[13px] leading-tight text-muted">{teamSub(team)}</span>}
           </span>
         </span>
       ) : (

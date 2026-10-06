@@ -137,7 +137,7 @@ function SideCell({ side, which, winner }: { side: ResolvedSide; which: Side; wi
   const isLoser = winner != null && !isWinner;
   return (
     // Logo (and the winner's tick) above the name, so the name has the side's full width and wraps
-    // between words; the second line truncates.
+    // between words; the full name under it wraps too.
     <span className={`flex min-w-0 flex-1 flex-col gap-1 [container-type:inline-size] ${align}`}>
       <span className={`flex items-center gap-1 ${which === "home" ? "flex-row-reverse" : ""}`}>
         <TeamLogo team={side.team} size={20} />
@@ -151,7 +151,7 @@ function SideCell({ side, which, winner }: { side: ResolvedSide; which: Side; wi
       >
         {teamShort(side.team)}
       </span>
-      {teamSub(side.team) && <span className="max-w-full truncate text-xs leading-tight text-muted">{teamSub(side.team)}</span>}
+      {teamSub(side.team) && <span className="max-w-full text-xs leading-tight text-balance text-muted">{teamSub(side.team)}</span>}
     </span>
   );
 }

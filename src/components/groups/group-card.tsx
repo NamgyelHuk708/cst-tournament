@@ -192,9 +192,9 @@ function Row({ row, form, markTie }: { row: StandingRow; form: FormSlot[]; markT
             </span>
           )}
         </span>
-        {/* The second line, where a team has one (e.g. "Bhutan Brewary Private Limited"), truncated if long. */}
+        {/* The full name, where a team has one (e.g. "Bank of Bhutan Limited"), wrapping onto more lines if long. */}
         {teamSub(row.team) && (
-          <TeamLink team={row.team} decorative className="mt-0.5 block truncate text-xs leading-tight text-muted">
+          <TeamLink team={row.team} decorative className="mt-0.5 block text-xs leading-tight text-muted">
             {teamSub(row.team)}
           </TeamLink>
         )}
