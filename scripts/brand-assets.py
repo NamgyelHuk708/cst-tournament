@@ -15,17 +15,21 @@ Outputs
   src/app/twitter-image.jpg       same image for Twitter / X
   src/assets/intro-emblem.webp    from design/jubilee-logo.png: the emblem for the intro animation (600 px)
   src/assets/intro-emblem-mask.webp   its shape only (200 px), which masks the intro's shimmer
-  src/app/favicon.ico             16/32/48: the "25" mark on a rounded teal tile, tuned per size
-  src/app/icon.png                512, the "25" mark on full-bleed teal
-  src/app/apple-icon.png          180, same (iOS rounds the corners itself)
-  public/icons/icon-192.png, icon-512.png, maskable-512.png   for the web app manifest
+  src/assets/header-logo.webp     the logo for the header plate (public and admin), 160 px: sharp at
+                                  up to 53 CSS px on 3x screens, served as is (no 1x/2x-only srcset)
+  Icons, all from design/jubilee-logo.png on white, so they show on dark tab strips and home screens:
+  src/app/favicon.ico             16/32/48: the logo on a white rounded tile, filling it
+  src/app/icon.png                512, the same tile
+  src/app/apple-icon.png          180, full-bleed white (iOS rounds the corners itself)
+  public/icons/icon-192.png, icon-512.png   the logo on a white circle, transparent outside
+  public/icons/maskable-512.png   full-bleed white, the logo inside Android's 80% safe circle
 
 The images under src/ are served through next/image or Next's metadata files, which
 handle WebP conversion and sizing. Logos are never cropped out of the banner (too low resolution).
 """
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFilter, ImageFont
+from PIL import Image, ImageDraw, ImageEnhance, ImageFilter
 
 ROOT = Path(__file__).resolve().parent.parent
 BANNER = Image.open(ROOT / "design/banner-v2.png").convert("RGB")
@@ -83,43 +87,83 @@ if logo_file.exists():
 else:
     print("design/jubilee-logo.png not found: intro emblem left as it is.")
 
-# Icons: the "25" mark (option A). The emblem's small text can't be read at icon sizes, so the mark
-# is just "25" in our display font, in a blue-grey ring on the brand teal. Colours from globals.css.
-BRAND = (0x13, 0x54, 0x63)  # --brand
-ACCENT = (0x8A, 0xA9, 0xB1)  # --accent
-DEEP = tuple(round(c * 0.82) for c in BRAND)  # --brand-deep (the header mark's fill)
-FONT = str(ROOT / "scripts/assets/barlow-condensed-700.woff2")  # Barlow Condensed Bold, OFL
+# Header plate: the logo alone, 160 px. Next serves fixed-size images at 1x and 2x only, so the
+# header uses this file as is (unoptimized) to stay sharp on 3x phones.
+if logo_file.exists():
+    square.resize((160, 160), Image.LANCZOS).save(ROOT / "src/assets/header-logo.webp", quality=90, alpha_quality=95, method=6)
+
+# Icons: the official logo (design/jubilee-logo.png) on white. The logo's square is `square` above;
+# its ribbon tips reach 1.08x the radius of the circle inscribed in that square, so inside a circle
+# the logo is drawn at most 1/1.08 of the circle's width.
+assert logo_file.exists(), "design/jubilee-logo.png is needed for the icons"
+WHITE = (255, 255, 255, 255)
+REACH = 1.08  # how far the logo reaches beyond its inscribed circle (measured: 1.079)
 
 
-def mark(size: int, *, tile: bool, ring_diameter: float) -> Image.Image:
-    """The "25" mark. tile: rounded corners (favicon); otherwise full-bleed (platforms round it).
-    Tiny sizes get a thicker ring and bigger figures so they survive 16 px."""
-    ss = 8
+def logo_at(px: int) -> Image.Image:
+    """The logo square resized to px. Tiny sizes (favicon 16 and 32) get more contrast and a little
+    darker, and a light sharpen: the silver "25" and ribbon are otherwise too pale on white."""
+    im = square.resize((px, px), Image.LANCZOS)
+    if px <= 32:
+        alpha = im.getchannel("A")
+        rgb = ImageEnhance.Brightness(ImageEnhance.Contrast(im.convert("RGB")).enhance(1.6)).enhance(0.85)
+        im = rgb.convert("RGBA")
+        im.putalpha(alpha)
+    if px <= 48:
+        im = im.filter(ImageFilter.UnsharpMask(radius=0.6, percent=60, threshold=1))
+    return im
+
+
+def shape_mask(size: int, shape: str, *, inset: float = 1.0) -> Image.Image:
+    """Where the icon is visible: the white shape, or a platform's crop. inset: a circle's diameter
+    as a share of the icon (Android's maskable safe zone is 0.8)."""
+    ss = 4
     big = size * ss
-    im = Image.new("RGBA", (big, big), (0, 0, 0, 0))
-    d = ImageDraw.Draw(im)
-    if tile:
-        d.rounded_rectangle((0, 0, big - 1, big - 1), radius=big // 5, fill=BRAND + (255,))
+    m = Image.new("L", (big, big), 0)
+    d = ImageDraw.Draw(m)
+    if shape == "tile":
+        d.rounded_rectangle((0, 0, big - 1, big - 1), radius=round(big * 0.18), fill=255)
+    elif shape == "ios":
+        d.rounded_rectangle((0, 0, big - 1, big - 1), radius=round(big * 0.2237), fill=255)
+    elif shape == "circle":
+        pad = big * (1 - inset) / 2
+        d.ellipse((pad, pad, big - 1 - pad, big - 1 - pad), fill=255)
     else:
-        d.rectangle((0, 0, big, big), fill=BRAND + (255,))
-    small = size <= 32
-    diameter = big * ring_diameter
-    pad = (big - diameter) / 2
-    ring = diameter * (0.09 if small else 0.06)
-    d.ellipse((pad, pad, big - pad, big - pad), fill=DEEP + (255,), outline=ACCENT + (255,), width=round(ring))
-    font = ImageFont.truetype(FONT, round(diameter * (0.6 if small else 0.52)))
-    d.text((big / 2, big / 2 + diameter * 0.02), "25", fill=(255, 255, 255, 255), font=font, anchor="mm")
-    return im.resize((size, size), Image.LANCZOS)
+        d.rectangle((0, 0, big, big), fill=255)
+    return m.resize((size, size), Image.LANCZOS)
+
+
+def icon(name: str, size: int, *, background: str, logo: float, crop: tuple[str, float] | None = None) -> Image.Image:
+    """The logo (logo: its width as a share of the icon) on white. background: "tile" (rounded
+    square), "circle" (disc, transparent outside) or "bleed" (full square, for platforms that apply
+    their own mask). crop: the platform's mask to check against, if it cuts more than the background.
+    Fails if any visible part of the logo would be cut off."""
+    px = round(size * logo)
+    layer = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    layer.alpha_composite(logo_at(px), ((size - px) // 2, (size - px) // 2))
+    for kind, inset in [(background, 1.0)] + ([crop] if crop else []):
+        visible = shape_mask(size, kind, inset=inset).point(lambda v: 255 if v > 200 else 0)
+        cut = layer.getchannel("A").point(lambda v: 255 if v > 60 else 0)
+        cut = Image.composite(Image.new("L", cut.size, 0), cut, visible)
+        assert cut.getbbox() is None, f"{name}: part of the logo would be cut off ({kind})"
+    out = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    out.paste(WHITE, mask=shape_mask(size, background))
+    out.alpha_composite(layer)
+    return out
 
 
 (ROOT / "public/icons").mkdir(parents=True, exist_ok=True)
-ico = {s: mark(s, tile=True, ring_diameter=0.88 if s <= 32 else 0.76) for s in (16, 32, 48)}
+# Favicon: a rounded white tile, the logo almost edge to edge (only the corners are rounded, and the
+# logo's round shape keeps clear of them).
+ico = {s: icon(f"favicon {s}", s, background="tile", logo=0.98 if s <= 32 else 0.96) for s in (16, 32, 48)}
 ico[48].save(ROOT / "src/app/favicon.ico", format="ICO", sizes=[(16, 16), (32, 32), (48, 48)], append_images=[ico[16], ico[32]])
-mark(512, tile=False, ring_diameter=0.76).save(ROOT / "src/app/icon.png", optimize=True)
-mark(180, tile=False, ring_diameter=0.76).save(ROOT / "src/app/apple-icon.png", optimize=True)
-mark(192, tile=False, ring_diameter=0.76).save(ROOT / "public/icons/icon-192.png", optimize=True)
-mark(512, tile=False, ring_diameter=0.76).save(ROOT / "public/icons/icon-512.png", optimize=True)
-# Maskable: Android may crop to a circle of 80% of the width, so the ring stays inside that.
-mark(512, tile=False, ring_diameter=0.62).save(ROOT / "public/icons/maskable-512.png", optimize=True)
+icon("icon.png", 512, background="tile", logo=0.96).save(ROOT / "src/app/icon.png", optimize=True)
+# iOS rounds the corners (about 22% radius) itself: full-bleed white, the logo clear of that mask.
+icon("apple-icon", 180, background="bleed", logo=0.94, crop=("ios", 1.0)).save(ROOT / "src/app/apple-icon.png", optimize=True)
+# Manifest "any" icons: a white disc, transparent outside, the logo inside it.
+for size in (192, 512):
+    icon(f"icon-{size}", size, background="circle", logo=0.98 / REACH).save(ROOT / f"public/icons/icon-{size}.png", optimize=True)
+# Maskable: Android may crop to a circle 80% of the width; the whole logo stays inside it.
+icon("maskable", 512, background="bleed", logo=0.79 / REACH, crop=("circle", 0.8)).save(ROOT / "public/icons/maskable-512.png", optimize=True)
 
-print("Banner, share images and icons written.")
+print("Banner, share images, header logo and icons written.")
