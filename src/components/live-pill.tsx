@@ -3,15 +3,18 @@
 import { isBallInPlay, matchClock, type Match, type Team } from "@/lib/tournament";
 import { useServerNow } from "./tournament-provider";
 
-/** Pill size per place. A fixed minimum width, so the minute ticking over never moves anything. */
+/** Height, padding and text size per place. The width follows the text (see the sizer below). */
 const SIZES = {
-  /** The live card. */
-  lg: "h-9 min-w-[8.5rem] px-4 text-[17px]",
-  /** Match sheet header and admin scoreboard. */
-  md: "h-7 min-w-[6.5rem] px-3 text-sm",
+  /** The live card and admin scoreboard. */
+  lg: "h-9 px-3.5 text-[17px]",
+  /** Match sheet header. */
+  md: "h-7 px-3 text-sm",
   /** Match rows and list columns. */
-  sm: "h-6 w-[4.75rem] px-1.5 text-xs",
+  sm: "h-6 px-2 text-xs",
 } as const;
+
+/** The pill is never narrower than this text, so "Live 1'" to "Live 89'" keep one width. */
+const MIN_TEXT = "Live 45'";
 
 /** The underline's thickness and gap below the text, per size. */
 const LINE = { lg: "-bottom-1 h-[2px]", md: "-bottom-[3px] h-[1.5px]", sm: "-bottom-[3px] h-px" } as const;
@@ -56,9 +59,14 @@ export function LivePill({
       className={`inline-flex shrink-0 items-center justify-center rounded-full bg-live font-display leading-none font-bold text-live-text tabular ${SIZES[size]} ${className}`}
     >
       <span className="sr-only">{spoken}</span>
-      <span aria-hidden="true" className="relative whitespace-nowrap">
-        {text}
-        {inPlay && <span className={`live-underline absolute inset-x-0 rounded-full bg-live-text ${LINE[size]}`} />}
+      {/* An invisible "Live 45'" shares the grid cell with the text: the pill is as wide as the wider
+          of the two, so it only grows for longer text ("Live 45+2'", "Penalties"). */}
+      <span aria-hidden="true" className="grid whitespace-nowrap">
+        <span className="invisible col-start-1 row-start-1">{MIN_TEXT}</span>
+        <span className="relative col-start-1 row-start-1 justify-self-center">
+          {text}
+          {inPlay && <span className={`live-underline absolute inset-x-0 rounded-full bg-live-text ${LINE[size]}`} />}
+        </span>
       </span>
     </span>
   );
