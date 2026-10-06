@@ -21,13 +21,15 @@ type Props = {
   match: Match;
   /** Labels to use when a side has no team yet (knockout placeholders). */
   placeholders?: Partial<Record<Side, string>>;
+  /** Each team on one line: short name, then the full name beside it, truncated (the Live page). */
+  oneLine?: boolean;
 };
 
 /**
  * One match as a compact, stacked row: status on the left, a line per team,
  * scores right-aligned. Tapping it opens the match sheet.
  */
-export function MatchRow({ match, placeholders }: Props) {
+export function MatchRow({ match, placeholders, oneLine = false }: Props) {
   const { teamsById } = useTournament();
   const openSheet = useMatchSheet();
 
@@ -42,9 +44,9 @@ export function MatchRow({ match, placeholders }: Props) {
       <StatusCell match={match} />
       <div className="min-w-0 flex-1 space-y-1">
         <TeamLine team={home} placeholder={placeholders?.home} score={started ? match.home_score : null}
-          pens={match.home_pens} state={lineState(outcome?.winner, "home")} />
+          pens={match.home_pens} state={lineState(outcome?.winner, "home")} oneLine={oneLine} />
         <TeamLine team={away} placeholder={placeholders?.away} score={started ? match.away_score : null}
-          pens={match.away_pens} state={lineState(outcome?.winner, "away")} />
+          pens={match.away_pens} state={lineState(outcome?.winner, "away")} oneLine={oneLine} />
       </div>
       <ChevronIcon className="size-4 shrink-0 -rotate-90 text-muted" />
     </>
@@ -81,12 +83,14 @@ function TeamLine({
   score,
   pens,
   state,
+  oneLine,
 }: {
   team?: Team;
   placeholder?: string;
   score: number | null;
   pens: number | null;
   state: LineState;
+  oneLine: boolean;
 }) {
   const flash = useFlashOnChange(score);
   const tone = state === "loser" ? "text-muted" : "text-text";
@@ -95,15 +99,27 @@ function TeamLine({
       {team ? (
         <span className="flex min-w-0 flex-1 items-center gap-2">
           <TeamLogo team={team} size={20} />
-          {/* The short name, with the full name underneath; both wrap between words, never cut. */}
-          <span className={`flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2 gap-y-0.5 ${tone}`}>
-            <span
-              className={`font-display text-[17px] leading-tight tracking-wide break-words ${state === "winner" ? "font-bold" : "font-semibold"}`}
-            >
-              {teamShort(team)}
+          {oneLine ? (
+            // One line: the short name in full, the full name beside it, cut with an ellipsis if needed.
+            <span className={`flex min-w-0 flex-1 items-baseline gap-2 ${tone}`}>
+              <span
+                className={`shrink-0 font-display text-[17px] leading-tight tracking-wide whitespace-nowrap ${state === "winner" ? "font-bold" : "font-semibold"}`}
+              >
+                {teamShort(team)}
+              </span>
+              {teamSub(team) && <span className="min-w-0 truncate text-[13px] leading-tight text-muted">{teamSub(team)}</span>}
             </span>
-            {teamSub(team) && <span className="basis-full text-[13px] leading-tight text-muted">{teamSub(team)}</span>}
-          </span>
+          ) : (
+            // The short name, with the full name underneath; both wrap between words, never cut.
+            <span className={`flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2 gap-y-0.5 ${tone}`}>
+              <span
+                className={`font-display text-[17px] leading-tight tracking-wide break-words ${state === "winner" ? "font-bold" : "font-semibold"}`}
+              >
+                {teamShort(team)}
+              </span>
+              {teamSub(team) && <span className="basis-full text-[13px] leading-tight text-muted">{teamSub(team)}</span>}
+            </span>
+          )}
         </span>
       ) : (
         <p className="min-w-0 flex-1 truncate text-[13px] leading-none text-muted italic">{placeholder ?? "To be decided"}</p>

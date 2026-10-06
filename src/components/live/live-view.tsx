@@ -57,7 +57,7 @@ export function LiveView() {
       {otherLive.length > 0 && (
         <Section title="Also live">
           {otherLive.map((m) => (
-            <MatchRow key={m.id} match={m} />
+            <MatchRow key={m.id} match={m} oneLine />
           ))}
         </Section>
       )}
@@ -75,7 +75,7 @@ export function LiveView() {
         aside={resultsDay && resultsDay !== today ? formatDay(results[0].kickoff_at) : undefined}
       >
         {results.length > 0 ? (
-          results.map((m) => <MatchRow key={m.id} match={m} />)
+          results.map((m) => <MatchRow key={m.id} match={m} oneLine />)
         ) : (
           <li className="bg-card px-4 py-5 text-sm text-muted">No results yet. Final scores will appear here.</li>
         )}
@@ -100,7 +100,7 @@ function NextHero({ match }: { match: Match }) {
 
 function UpNextRow({ match }: { match: Match }) {
   const sides = useResolvedSides(match);
-  return <MatchRow match={match} placeholders={{ home: sides.home.placeholder, away: sides.away.placeholder }} />;
+  return <MatchRow match={match} oneLine placeholders={{ home: sides.home.placeholder, away: sides.away.placeholder }} />;
 }
 
 function EmptyHero({ finishedCount }: { finishedCount: number }) {
