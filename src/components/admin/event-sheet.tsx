@@ -3,11 +3,12 @@
 import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { uuid } from "@/lib/uuid";
-import { byShirtOrder, eventMinuteLabel, scoreFromEvents, type EventType, type Match, type MatchEvent, type Side } from "@/lib/tournament";
+import { byShirtOrder, eventAfterSubWarning, eventMinuteLabel, scoreFromEvents, subMarks, type EventType, type Match, type MatchEvent, type Side } from "@/lib/tournament";
 import { useTournament } from "../tournament-provider";
 import { Sheet } from "../sheet";
 import { MinuteField, useMinuteInput } from "./minute-field";
 import { NEW_PLAYER, PlayerChips } from "./player-chips";
+import { useSubWarnings } from "./sub-warnings";
 import { teamShort } from "@/data/team-names";
 
 const TYPES: { type: EventType; label: string }[] = [
@@ -32,7 +33,7 @@ export function EventSheet({
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const { teamsById, players, events, local } = useTournament();
+  const { teamsById, players, events, substitutions, local } = useTournament();
   const supabase = useMemo(() => createClient(), []);
   const sideOf = (teamId: number): Side => (teamId === match.home_team_id ? "home" : "away");
   const teamOn = (side: Side) => (side === "home" ? match.home_team_id : match.away_team_id)!;
@@ -99,6 +100,22 @@ export function EventSheet({
     : ownGoal
       ? `Own goal by ${who} — counts for ${code(credited)}. ${scoreText}`
       : `Goal by ${who} for ${code(credited)}. ${scoreText}`;
+
+  // A goal or card by a player who had already gone off by this minute: warn, "Save anyway".
+  const eventMoment = minute == null || Number.isNaN(minute) ? null : { minute, added_time: added };
+  const subWarning = eventAfterSubWarning({
+    matchId: match.id,
+    subs: substitutions,
+    at: eventMoment,
+    playerId: effectivePlayer && effectivePlayer !== NEW_PLAYER ? effectivePlayer : null,
+    noun: { goal: "goal", own_goal: "own goal", yellow_card: "card", red_card: "card" }[type],
+    label: (id) => {
+      const p = teamPlayers.find((x) => x.id === id);
+      return p ? `${p.shirt_number != null ? `#${p.shirt_number} ` : ""}${p.name}` : "This player";
+    },
+  });
+  const check = useSubWarnings(subWarning ? [subWarning] : [], save);
+  const subNotes = subMarks(teamPlayers, match.id, substitutions, eventMoment, undefined, true);
 
   async function save() {
     if (problem) {
@@ -198,7 +215,14 @@ export function EventSheet({
         </Field>
 
         <Field label={`${ownGoal ? `Own goal by (${code(playerSide)} player)` : isGoal ? "Scored by" : "Player"}${pickHint}`}>
-          <PlayerChips teamPlayers={teamPlayers} selected={effectivePlayer} onPick={setPlayerId} teamCode={code(playerSide)} />
+          <PlayerChips
+            teamPlayers={teamPlayers}
+            selected={effectivePlayer}
+            onPick={setPlayerId}
+            teamCode={code(playerSide)}
+            marks={subNotes.marks}
+            off={subNotes.off}
+          />
           {effectivePlayer === NEW_PLAYER && (
             <div className="mt-2 grid grid-cols-[1fr_5.5rem] gap-2">
               <input
@@ -221,6 +245,8 @@ export function EventSheet({
           )}
         </Field>
 
+        {check.panel}
+        {check.sheet}
         <Field label="Minute">
           <MinuteField state={minuteState} />
         </Field>
@@ -243,11 +269,11 @@ export function EventSheet({
           </button>
           <button
             type="button"
-            onClick={save}
-            disabled={saving || !!problem}
+            onClick={check.onSave}
+            disabled={saving || !!problem || check.blocked}
             className="h-14 rounded-xl bg-text font-semibold text-white active:opacity-90 disabled:opacity-60"
           >
-            {saving ? "Saving…" : "Save"}
+            {saving ? "Saving…" : check.label}
           </button>
         </div>
       </div>

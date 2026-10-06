@@ -14,21 +14,29 @@ export function PlayerChips({
   onPick,
   allowNew = true,
   teamCode,
+  marks = {},
+  off,
 }: {
   teamPlayers: Player[];
   selected: string | null;
   onPick: (id: string | null) => void;
   allowNew?: boolean;
   teamCode?: string;
+  /** A note on a player's chip from this match's substitutions, e.g. "off 62'" or "on 55'". */
+  marks?: Record<string, string>;
+  /** Players substituted off (not back on): listed after the others, their chips muted. */
+  off?: Set<string>;
 }) {
+  const ordered = off?.size ? [...teamPlayers.filter((p) => !off.has(p.id)), ...teamPlayers.filter((p) => off.has(p.id))] : teamPlayers;
   return (
     <div className="space-y-2">
       {teamPlayers.length > 0 ? (
         <div className="flex flex-wrap gap-2">
-          {teamPlayers.map((p) => (
-            <Chip key={p.id} selected={selected === p.id} onClick={() => onPick(p.id)}>
+          {ordered.map((p) => (
+            <Chip key={p.id} selected={selected === p.id} onClick={() => onPick(p.id)} quiet={off?.has(p.id)}>
               {p.shirt_number != null && <span className="tabular opacity-60">#{p.shirt_number} </span>}
               {p.name}
+              {marks[p.id] && <span className="ml-1.5 text-xs font-semibold tabular opacity-70">· {marks[p.id]}</span>}
             </Chip>
           ))}
         </div>

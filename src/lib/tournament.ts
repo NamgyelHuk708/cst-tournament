@@ -708,6 +708,113 @@ export function byShirtOrder(a: Player, b: Player): number {
   return (a.shirt_number ?? 999) - (b.shirt_number ?? 999) || a.name.localeCompare(b.name);
 }
 
+// ---------------------------------------------------------------------------
+// Substitution checks (warnings in the admin sheets)
+// ---------------------------------------------------------------------------
+
+/**
+ * Whether a player who was substituted off may come back on (rolling substitutions). Until the
+ * organisers confirm, re-entry is only warned about: the admin sees the warning and can "Save
+ * anyway". Set to false to make re-entry (and goals or cards after going off) a hard block.
+ */
+export const ALLOW_RE_ENTRY = true;
+
+type Moment = { minute: number | null; added_time: number | null };
+
+/**
+ * a happened before b (or at the same time, unless strict). An unknown minute on either side counts
+ * as earlier: it can't be ruled out, so the admin is warned rather than not.
+ */
+function happenedBefore(a: Moment, b: Moment, strict: boolean): boolean {
+  if (a.minute == null || b.minute == null) return true;
+  const d = a.minute - b.minute || (a.added_time ?? 0) - (b.added_time ?? 0);
+  return strict ? d < 0 : d <= 0;
+}
+
+const momentLabel = (m: Moment) => (m.minute == null ? "an unknown minute" : eventMinuteLabel({ minute: m.minute, added_time: m.added_time }));
+
+/**
+ * Where a player stands in a match at a moment, from that match's other substitutions:
+ * "off" (substituted off, not back on), "on" (came on, not gone off), or null (no substitution yet).
+ * `at` null: after every substitution. `except`: the substitution being edited. `strict`: only
+ * substitutions before `at`, not at the same minute (goals and cards: a player can score, then go off).
+ */
+export function playerSubState(
+  playerId: string,
+  matchId: number,
+  subs: Substitution[],
+  at: Moment | null,
+  except?: number,
+  strict = false,
+): { state: "on" | "off"; at: string } | null {
+  const mine = subs
+    .filter((s) => s.match_id === matchId && s.id !== except && (s.player_on === playerId || s.player_off === playerId))
+    .filter((s) => !at || happenedBefore(s, at, strict))
+    .sort(compareEventTime);
+  let result: { state: "on" | "off"; at: string } | null = null;
+  for (const s of mine) {
+    if (s.player_off === playerId) result = { state: "off", at: momentLabel(s) };
+    else result = { state: "on", at: momentLabel(s) };
+  }
+  return result;
+}
+
+export type SubWarning = { text: string; /** blocked when ALLOW_RE_ENTRY is false */ reEntry: boolean };
+
+/** Warnings for a substitution about to be saved: re-entry, already on, already off. */
+export function substitutionWarnings(args: {
+  matchId: number;
+  subs: Substitution[];
+  at: Moment | null;
+  except?: number;
+  offId: string | null;
+  onId: string | null;
+  label: (playerId: string) => string;
+}): SubWarning[] {
+  const { matchId, subs, at, except, offId, onId, label } = args;
+  const out: SubWarning[] = [];
+  if (onId) {
+    const st = playerSubState(onId, matchId, subs, at, except);
+    if (st?.state === "off") out.push({ text: `${label(onId)} was substituted off at ${st.at}. Bring them back on anyway?`, reEntry: true });
+    if (st?.state === "on") out.push({ text: `${label(onId)} is already on the pitch (came on at ${st.at}).`, reEntry: false });
+  }
+  if (offId) {
+    const st = playerSubState(offId, matchId, subs, at, except);
+    if (st?.state === "off") out.push({ text: `${label(offId)} already went off at ${st.at}.`, reEntry: false });
+  }
+  return out;
+}
+
+/** Warning for a goal or card by a player who had gone off before its minute. */
+export function eventAfterSubWarning(args: {
+  matchId: number;
+  subs: Substitution[];
+  at: Moment | null;
+  playerId: string | null;
+  noun: string;
+  label: (playerId: string) => string;
+}): SubWarning | null {
+  const { matchId, subs, at, playerId, noun, label } = args;
+  if (!playerId) return null;
+  const st = playerSubState(playerId, matchId, subs, at, undefined, true);
+  if (st?.state !== "off") return null;
+  const when = at && at.minute != null ? ` at ${momentLabel(at)}` : "";
+  return { text: `${label(playerId)} went off at ${st.at}. Record this ${noun}${when} anyway?`, reEntry: true };
+}
+
+/** Chip notes for a team's players at a moment ("off 62'", "on 55'"), and who is currently off. */
+export function subMarks(players: Player[], matchId: number, subs: Substitution[], at: Moment | null, except?: number, strict = false) {
+  const marks: Record<string, string> = {};
+  const off = new Set<string>();
+  for (const p of players) {
+    const st = playerSubState(p.id, matchId, subs, at, except, strict);
+    if (!st) continue;
+    marks[p.id] = `${st.state} ${st.at === "an unknown minute" ? "" : st.at}`.trim();
+    if (st.state === "off") off.add(p.id);
+  }
+  return { marks, off };
+}
+
 /** Substitutions for a match, in time order, with names and numbers. Untimed ones go last. */
 export function subsForMatch(match: Match, subs: Substitution[], playersById: Map<string, Player>): DisplaySub[] {
   const ref = (id: string | null): PlayerRef | null => {

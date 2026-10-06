@@ -3,12 +3,13 @@
 import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { uuid } from "@/lib/uuid";
-import { byShirtOrder, type Match, type Substitution } from "@/lib/tournament";
+import { byShirtOrder, subMarks, substitutionWarnings, type Match, type Substitution } from "@/lib/tournament";
 import { Sheet } from "../sheet";
 import { useTournament } from "../tournament-provider";
 import { MinuteField, useMinuteInput } from "./minute-field";
 import { NEW_PLAYER as NEW, PlayerChips } from "./player-chips";
 import { teamShort } from "@/data/team-names";
+import { useSubWarnings } from "./sub-warnings";
 
 /**
  * Record or edit a substitution: player off, player on (from the team's players, or a new one with
@@ -28,7 +29,7 @@ export function SubSheet({
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const { players, teamsById, local } = useTournament();
+  const { players, teamsById, substitutions, local } = useTournament();
   const supabase = useMemo(() => createClient(), []);
   const team = teamsById.get(teamId);
   const teamPlayers = players.filter((p) => p.team_id === teamId).sort(byShirtOrder);
@@ -92,8 +93,26 @@ export function SubSheet({
     onSaved();
   }
 
+  // This match's other substitutions, up to the minute being entered: who went off, who came on.
+  const at = minuteState.minute == null || Number.isNaN(minuteState.minute) ? null : { minute: minuteState.minute, added_time: minuteState.added };
+  const label = (id: string) => {
+    const p = teamPlayers.find((x) => x.id === id);
+    return p ? `${p.shirt_number != null ? `#${p.shirt_number} ` : ""}${p.name}` : "This player";
+  };
+  const warnings = substitutionWarnings({
+    matchId: match.id,
+    subs: substitutions,
+    at,
+    except: sub?.id,
+    offId: off,
+    onId: on === NEW ? null : on,
+    label,
+  });
+  const check = useSubWarnings(warnings, save);
+  const { marks, off: offNow } = subMarks(teamPlayers, match.id, substitutions, at, sub?.id);
+
   const chips = (selected: string | null, pick: (id: string | null) => void, allowNew: boolean) => (
-    <PlayerChips teamPlayers={teamPlayers} selected={selected} onPick={pick} allowNew={allowNew} teamCode={teamShort(team)} />
+    <PlayerChips teamPlayers={teamPlayers} selected={selected} onPick={pick} allowNew={allowNew} teamCode={teamShort(team)} marks={marks} off={offNow} />
   );
 
   return (
@@ -124,6 +143,8 @@ export function SubSheet({
             </div>
           )}
         </Field>
+        {check.panel}
+        {check.sheet}
         <Field label="Minute">
           <MinuteField state={minuteState} />
         </Field>
@@ -157,11 +178,11 @@ export function SubSheet({
           </button>
           <button
             type="button"
-            onClick={save}
-            disabled={saving || !!blocked}
+            onClick={check.onSave}
+            disabled={saving || !!blocked || check.blocked}
             className="h-14 rounded-xl bg-text font-semibold text-white active:opacity-90 disabled:opacity-60"
           >
-            {saving ? "Saving…" : "Save"}
+            {saving ? "Saving…" : check.label}
           </button>
         </div>
       </div>
