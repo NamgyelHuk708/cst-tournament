@@ -10,7 +10,7 @@ const SIZES = {
   lg: "h-9 w-[14.5rem] text-[15px]",
   /** Match sheet header and admin scoreboard. */
   md: "h-7 w-[7.5rem] text-[13px]",
-  /** Match rows and list columns. */
+  /** Match rows and list columns. With the minute beside it, the pill narrows to keep the same width. */
   sm: "h-6 w-[4.75rem] text-xs",
 } as const;
 
@@ -26,6 +26,7 @@ export function LivePill({
   home,
   away,
   className = "",
+  minute: minutePlacement,
 }: {
   match: Match;
   size?: keyof typeof SIZES;
@@ -33,6 +34,12 @@ export function LivePill({
   home?: Team;
   away?: Team;
   className?: string;
+  /**
+   * The current minute shown still, outside the scroll, so it's always easy to find: "below" the
+   * pill (the live card) or "beside" it (rows, headers). Only while the ball is in play; at pauses
+   * the pill says HALF-TIME or PENALTIES on its own.
+   */
+  minute?: "below" | "beside";
 }) {
   const now = useServerNow(10_000);
   const clock = matchClock(match, now);
@@ -42,7 +49,8 @@ export function LivePill({
 
   const pause = match.status === "half_time" ? "HALF-TIME" : match.status === "penalties" ? "PENALTIES" : "LIVE";
   const minute = clock.label.endsWith("'") ? clock.label : null;
-  const text = scrolling ? ["LIVE", minute, score].filter(Boolean).join(" · ") : pause;
+  // With the minute shown still beside the pill, the narrow pill scrolls just "LIVE".
+  const text = scrolling ? (minutePlacement === "beside" && minute ? "LIVE" : ["LIVE", minute, score].filter(Boolean).join(" · ")) : pause;
 
   const spokenMinute = minute
     ? minute.replace(/^(\d+)\+(\d+)'$/, "$1 plus $2 minutes").replace(/^(\d+)'$/, "$1 minutes")
@@ -59,8 +67,8 @@ export function LivePill({
     .filter(Boolean)
     .join(", ");
 
-  return (
-    <span className={`led font-display font-bold tracking-wider tabular ${SIZES[size]} ${className}`}>
+  const pill = (sizeClass: string) => (
+    <span className={`led font-display font-bold tracking-wider tabular ${sizeClass} ${className}`}>
       <span className="sr-only">{spoken}</span>
       {scrolling ? (
         <span aria-hidden="true" className="led-window">
@@ -81,4 +89,37 @@ export function LivePill({
       )}
     </span>
   );
+
+  // The still minute (screen readers already hear it in the pill's status).
+  const still = scrolling && minute && minutePlacement ? minute : null;
+  if (still && minutePlacement === "below") {
+    return (
+      <span className="inline-flex flex-col items-center gap-1">
+        {pill(SIZES[size])}
+        <span aria-hidden="true" className="font-display text-[28px] leading-none font-bold text-live tabular">
+          {still}
+        </span>
+      </span>
+    );
+  }
+  if (still && minutePlacement === "beside") {
+    // Same overall width as the pill alone: a narrower LED, then the minute in a fixed slot.
+    return (
+      <span className={`inline-flex shrink-0 items-center gap-1 ${BESIDE_WIDTH[size]}`}>
+        {pill(BESIDE_PILL[size])}
+        <span aria-hidden="true" className={`min-w-0 flex-1 text-right font-display leading-none font-bold whitespace-nowrap text-text tabular ${size === "sm" ? "text-sm" : "text-[15px]"}`}>
+          {still}
+        </span>
+      </span>
+    );
+  }
+  return pill(SIZES[size]);
 }
+
+/** With the minute beside it: the group's width, and the narrower pill inside it. */
+const BESIDE_WIDTH: Record<keyof typeof SIZES, string> = { lg: "w-[14.5rem]", md: "w-[7.5rem]", sm: "w-[5rem]" };
+const BESIDE_PILL: Record<keyof typeof SIZES, string> = {
+  lg: "h-9 w-[9rem] text-[15px]",
+  md: "h-7 w-[4rem] text-[13px]",
+  sm: "h-6 w-[2.5rem] text-xs",
+};

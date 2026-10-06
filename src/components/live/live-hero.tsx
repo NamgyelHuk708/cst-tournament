@@ -34,7 +34,7 @@ export function LiveHero({ match }: { match: Match }) {
 
         <div className="mt-4 flex justify-center">
           <span role="status" aria-live="polite">
-            <LivePill match={match} size="lg" home={home} away={away} />
+            <LivePill match={match} size="lg" home={home} away={away} minute="below" />
           </span>
         </div>
 

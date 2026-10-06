@@ -59,6 +59,11 @@ function OfficialsSheet({ match, onClose }: { match: Match; onClose: () => void 
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmRemove, setConfirmRemove] = useState(false);
+  // Saved officials no longer in the list: Save asks before removing them.
+  const saved = officials.filter((o) => o.match_id === match.id);
+  const removed = saved.filter((o) => !rows.some((r) => r.name.trim() === o.name && r.role === o.role));
+  const roleLabel = (o: Official) => (o.role === "other" ? (o.custom_role ?? "Other") : (OFFICIAL_ROLES.find((x) => x.role === o.role)?.label ?? o.role));
 
   // Names from other matches, most used first.
   const suggestions = useMemo(() => {
@@ -91,6 +96,33 @@ function OfficialsSheet({ match, onClose }: { match: Match; onClose: () => void 
 
   return (
     <Sheet open onClose={onClose} title="Match officials">
+      {confirmRemove && (
+        <Sheet open onClose={() => setConfirmRemove(false)} title={`Remove ${removed.length === 1 ? "this official" : `${removed.length} officials`}?`}>
+          <p className="text-base">Saving removes {removed.length === 1 ? "this official" : "these officials"} from the match, and from the match sheet fans see:</p>
+          <ul className="mt-2 list-disc space-y-0.5 pl-5 text-base">
+            {removed.map((o) => (
+              <li key={o.id}>
+                <span className="font-semibold">{o.name}</span> <span className="text-muted">({roleLabel(o)})</span>
+              </li>
+            ))}
+          </ul>
+          <div className="mt-5 grid grid-cols-2 gap-3">
+            <button type="button" onClick={() => setConfirmRemove(false)} className="h-14 rounded-xl font-semibold ring-1 ring-border active:bg-bg">
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setConfirmRemove(false);
+                save();
+              }}
+              className="h-14 rounded-xl bg-text font-semibold text-white active:opacity-90"
+            >
+              Remove and save
+            </button>
+          </div>
+        </Sheet>
+      )}
       <div className="space-y-3">
         <datalist id={listId}>
           {suggestions.map((n) => (
@@ -162,7 +194,12 @@ function OfficialsSheet({ match, onClose }: { match: Match; onClose: () => void 
           <button type="button" onClick={onClose} className="h-14 rounded-xl font-semibold ring-1 ring-border active:bg-bg">
             Cancel
           </button>
-          <button type="button" onClick={save} disabled={saving} className="h-14 rounded-xl bg-text font-semibold text-white active:opacity-90 disabled:opacity-60">
+          <button
+            type="button"
+            onClick={() => (removed.length ? setConfirmRemove(true) : save())}
+            disabled={saving}
+            className="h-14 rounded-xl bg-text font-semibold text-white active:opacity-90 disabled:opacity-60"
+          >
             {saving ? "Saving…" : "Save"}
           </button>
         </div>

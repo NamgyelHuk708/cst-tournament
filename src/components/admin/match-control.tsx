@@ -83,6 +83,7 @@ export function MatchControl({ matchId }: { matchId: number }) {
   const [toast, setToast] = useState<{ eventId?: number; text: string } | null>(null);
   const [editing, setEditing] = useState<MatchEvent | null>(null);
   const [confirmStatus, setConfirmStatus] = useState(false);
+  const [confirmUndo, setConfirmUndo] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<MatchEvent | null>(null);
   const [adding, setAdding] = useState(false);
   const [subbing, setSubbing] = useState<{ teamId: number; sub: Substitution | null } | null>(null);
@@ -316,12 +317,10 @@ export function MatchControl({ matchId }: { matchId: number }) {
           if (ev) setEditing(ev);
           setToast(null);
         }}
-        onUndo={undo}
-        onStep={() => {
-          if (!step) return;
-          if (step.confirm) setConfirmStatus(true);
-          else setStatus(step.to);
-        }}
+        // Undoing a goal, card or sub stays one tap; undoing a status change asks first.
+        onUndo={() => (lastAction?.source === "match" && lastAction.kind === "status" ? setConfirmUndo(true) : undo())}
+        // Every status change is confirmed: it moves the clock for everyone watching.
+        onStep={() => step && setConfirmStatus(true)}
         onPens={setPens}
         onAddEvent={() => setAdding(true)}
         onSetFinal={() => openTool("final")}
@@ -434,19 +433,27 @@ export function MatchControl({ matchId }: { matchId: number }) {
         />
       )}
 
-      <Sheet open={confirmStatus} onClose={() => setConfirmStatus(false)} title={step?.to === "penalties" ? "Go to penalties?" : "End the match?"}>
-        <p className="text-base">
-          {step?.to === "penalties" ? "Level at full time: " : "Final score: "}
-          <strong className="font-display text-2xl tabular">
-            {teamShort(home)} {score.home}–{score.away} {teamShort(away)}
-          </strong>
-          {match.status === "penalties" && (
-            <span className="block text-sm text-muted">
-              Penalties {match.home_pens}–{match.away_pens}
-            </span>
-          )}
-        </p>
-        <p className="mt-1 text-sm text-muted">You can undo this if it was a mistake.</p>
+      <Sheet open={confirmStatus} onClose={() => setConfirmStatus(false)} title={step ? STATUS_CONFIRM[step.to].title : "Change status?"}>
+        {step && (
+          <>
+            <p className="text-base">
+              <strong className="font-display text-2xl tabular">
+                {teamShort(home)} {score.home}–{score.away} {teamShort(away)}
+              </strong>
+              {match.status === "penalties" && (
+                <span className="block text-sm text-muted">
+                  Penalties {match.home_pens}–{match.away_pens}
+                </span>
+              )}
+            </p>
+            <p className="mt-2 text-base">
+              {match.status === "penalties"
+                ? "The shoot-out ends and this becomes the final result in the bracket; the winner goes through."
+                : STATUS_CONFIRM[step.to].body}
+            </p>
+            <p className="mt-1 text-sm text-muted">You can undo this if it was a mistake.</p>
+          </>
+        )}
         <div className="mt-5 grid grid-cols-2 gap-3">
           <button type="button" onClick={() => setConfirmStatus(false)} className="h-14 rounded-xl font-semibold ring-1 ring-border active:bg-bg">
             Cancel
@@ -459,7 +466,27 @@ export function MatchControl({ matchId }: { matchId: number }) {
             }}
             className="h-14 rounded-xl bg-text font-semibold text-white active:opacity-90"
           >
-            {step?.to === "penalties" ? "Go to penalties" : match.status === "penalties" ? "End shoot-out" : "Full time"}
+            {step?.to === "finished" && match.status === "penalties" ? "End shoot-out" : step ? STATUS_CONFIRM[step.to].action : "Confirm"}
+          </button>
+        </div>
+      </Sheet>
+
+      {/* Undoing a status change moves the clock for everyone, so Cancel is the prominent choice. */}
+      <Sheet open={confirmUndo} onClose={() => setConfirmUndo(false)} title={undoStatusText(lastAction).title}>
+        <p className="rounded-xl border-l-4 border-text bg-bg px-4 py-3 text-base font-medium">{undoStatusText(lastAction).body}</p>
+        <div className="mt-5 grid gap-3">
+          <button type="button" onClick={() => setConfirmUndo(false)} className="h-14 rounded-xl bg-text font-semibold text-white active:opacity-90">
+            Cancel, keep it as it is
+          </button>
+          <button
+            type="button"
+            onClick={async () => {
+              setConfirmUndo(false);
+              await undo();
+            }}
+            className="h-12 rounded-xl text-sm font-semibold ring-1 ring-border active:bg-bg"
+          >
+            {undoStatusText(lastAction).action}
           </button>
         </div>
       </Sheet>
@@ -487,6 +514,79 @@ export function MatchControl({ matchId }: { matchId: number }) {
       </Sheet>
     </div>
   );
+}
+
+/** What each status change does, said plainly before it happens. */
+const STATUS_CONFIRM: Record<MatchStatus, { title: string; body: string; action: string }> = {
+  first_half: {
+    title: "Start the match?",
+    body: "Kick-off: the clock starts at 1' now, and the match shows as live to everyone.",
+    action: "Start match",
+  },
+  half_time: {
+    title: "Half time?",
+    body: "The clock stops and the match shows HALF-TIME. Start the second half when play resumes.",
+    action: "Half time",
+  },
+  second_half: {
+    title: "Start the second half?",
+    body: "The clock starts again from 46' now.",
+    action: "Start second half",
+  },
+  penalties: {
+    title: "Go to penalties?",
+    body: "Level at full time: the match goes to a penalty shoot-out. The clock stops.",
+    action: "Go to penalties",
+  },
+  finished: {
+    title: "End the match?",
+    body: "Full time: the clock stops and this becomes the final result in the tables and bracket.",
+    action: "Full time",
+  },
+  scheduled: { title: "Change status?", body: "The match goes back to not started.", action: "Confirm" },
+};
+
+/** The stronger warning before undoing a status change: what happens to the clock and the match. */
+function undoStatusText(action: LastAction | null): { title: string; body: string; action: string } {
+  const to = action?.source === "match" ? action.new_status : null;
+  switch (to) {
+    case "first_half":
+      return {
+        title: "Undo kick-off?",
+        body: "The match goes back to not started and the clock stops. If the match is actually being played, the clock will restart from 0' when you start it again.",
+        action: "Undo kick-off",
+      };
+    case "half_time":
+      return {
+        title: "Undo half time?",
+        body: "The match goes back to the first half and shows as live again. The clock carries on from the first-half kick-off, as if half time hadn't been pressed.",
+        action: "Undo half time",
+      };
+    case "second_half":
+      return {
+        title: "Undo the second-half start?",
+        body: "The match goes back to half time and the clock stops. If the second half is actually being played, the clock will restart from 46' when you start it again.",
+        action: "Undo second-half start",
+      };
+    case "penalties":
+      return {
+        title: "Undo go to penalties?",
+        body: "The match goes back to the second half and shows as live again, and the penalty score is cleared.",
+        action: "Undo go to penalties",
+      };
+    case "finished":
+      return {
+        title: "Undo full time?",
+        body: "The match is no longer finished: it goes back to being live, the clock carries on, and the tables and bracket stop counting this result.",
+        action: "Undo full time",
+      };
+    default:
+      return {
+        title: "Undo the status change?",
+        body: "The match goes back to the status it had before, and the clock with it.",
+        action: "Undo status change",
+      };
+  }
 }
 
 function describeUndo(action: LastAction | null, events: MatchEvent[], shortCode: (id: number) => string): string | null {

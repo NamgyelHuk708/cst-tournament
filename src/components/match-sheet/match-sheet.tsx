@@ -124,7 +124,7 @@ function MatchDetail({ match, onLeave }: { match: Match; onLeave: () => void }) 
 }
 
 function Status({ match }: { match: Match }) {
-  if (isLive(match)) return <LivePill match={match} size="md" />;
+  if (isLive(match)) return <LivePill match={match} size="md" minute="beside" />;
   if (isFinished(match)) return <span className="shrink-0 font-display text-sm font-semibold text-muted">Full time</span>;
   return (
     <span className="shrink-0 text-xs font-semibold text-muted tabular">

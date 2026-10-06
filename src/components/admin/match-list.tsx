@@ -68,9 +68,9 @@ export function AdminMatchRow({ match, now, hideGroup = false }: { match: Match;
       <span className="w-[5rem] shrink-0 leading-tight">
         {live ? (
           <>
-            <LivePill match={match} />
-            <span className="mt-0.5 block text-[11px] font-medium whitespace-nowrap text-muted tabular">
-              {relativeDay(match.kickoff_at, now)} {formatTime(match.kickoff_at)}
+            <LivePill match={match} minute="beside" />
+            <span className="mt-0.5 block text-[11px] leading-tight font-medium text-muted tabular">
+              {relativeDay(match.kickoff_at, now)} <span className="whitespace-nowrap">{formatTime(match.kickoff_at)}</span>
             </span>
           </>
         ) : (

@@ -121,6 +121,8 @@ export function FinalScoreSheet({
   const [a, setA] = useState(match.away_score);
   const [hp, setHp] = useState(match.home_pens ?? 0);
   const [ap, setAp] = useState(match.away_pens ?? 0);
+  // Second step: "Set 2–1" first shows what will happen and asks again.
+  const [confirming, setConfirming] = useState(false);
 
   const needsPens = isKnockout(match) && h === a;
   const plans = [planSide(match, events, home.id, away.id, teamShort(home), h), planSide(match, events, away.id, home.id, teamShort(away), a)];
@@ -210,12 +212,47 @@ export function FinalScoreSheet({
         <button
           type="button"
           disabled={busy || !!blocked || pensInvalid || unchanged || !!laterTie}
-          onClick={() => onSubmit(h, a, needsPens ? hp : null, needsPens ? ap : null)}
+          onClick={() => setConfirming(true)}
           className={BTN_PRIMARY}
         >
           {busy ? "Saving…" : `Set ${h}–${a}`}
         </button>
       </div>
+
+      {confirming && (
+        <Sheet open onClose={() => setConfirming(false)} title="Set this final score?">
+          <p className="font-display text-2xl font-bold tabular">
+            {teamShort(home)} {h}–{a} {teamShort(away)}
+          </p>
+          {needsPens && (
+            <p className="text-sm font-semibold text-muted tabular">
+              Penalties {hp}–{ap}
+            </p>
+          )}
+          <ul className="mt-3 list-disc space-y-0.5 pl-5 text-base">
+            {lines.map((l) => (
+              <li key={l}>{l}</li>
+            ))}
+          </ul>
+          <p className="mt-2 text-sm text-muted">The tables{isKnockout(match) ? " and bracket" : ""} update straight away. You can undo this.</p>
+          <div className="mt-5 grid grid-cols-2 gap-3">
+            <button type="button" onClick={() => setConfirming(false)} className={BTN_SECONDARY}>
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => {
+                setConfirming(false);
+                onSubmit(h, a, needsPens ? hp : null, needsPens ? ap : null);
+              }}
+              className={BTN_PRIMARY}
+            >
+              Set final score
+            </button>
+          </div>
+        </Sheet>
+      )}
     </Sheet>
   );
 }

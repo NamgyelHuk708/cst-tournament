@@ -52,7 +52,7 @@ export function MatchListRow({ match }: { match: Match }) {
   const body = (
     <>
       {/* Match number and stage, then the day and kick-off time on every row (never just a time). */}
-      <span className="flex w-[4.5rem] shrink-0 flex-col items-start gap-1 leading-none">
+      <span className="flex w-[5rem] shrink-0 flex-col items-start gap-1 leading-none">
         <span className="flex items-center gap-1 text-[11px] font-medium whitespace-nowrap text-muted tabular">
           #{match.id}
           <span aria-hidden="true">·</span>
@@ -70,7 +70,7 @@ export function MatchListRow({ match }: { match: Match }) {
             <span className="text-[11px] font-medium whitespace-nowrap text-muted tabular">
               {day} {time}
             </span>
-            <LivePill match={match} />
+            <LivePill match={match} minute="beside" />
           </>
         ) : (
           <>

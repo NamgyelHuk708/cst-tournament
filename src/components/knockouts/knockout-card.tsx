@@ -43,7 +43,7 @@ export function KnockoutCard({ match, featured = false }: { match: Match; featur
         </span>
         <span className="ml-auto text-xs font-medium text-muted tabular">
           {live ? (
-            <LivePill match={match} />
+            <LivePill match={match} minute="beside" />
           ) : isFinished(match) ? (
             "Full time"
           ) : (
