@@ -44,7 +44,7 @@ export function GroupCard({ standings }: { standings: GroupStandings }) {
               {matchesPlayed} of {matchesTotal} played
               {liveCount > 0 && (
                 <span className="ml-2 inline-flex items-center gap-1 font-semibold text-brand-text">
-                  <span className="live-dot size-1.5 rounded-full bg-live" />
+                  <span className="size-1.5 rounded-full bg-live" />
                   {liveCount} live
                 </span>
               )}

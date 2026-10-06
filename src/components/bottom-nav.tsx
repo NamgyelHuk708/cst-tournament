@@ -42,7 +42,7 @@ export function BottomNav() {
                 <span className="relative">
                   <Icon />
                   {href === "/" && anyLive && (
-                    <span className="live-dot absolute -top-0.5 -right-1 size-2.5 rounded-full border-2 border-card bg-live" />
+                    <span className="absolute -top-0.5 -right-1 size-2.5 rounded-full border-2 border-card bg-live" />
                   )}
                 </span>
                 {label}

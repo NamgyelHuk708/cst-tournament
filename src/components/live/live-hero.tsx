@@ -1,6 +1,6 @@
 "use client";
 
-import { compareEventTime, eventsForMatch, isBallInPlay, slotDisplayName, subsForMatch, type Match, type Team } from "@/lib/tournament";
+import { compareEventTime, eventsForMatch, slotDisplayName, subsForMatch, type Match, type Team } from "@/lib/tournament";
 import { LatestSub, ScorerColumns } from "../event-list";
 import { GroupTag } from "../group-tag";
 import { TeamLink } from "../team-link";
@@ -11,7 +11,7 @@ import { useFlashOnChange } from "../use-flash";
 import { LivePill } from "../live-pill";
 import { fitNameSize, teamShort, teamSub } from "@/data/team-names";
 
-/** The live match, readable from arm's length: big score, teal LED status with the minute. */
+/** The live match, readable from arm's length: big score, the teal live pill with the minute. */
 export function LiveHero({ match }: { match: Match }) {
   const { teamsById, events, playersById, substitutions } = useTournament();
   const home = match.home_team_id != null ? teamsById.get(match.home_team_id) : undefined;
@@ -25,7 +25,6 @@ export function LiveHero({ match }: { match: Match }) {
 
   return (
     <article aria-label="Live match" className="relative overflow-hidden rounded-2xl bg-card shadow-[0_1px_2px_rgb(27_34_48/0.06),0_8px_24px_-12px_rgb(27_34_48/0.18)]">
-      <div className={`h-1 bg-live ${isBallInPlay(match) ? "live-sweep" : ""}`} />
       <div className="px-5 pt-4 pb-5">
         <div className="flex items-center justify-between">
           {match.group_code ? <GroupTag group={match.group_code} /> : <StageTag match={match} />}
@@ -34,7 +33,7 @@ export function LiveHero({ match }: { match: Match }) {
 
         <div className="mt-4 flex justify-center">
           <span role="status" aria-live="polite">
-            <LivePill match={match} size="lg" home={home} away={away} minute="below" />
+            <LivePill match={match} size="lg" home={home} away={away} />
           </span>
         </div>
 

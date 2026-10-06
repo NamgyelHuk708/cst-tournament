@@ -109,91 +109,18 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-@keyframes live-pulse {
-  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--live) 70%, transparent); }
-  70% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--live) 0%, transparent); }
-  100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--live) 0%, transparent); }
-}
-
-.live-dot {
-  animation: live-pulse 1.8s ease-out infinite;
-}
-
 /*
- * The live status as a teal LED sign (LivePill). A fixed-size pill with a faint dot-matrix texture;
- * while the ball is in play the text scrolls right to left in a seamless loop (four identical
- * copies, moved by one copy). Only transform is animated, so it stays smooth on phones.
+ * The one live animation: a thin underline under the live pill's text ("Live 24'") grows from the
+ * centre to the text's full width and back, about every 2 seconds. Transform only (scaleX).
  */
-.led {
-  position: relative;
-  display: inline-flex;
-  flex-shrink: 0;
-  align-items: center;
-  overflow: hidden;
-  border-radius: 9999px;
-  background: var(--live);
-  color: var(--live-text);
-  line-height: 1;
+@keyframes live-underline {
+  0%, 100% { transform: scaleX(0.15); }
+  50% { transform: scaleX(1); }
 }
 
-/* Dot matrix: dark lines between "pixels", like an LED board. Static. */
-.led::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background-image: radial-gradient(circle, transparent 0.75px, rgb(0 0 0 / 0.2) 1.15px);
-  background-size: 3px 3px;
-}
-
-.led-window {
-  display: flex;
-  width: 100%;
-  overflow: hidden;
-  /* Text fades in and out at the ends, as it would at the edge of a sign. */
-  mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
-}
-
-.led-track {
-  display: flex;
-  width: max-content;
-  animation: led-scroll var(--led-duration, 7s) linear infinite;
-  will-change: transform;
-}
-
-.led-copy {
-  flex: none;
-  white-space: nowrap;
-}
-
-.led-sep {
-  padding: 0 0.6em;
-}
-
-@keyframes led-scroll {
-  to { transform: translateX(-25%); }
-}
-
-/* Live card top bar: a teal-to-blue-grey sweep travelling left to right, only while the ball is in play. */
-@keyframes live-sweep {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(250%); }
-}
-
-.live-sweep {
-  position: relative;
-  overflow: hidden;
-}
-
-.live-sweep::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  width: 40%;
-  background: linear-gradient(90deg, transparent, var(--accent) 30%, #d9e5e8 50%, var(--accent) 70%, transparent);
-  transform: translateX(-100%);
-  pointer-events: none;
-  animation: live-sweep 2.6s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+.live-underline {
+  transform-origin: center;
+  animation: live-underline 2s cubic-bezier(0.65, 0, 0.35, 1) infinite;
 }
 
 /* Brief highlight when a score changes. */
@@ -226,20 +153,12 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .live-dot, .score-flash, .skeleton::after, .live-sweep::after {
+  .score-flash, .skeleton::after {
     animation: none;
   }
-  /* Still, centred, shown once. */
-  .led-track {
-    width: 100%;
-    justify-content: center;
+  /* Still, at full width. */
+  .live-underline {
     animation: none;
-  }
-  .led-window {
-    mask-image: none;
-  }
-  .led-copy:not(:first-child),
-  .led-sep {
-    display: none;
+    transform: none;
   }
 }

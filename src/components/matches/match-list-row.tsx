@@ -70,7 +70,7 @@ export function MatchListRow({ match }: { match: Match }) {
             <span className="text-[11px] font-medium whitespace-nowrap text-muted tabular">
               {day} {time}
             </span>
-            <LivePill match={match} minute="beside" />
+            <LivePill match={match} />
           </>
         ) : (
           <>

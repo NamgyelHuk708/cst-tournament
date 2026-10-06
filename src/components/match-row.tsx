@@ -149,7 +149,7 @@ function StatusCell({ match }: { match: Match }) {
   if (isLive(match)) {
     return (
       <span className="w-[5rem] shrink-0 leading-tight">
-        <LivePill match={match} minute="beside" />
+        <LivePill match={match} />
         <span className="mt-0.5 block text-[11px] leading-tight font-medium text-muted tabular">
           {day} <span className="whitespace-nowrap">{time}</span>
         </span>

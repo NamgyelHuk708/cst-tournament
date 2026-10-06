@@ -9,7 +9,6 @@ import {
   eventMinuteLabel,
   isKnockout,
   isLive,
-  matchClock,
   nextStatusStep,
   scoreFromEvents,
   slotDisplayName,
@@ -22,7 +21,7 @@ import {
   type Team,
 } from "@/lib/tournament";
 import { ChevronIcon } from "../icons";
-import { useServerNow, useTournament } from "../tournament-provider";
+import { useTournament } from "../tournament-provider";
 import { ControlDock } from "./control-dock";
 import { FinalScoreSheet, MoreSheet, ResetSheet, StatusSheet } from "./correction-sheets";
 import { TeamsSheet } from "./teams-sheet";
@@ -662,8 +661,6 @@ function Scoreboard({
   away?: Team;
   score: { home: number; away: number };
 }) {
-  const now = useServerNow(5_000);
-  const clock = matchClock(match, now);
   const live = isLive(match);
   const nameSize = fitNameSize([teamShort(home, "TBD"), teamShort(away, "TBD")], 24);
   const statusText: Record<MatchStatus, string> = {
@@ -678,8 +675,8 @@ function Scoreboard({
   return (
     <section aria-label="Scoreboard" className="mx-4 mt-1 rounded-2xl bg-card px-4 py-3 ring-1 ring-border/60">
       <div className="flex items-center justify-between text-sm">
-        {live ? <LivePill match={match} size="md" /> : <span className="font-semibold text-muted">{statusText[match.status]}</span>}
-        {live && clock.running && <span className="font-display text-2xl leading-none font-bold tabular">{clock.label}</span>}
+        {/* The minute is in the pill ("Live 58'"), large enough to read at a glance. */}
+        {live ? <LivePill match={match} size="lg" /> : <span className="font-semibold text-muted">{statusText[match.status]}</span>}
       </div>
       {/* Short names wrap onto two lines rather than pushing the score aside. */}
       <div className="mt-1 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-x-2">
