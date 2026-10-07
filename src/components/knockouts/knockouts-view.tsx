@@ -9,6 +9,7 @@ import { TeamLogo } from "../team-logo";
 import { useTournament } from "../tournament-provider";
 import { KnockoutCard } from "./knockout-card";
 import { teamShort, teamSub } from "@/data/team-names";
+import { SponsorsFooter } from "../sponsors";
 
 export function KnockoutsView() {
   const { matches, teamsById } = useTournament();
@@ -107,6 +108,7 @@ export function KnockoutsView() {
           </ol>
         )}
       </div>
+      <SponsorsFooter />
     </div>
   );
 }

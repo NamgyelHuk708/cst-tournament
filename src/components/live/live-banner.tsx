@@ -1,6 +1,7 @@
 import { getImageProps } from "next/image";
 import phone from "@/assets/banner-phone.webp";
 import wide from "@/assets/banner-wide.webp";
+import { Sponsors } from "../sponsors";
 
 const ALT = "College of Science and Technology, Royal University of Bhutan — celebrating the 25th Foundation Day";
 const TITLE = "CST Silver Jubilee Departmental Football Tournament";
@@ -9,7 +10,8 @@ const WIDE_FROM = 640;
 
 /**
  * Live page banner, shown the same way whether or not a match is live: the foundation-day artwork, then the tournament name as
- * real text (the artwork doesn't mention the tournament). Phones get a crop of the logos and title;
+ * real text (the artwork doesn't mention the tournament), then the sponsors. Phones get a short
+ * version of the artwork (logos, college name and "Celebrating 25th Foundation Day");
  * wider screens see more of the artwork. Low priority and not preloaded: it never holds up the scores.
  */
 export function BannerHero() {
@@ -21,16 +23,18 @@ export function BannerHero() {
     <section aria-labelledby="tournament-title" className="overflow-hidden rounded-2xl bg-card shadow-sm ring-1 ring-border/60">
       {/* Fixed proportions per breakpoint, so nothing below moves when the image arrives. */}
       <picture
-        className="block aspect-[1620/661] bg-cover bg-center sm:aspect-[2/1]"
+        className="block aspect-[1620/557] bg-cover bg-center sm:aspect-[2/1]"
         style={{ backgroundImage: `url(${phone.blurDataURL})` }}
       >
         <source media={`(min-width: ${WIDE_FROM}px)`} srcSet={wideSrcSet} sizes="544px" />
         {/* eslint-disable-next-line jsx-a11y/alt-text -- alt comes from getImageProps */}
         <img {...img} className="h-full w-full object-cover" />
       </picture>
-      <h2 id="tournament-title" className="px-4 pt-2.5 pb-3 text-center font-display text-[19px] leading-tight font-bold text-balance text-brand-text">
+      <h2 id="tournament-title" className="px-4 pt-2.5 pb-2.5 text-center font-display text-[19px] leading-tight font-bold text-balance text-brand-text">
         {TITLE}
       </h2>
+      {/* Sponsors: one slim row under the title, behind a thin divider. */}
+      <Sponsors place="banner" className="mx-4 border-t border-border py-2" />
     </section>
   );
 }

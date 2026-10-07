@@ -22,6 +22,7 @@
     "rehearsal": "tsx --env-file=.env.local scripts/rehearsal.ts",
     "seed:results": "tsx --env-file=.env.local scripts/seed-results.ts",
     "admin:update": "tsx --env-file=.env.local scripts/update-admin.ts",
+    "sponsors": "python3 scripts/sponsor-logos.py",
     "logos": "tsx scripts/team-logos.ts",
     "backup:live": "tsx --env-file=.env.local scripts/backup-live.ts",
     "compare:live": "tsx --env-file=.env.local scripts/compare-live.ts"

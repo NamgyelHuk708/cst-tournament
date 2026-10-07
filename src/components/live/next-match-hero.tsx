@@ -35,14 +35,15 @@ export function NextMatchHero({ match, placeholders }: { match: Match; placehold
           home={home}
           away={away}
           placeholders={placeholders}
-          center={<span className="px-3 font-display text-lg font-semibold text-muted">vs</span>}
+          center={<span className="px-3 font-display text-[22px] font-bold text-text/70">vs</span>}
         />
 
+        {/* The kick-off time; in the last hour before it, a countdown under it. */}
         <div className="mt-5 rounded-xl bg-bg px-4 py-3 text-center">
-          <p className="text-sm font-semibold">
+          <p className={msToKickoff > COUNTDOWN_FROM_MS ? "font-display text-xl font-bold" : "text-sm font-semibold"}>
             {relativeDay(match.kickoff_at, now)} · {formatTime(match.kickoff_at)}
           </p>
-          <Countdown ms={msToKickoff} />
+          {msToKickoff <= COUNTDOWN_FROM_MS && <Countdown ms={msToKickoff} />}
         </div>
       </div>
       <MatchDetailsHint />
@@ -51,23 +52,22 @@ export function NextMatchHero({ match, placeholders }: { match: Match; placehold
   );
 }
 
+/** The countdown only appears in the last hour before kick-off. */
+const COUNTDOWN_FROM_MS = 60 * 60_000;
+
+/** "Starts in 42 min 18 sec", or "Kick-off soon" once the time has passed. */
 function Countdown({ ms }: { ms: number }) {
   if (ms <= 0) {
     return <p className="mt-1 font-display text-2xl font-semibold text-muted">Kick-off soon</p>;
   }
-  const { days, hours, minutes, seconds } = countdownParts(ms);
-  const units =
-    days > 0
-      ? [[days, "days"], [hours, "hrs"], [minutes, "min"]]
-      : [[hours, "hrs"], [minutes, "min"], [seconds, "sec"]];
+  const { minutes, seconds } = countdownParts(ms);
   return (
-    <p className="mt-1 flex justify-center gap-4" aria-label="Time until kick-off">
-      {units.map(([value, unit]) => (
-        <span key={unit} className="flex items-baseline gap-1">
-          <span className="font-display text-[34px] leading-none font-bold tabular">{String(value).padStart(2, "0")}</span>
-          <span className="text-xs font-medium text-muted">{unit}</span>
-        </span>
-      ))}
+    <p className="mt-1 flex items-baseline justify-center gap-1.5" aria-label={`Starts in ${minutes} minutes`}>
+      <span className="text-sm font-medium text-muted">starts in</span>
+      <span className="font-display text-[34px] leading-none font-bold tabular">{minutes}</span>
+      <span className="text-xs font-medium text-muted">min</span>
+      <span className="font-display text-[34px] leading-none font-bold tabular">{String(seconds).padStart(2, "0")}</span>
+      <span className="text-xs font-medium text-muted">sec</span>
     </p>
   );
 }

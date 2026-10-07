@@ -10,6 +10,7 @@ import { useServerNow, useTournament } from "../tournament-provider";
 import { TeamLogo } from "../team-logo";
 import { MatchListRow } from "./match-list-row";
 import { teamSearchText, teamShort, teamSub } from "@/data/team-names";
+import { SponsorsFooter } from "../sponsors";
 
 type View = "results" | "upcoming";
 type Filter = { kind: "all" } | { kind: "group"; group: GroupCode } | { kind: "knockouts" } | { kind: "team"; team: Team };
@@ -127,6 +128,7 @@ export function MatchesView() {
           byDay(upcoming).map(([key, list]) => <DayList key={key} title={dayTitle(list[0].kickoff_at, now)} matches={list} />)
         )}
       </div>
+      <SponsorsFooter />
     </div>
   );
 }

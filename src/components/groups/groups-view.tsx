@@ -5,6 +5,7 @@ import { GROUP_CODES, type GroupCode } from "@/lib/tournament";
 import { GROUP_BG } from "../group-tag";
 import { useTournament } from "../tournament-provider";
 import { GroupCard } from "./group-card";
+import { SponsorsFooter } from "../sponsors";
 
 function FormKey({ result, label }: { result: "W" | "D" | "L"; label: string }) {
   const fill = result === "W" ? "bg-win" : result === "L" ? "bg-card-red" : "bg-form-draw";
@@ -95,6 +96,7 @@ export function GroupsView() {
         </p>
         <p className="sm:hidden">Swipe a table sideways for GF and GA.</p>
       </div>
+      <SponsorsFooter />
     </div>
   );
 }

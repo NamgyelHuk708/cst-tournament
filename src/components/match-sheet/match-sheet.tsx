@@ -20,6 +20,7 @@ import { useServerNow, useTournament } from "../tournament-provider";
 import { useResolvedSides } from "../use-resolved-sides";
 import { MatchSheetContext } from "./context";
 import { PlayersPanel } from "./players-panel";
+import { Sponsors } from "../sponsors";
 import { LivePill } from "../live-pill";
 
 /** One match detail sheet for the public pages; any match opens it via useMatchSheet(). */
@@ -119,6 +120,7 @@ function MatchDetail({ match, onLeave }: { match: Match; onLeave: () => void }) 
       <div id={`${tabsId}-panel`} role="tabpanel" aria-labelledby={`${tabsId}-${tab}`} className="mt-4">
         {tab === "summary" ? <SummaryPanel match={match} /> : <PlayersPanel match={match} home={home} away={away} />}
       </div>
+      <Sponsors place="sheet" className="mt-6 border-t border-border pt-3" />
     </div>
   );
 }
