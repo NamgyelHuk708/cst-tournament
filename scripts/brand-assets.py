@@ -7,11 +7,12 @@ Sources
   design/jubilee-logo.png     the official Silver Jubilee logo (transparent background)
 
 Outputs
-  src/assets/banner-phone.webp    Live page banner on phones, kept short: the three logos, "College of
-                                  Science and Technology" and "Celebrating 25th Foundation Day". The sky
-                                  above the logos and the "Royal University of Bhutan" band are left out
-                                  (the two parts blended over 30 px); building and water tower trimmed
-  src/assets/banner-wide.webp     Live page banner on wider screens: more of the artwork (2:1)
+  src/assets/banner-phone.webp    Live page banner on phones: the three logos, "College of Science and
+                                  Technology", "Royal University of Bhutan" and "Celebrating 25th
+                                  Foundation Day", ending just below the gold "25"
+  src/assets/banner-wide.webp     the same on wider screens, with the full width of the artwork
+  Both end above the tagline, the dates and the buildings (the roof and water tower that reach into
+  the bottom corners are faded out).
   src/app/opengraph-image.jpg     1200x630 share preview, centred on the logos and title
   src/app/twitter-image.jpg       same image for Twitter / X
   src/assets/intro-emblem.webp    from design/jubilee-logo.png: the emblem for the intro animation (600 px)
@@ -39,12 +40,11 @@ BANNER = Image.open(ROOT / "design/banner-v2.png").convert("RGB")
 # Phone: x covers "CELEBRATING ... FOUNDATION DAY" (211-1772); y from above the logos (200) to just
 # below the gold "25" (ends 820). The building roof (from y 790, x < 460) and the water tower
 # (from y 811, x 1654-1828) reach into the bottom corners, so those two corners are faded out.
-# Phone: from just above the logos (they start at y 209) to below the gold "25" (ends at y 820).
-# PHONE_CUT: the band between "College of Science and Technology" (ends ~472) and the "25" (starts
-# ~600), with "Royal University of Bhutan" in it, is left out so the banner is shorter on phones.
-PHONE = (185, 199, 1805, 826)
-PHONE_CUT = (484, 584)
-WIDE = (0, 90, 1990, 1085)  # 2:1, the full width: building, road and tower included
+# Measured in banner-v2.png: the logos start at y 209, the gold "25" ends at y 820 and the tagline
+# "Celebrating the Past..." starts at about y 866. Both crops end at y 840: a little room below the
+# "25", none of the tagline, dates or buildings (only their tops in the corners, faded out).
+PHONE = (185, 180, 1805, 840)  # x: "CELEBRATING ... FOUNDATION DAY" spans 211-1772
+WIDE = (0, 90, 1990, 840)  # the full width
 OG = (65, 110, 1925, 1086)  # 1200x630 proportions, centred on the logos and title
 
 (ROOT / "src/assets").mkdir(exist_ok=True)
@@ -63,25 +63,11 @@ def fade_bottom_corners(img: Image.Image, width: float, height: float) -> Image.
     return Image.composite(white, img, mask)
 
 
-def without_band(box: tuple[int, int, int, int], cut: tuple[int, int], blend: int) -> Image.Image:
-    """box with the rows cut[0]..cut[1] left out, the two parts crossfaded over `blend` rows."""
-    x0, top, x1, bottom = box
-    w = x1 - x0
-    upper = BANNER.crop((x0, top, x1, cut[0] + blend))  # runs `blend` rows into the band
-    lower = BANNER.crop((x0, cut[1] - blend, x1, bottom))  # starts `blend` rows before the band ends
-    out = Image.new("RGB", (w, (cut[0] - top) + (bottom - cut[1]) + blend))
-    out.paste(upper, (0, 0))
-    out.paste(lower, (0, cut[0] - top))
-    fade = Image.linear_gradient("L").rotate(180).resize((w, blend))  # upper fades out over the seam
-    seam = Image.composite(upper.crop((0, cut[0] - top, w, cut[0] - top + blend)), lower.crop((0, 0, w, blend)), fade)
-    out.paste(seam, (0, cut[0] - top))
-    return out
-
-
-phone = fade_bottom_corners(without_band(PHONE, PHONE_CUT, 30), width=0.2, height=0.1)
-print(f"Phone banner {phone.width}x{phone.height} (aspect-[{phone.width}/{phone.height}] in live-banner.tsx).")
-phone.save(ROOT / "src/assets/banner-phone.webp", quality=92, method=6)
-BANNER.crop(WIDE).save(ROOT / "src/assets/banner-wide.webp", quality=92, method=6)
+phone = fade_bottom_corners(BANNER.crop(PHONE), width=0.2, height=0.1)
+wide = fade_bottom_corners(BANNER.crop(WIDE), width=0.22, height=0.1)
+print(f"Banner phone {phone.width}x{phone.height}, wide {wide.width}x{wide.height}: the aspect-[w/h] classes in live-banner.tsx.")
+phone.save(ROOT / "src/assets/banner-phone.webp", quality=90, method=6)
+wide.save(ROOT / "src/assets/banner-wide.webp", quality=90, method=6)
 
 og = BANNER.crop(OG).resize((1200, 630), Image.LANCZOS)
 og.save(ROOT / "src/app/opengraph-image.jpg", quality=85, optimize=True, progressive=True)

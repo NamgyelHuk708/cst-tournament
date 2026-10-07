@@ -10,9 +10,8 @@ const WIDE_FROM = 640;
 
 /**
  * Live page banner, shown the same way whether or not a match is live: the foundation-day artwork, then the tournament name as
- * real text (the artwork doesn't mention the tournament), then the sponsors. Phones get a short
- * version of the artwork (logos, college name and "Celebrating 25th Foundation Day");
- * wider screens see more of the artwork. Low priority and not preloaded: it never holds up the scores.
+ * real text (the artwork doesn't mention the tournament), then the sponsors. The artwork ends just
+ * below "Celebrating 25th Foundation Day"; phones get a narrower crop, wider screens its full width. Low priority and not preloaded: it never holds up the scores.
  */
 export function BannerHero() {
   const common = { alt: ALT, fetchPriority: "low" as const, loading: "lazy" as const };
@@ -23,7 +22,7 @@ export function BannerHero() {
     <section aria-labelledby="tournament-title" className="overflow-hidden rounded-2xl bg-card shadow-sm ring-1 ring-border/60">
       {/* Fixed proportions per breakpoint, so nothing below moves when the image arrives. */}
       <picture
-        className="block aspect-[1620/557] bg-cover bg-center sm:aspect-[2/1]"
+        className="block aspect-[1620/660] bg-cover bg-center sm:aspect-[1990/750]"
         style={{ backgroundImage: `url(${phone.blurDataURL})` }}
       >
         <source media={`(min-width: ${WIDE_FROM}px)`} srcSet={wideSrcSet} sizes="544px" />
