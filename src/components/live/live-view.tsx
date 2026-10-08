@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { dayKey, formatDay } from "@/lib/format";
-import { isFinished, isLive, isUpcoming, type Match } from "@/lib/tournament";
+import { heldResult, isFinished, isLive, isUpcoming, type Match } from "@/lib/tournament";
 import { ChevronIcon } from "../icons";
 import { MatchRow } from "../match-row";
 import { useServerNow, useTournament } from "../tournament-provider";
@@ -15,8 +15,12 @@ import { NextMatchHero } from "./next-match-hero";
 const UP_NEXT_COUNT = 3;
 
 export function LiveView() {
-  const { matches } = useTournament();
-  const now = useServerNow(60_000);
+  const { matches, resultHolds } = useTournament();
+  // While a result may be held (a match finished within the last hour), tick every second so the switch
+  // to the next match happens at the same moment on every screen; otherwise once a minute is enough.
+  const minute = useServerNow(60_000);
+  const holdPossible = resultHolds.some((h) => minute - Date.parse(h.finished_at) < 61 * 60_000);
+  const now = useServerNow(holdPossible ? 1_000 : 60_000);
 
   const live = matches.filter(isLive);
   // Already in kick-off order.
@@ -32,7 +36,9 @@ export function LiveView() {
     .filter((m) => dayKey(m.kickoff_at) === resultsDay)
     .sort((a, b) => b.kickoff_at.localeCompare(a.kickoff_at));
 
-  const [hero, ...otherLive] = live;
+  // A live match always leads; otherwise a just-finished match keeps the main card during its hold.
+  const [liveHero, ...otherLive] = live;
+  const hero = liveHero ?? heldResult(matches, resultHolds, now);
   const next = hero ? null : scheduled[0];
   const upNext = scheduled.slice(next ? 1 : 0, (next ? 1 : 0) + UP_NEXT_COUNT);
 

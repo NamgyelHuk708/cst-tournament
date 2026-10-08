@@ -16,6 +16,7 @@ import {
   type Substitution,
   type Team,
   type TeamDisplayName,
+  type ResultHold,
   type TeamStaff,
   withDisplayNames,
 } from "@/lib/tournament";
@@ -44,6 +45,7 @@ type TournamentContextValue = Snapshot & {
     setOfficials: (matchId: number, rows: Official[]) => void;
     setStaff: (teamId: number, rows: TeamStaff[]) => void;
     upsertDisplayName: (row: TeamDisplayName) => void;
+    upsertResultHold: (row: ResultHold) => void;
     refresh: () => Promise<void>;
   };
 };
@@ -69,6 +71,13 @@ function applyChange<T extends { id: unknown }>(list: T[], payload: RealtimePost
     return list.filter((r) => r.id !== id);
   }
   return upsert(list, payload.new as T);
+}
+
+/** result_holds is keyed by match_id, not id. */
+function applyHoldChange(list: ResultHold[], payload: RealtimePostgresChangesPayload<ResultHold>): ResultHold[] {
+  const key = payload.eventType === "DELETE" ? (payload.old as Partial<ResultHold>).match_id : payload.new.match_id;
+  const rest = list.filter((h) => h.match_id !== key);
+  return payload.eventType === "DELETE" ? rest : [...rest, payload.new];
 }
 
 export function TournamentProvider({
@@ -166,6 +175,9 @@ export function TournamentProvider({
         .on<TeamDisplayName>("postgres_changes", { event: "*", schema: "public", table: "team_display_names" }, (p) =>
           apply((d) => ({ ...d, displayNames: applyChange(d.displayNames, p) })),
         )
+        .on<ResultHold>("postgres_changes", { event: "*", schema: "public", table: "result_holds" }, (p) =>
+          apply((d) => ({ ...d, resultHolds: applyHoldChange(d.resultHolds, p) })),
+        )
         .subscribe((status) => {
           // Ignore callbacks from channels we have already replaced (removing one fires CLOSED).
           if (disposed || current !== channel) return;
@@ -247,6 +259,7 @@ export function TournamentProvider({
       // A save replaces the team's real rows (the function returns the team's demo rows too).
       setStaff: (teamId, rows) => setData((d) => ({ ...d, staff: [...d.staff.filter((x) => x.team_id !== teamId), ...rows] })),
       upsertDisplayName: (row) => setData((d) => ({ ...d, displayNames: upsert(d.displayNames, row) })),
+      upsertResultHold: (row) => setData((d) => ({ ...d, resultHolds: [...d.resultHolds.filter((h) => h.match_id !== row.match_id), row] })),
       refresh,
     }),
     [refresh],

@@ -434,6 +434,38 @@ export type Database = {
           },
         ]
       }
+      result_holds: {
+        Row: {
+          finished_at: string
+          hold_until: string | null
+          is_demo: boolean
+          match_id: number
+          updated_at: string
+        }
+        Insert: {
+          finished_at: string
+          hold_until?: string | null
+          is_demo?: boolean
+          match_id: number
+          updated_at?: string
+        }
+        Update: {
+          finished_at?: string
+          hold_until?: string | null
+          is_demo?: boolean
+          match_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "result_holds_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: true
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       substitutions: {
         Row: {
           added_time: number | null
@@ -1045,6 +1077,22 @@ export type Database = {
       admin_set_qualifier_order: {
         Args: { p_group: string; p_team_ids: number[] }
         Returns: undefined
+      }
+      admin_set_result_hold: {
+        Args: { p_match: number; p_until: string }
+        Returns: {
+          finished_at: string
+          hold_until: string | null
+          is_demo: boolean
+          match_id: number
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "result_holds"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       admin_set_status: {
         Args: {

@@ -25,6 +25,7 @@ export type Substitution = Pick<
 export type StaffRole = "manager" | "coach" | "assistant_coach" | "other";
 export type TeamStaff = { id: number; team_id: number; role: StaffRole; custom_role: string | null; name: string; position: number; is_demo: boolean };
 export type TeamDisplayName = { id: number; team_id: number; short_name: string; full_name: string | null; is_demo: boolean };
+export type ResultHold = { match_id: number; finished_at: string; hold_until: string | null };
 export type EventType = Enums["event_type"];
 export type MatchStatus = Enums["match_status"];
 export type MatchStage = Enums["match_stage"];
@@ -39,7 +40,31 @@ export type Snapshot = {
   officials: Official[];
   staff: TeamStaff[];
   displayNames: TeamDisplayName[];
+  resultHolds: ResultHold[];
 };
+
+/**
+ * How long a finished match stays the main card on the Live page, by default. The admin can extend
+ * it (+5 min, up to 60 minutes after full time) or end it ("Show next match now"): result_holds.hold_until.
+ */
+export const RESULT_HOLD_MINUTES = 5;
+
+/** When a match's result stops being held on the Live page (ms, server time). */
+export function resultHoldEnd(hold: ResultHold): number {
+  return hold.hold_until ? Date.parse(hold.hold_until) : Date.parse(hold.finished_at) + RESULT_HOLD_MINUTES * 60_000;
+}
+
+/** The finished match whose result is still being held at `now`, if any (the most recently finished). */
+export function heldResult(matches: Match[], holds: ResultHold[], now: number): Match | null {
+  let best: { match: Match; finished: number } | null = null;
+  for (const h of holds) {
+    const m = matches.find((x) => x.id === h.match_id);
+    if (!m || m.status !== "finished" || resultHoldEnd(h) <= now) continue;
+    const finished = Date.parse(h.finished_at);
+    if (!best || finished > best.finished) best = { match: m, finished };
+  }
+  return best?.match ?? null;
+}
 
 /** Staff roles in their standard order, with labels. */
 export const STAFF_ROLES: { role: StaffRole; label: string; plural: string }[] = [

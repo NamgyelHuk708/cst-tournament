@@ -5,6 +5,7 @@ import { BallIcon, CardIcon } from "../icons";
 import { useServerNow } from "../tournament-provider";
 import type { PendingTap } from "./match-control";
 import { teamShort } from "@/data/team-names";
+import { ResultHoldPanel } from "./result-hold";
 
 type Props = {
   match: Match;
@@ -116,6 +117,7 @@ export function ControlDock(props: Props) {
             </div>
           ) : match.status === "finished" ? (
             <div className="space-y-2">
+              <ResultHoldPanel match={match} />
               <button type="button" onClick={props.onAddEvent} disabled={busy} className={PRIMARY}>
                 Add goal or card
               </button>
