@@ -30,6 +30,7 @@ import { useResolvedSides } from "../use-resolved-sides";
 import { EventLog } from "./event-log";
 import { EventSheet } from "./event-sheet";
 import { OfficialsSection } from "./officials";
+import { ManagersSection } from "./team-managers";
 import { SubSheet } from "./sub-sheet";
 import { Sheet } from "../sheet";
 import { LivePill } from "../live-pill";
@@ -300,6 +301,7 @@ export function MatchControl({ matchId }: { matchId: number }) {
       <Scoreboard match={match} home={home} away={away} score={score} />
 
       <OfficialsSection match={match} />
+      <ManagersSection match={match} />
 
       <EventLog
         events={matchEvents}

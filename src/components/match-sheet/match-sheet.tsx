@@ -11,7 +11,9 @@ import {
   slotDisplayName,
   subsForMatch,
   type Match,
+  teamManagers,
 } from "@/lib/tournament";
+import { teamShort } from "@/data/team-names";
 import { MatchTimeline, ScorerColumns } from "../event-list";
 import { GroupTag } from "../group-tag";
 import { Matchup } from "../live/live-hero";
@@ -136,7 +138,12 @@ function Status({ match }: { match: Match }) {
 }
 
 function SummaryPanel({ match }: { match: Match }) {
-  const { events, playersById, teamsById, substitutions, officials } = useTournament();
+  const { events, playersById, teamsById, substitutions, officials, staff } = useTournament();
+  const managers = [match.home_team_id, match.away_team_id]
+    .map((id) => (id != null ? teamsById.get(id) : undefined))
+    .filter((t) => t != null)
+    .map((team) => ({ team, names: teamManagers(staff, team.id).map((s) => s.name) }))
+    .filter((m) => m.names.length > 0);
   const officialGroups = groupOfficials(officials, match.id);
   const now = useServerNow(60_000);
   const matchEvents = eventsForMatch(match, events, playersById, teamsById);
@@ -167,6 +174,28 @@ function SummaryPanel({ match }: { match: Match }) {
                 <dt className="shrink-0 text-muted">{g.label}</dt>
                 <dd className="min-w-0 text-right font-medium">
                   {g.names.map((n, i) => (
+                    <span key={i} className="block">
+                      {n}
+                    </span>
+                  ))}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+      )}
+      {/* Each team's manager(s), from its team staff; a team without one is left out. */}
+      {managers.length > 0 && (
+        <section aria-labelledby="managers-title">
+          <h3 id="managers-title" className="mb-2 px-1 text-xs font-bold text-muted">
+            Team managers
+          </h3>
+          <dl className="divide-y divide-border rounded-xl text-sm ring-1 ring-border">
+            {managers.map((m) => (
+              <div key={m.team.id} className="flex items-baseline justify-between gap-4 px-4 py-2.5">
+                <dt className="shrink-0 text-muted">{teamShort(m.team)}</dt>
+                <dd className="min-w-0 text-right font-medium">
+                  {m.names.map((n, i) => (
                     <span key={i} className="block">
                       {n}
                     </span>

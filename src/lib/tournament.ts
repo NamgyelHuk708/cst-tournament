@@ -90,6 +90,13 @@ export function staffLines(staff: TeamStaff[], teamId: number): { label: string;
   });
 }
 
+/** A team's managers in their saved order (demo rows, when present, replace the real ones: testing). */
+export function teamManagers(staff: TeamStaff[], teamId: number): TeamStaff[] {
+  const mine = staff.filter((s) => s.team_id === teamId);
+  const rows = mine.some((s) => s.is_demo) ? mine.filter((s) => s.is_demo) : mine;
+  return rows.filter((s) => s.role === "manager").sort((a, b) => a.position - b.position);
+}
+
 /** Teams with the admin's display names attached (a demo row, when present, wins: testing). */
 export function withDisplayNames(teams: Team[], rows: TeamDisplayName[]): Team[] {
   const byTeam = new Map<number, TeamDisplayName>();
