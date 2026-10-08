@@ -11,6 +11,7 @@ import { IntroLiveSignal } from "../intro/intro-gate";
 import { BannerHero } from "./live-banner";
 import { LiveHero } from "./live-hero";
 import { NextMatchHero } from "./next-match-hero";
+import { NextLine } from "./next-line";
 
 const UP_NEXT_COUNT = 3;
 
@@ -52,7 +53,11 @@ export function LiveView() {
       <div className="space-y-3">
         <BannerHero />
         {hero ? (
-          <LiveHero match={hero} />
+          <>
+            <LiveHero match={hero} />
+            {/* During the result hold, the next match is one tap away under the full-time card. */}
+            {isFinished(hero) && scheduled[0] && <NextLine match={scheduled[0]} />}
+          </>
         ) : next ? (
           <NextHero match={next} />
         ) : (
