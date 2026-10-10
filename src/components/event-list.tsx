@@ -54,7 +54,9 @@ export function ScorerColumns({ events, className = "" }: { events: DisplayEvent
                 <PlayerLabel name={l.name} number={l.number} />
                 {l.teamCode && <span className="text-muted"> ({l.teamCode})</span>}
               </span>
-              <span className="shrink-0 font-medium text-muted tabular">
+              {/* Many goals ("6', 16', 20', 21', …") wrap onto more lines inside this column, never across
+                  into the other team's: no shrink-0 here. */}
+              <span className="max-w-full min-w-0 font-medium text-muted tabular">
                 {minutesText(l)}
                 {l.ownGoal && " (OG)"}
               </span>
