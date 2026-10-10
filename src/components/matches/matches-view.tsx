@@ -1,9 +1,10 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
 import { dayKey, formatDay } from "@/lib/format";
-import { GROUP_CODES, isFinished, isLive, isUpcoming, type GroupCode, type Match, type Team } from "@/lib/tournament";
+import { GROUP_CODES, isFinished, isLive, isUpcoming, slotDisplayName, type GroupCode, type Match, type Team } from "@/lib/tournament";
 import { GroupSwatch } from "../group-tag";
 import { CloseIcon, SearchIcon } from "../icons";
 import { useServerNow, useTournament } from "../tournament-provider";
@@ -13,6 +14,22 @@ import { teamSearchText, teamShort, teamSub } from "@/data/team-names";
 import { SponsorsFooter } from "../sponsors";
 
 type View = "results" | "upcoming";
+
+/** The admin's list (All matches) reuses this view: its own path, rows that link to the match screen, and flags. */
+export type MatchesViewOptions = {
+  /** Where the list lives; the view and filter are kept in its URL. */
+  basePath: string;
+  heading: React.ReactNode;
+  /** Each row links here instead of opening the match sheet; `listHref` is the list as it is now. */
+  rowHref?: (match: Match, listHref: string) => string;
+  /** Problems to flag under a row ("Result needed"). */
+  rowFlags?: (match: Match) => string[];
+  /** A match number typed in the search ("33") offers that match. */
+  matchSearch?: boolean;
+  /** The filter bar sticks to the top of the screen (the public pages, which have no sticky header). */
+  sticky?: boolean;
+  footer?: React.ReactNode;
+};
 type Filter = { kind: "all" } | { kind: "group"; group: GroupCode } | { kind: "knockouts" } | { kind: "team"; team: Team };
 
 const DAY_MS = 86_400_000;
@@ -28,14 +45,14 @@ function readFilter(params: URLSearchParams, teams: Team[]): Filter {
   return { kind: "all" };
 }
 
-function hrefFor(view: View, filter: Filter): string {
+function hrefFor(view: View, filter: Filter, basePath = "/matches"): string {
   const p = new URLSearchParams();
   if (view === "upcoming") p.set("view", "upcoming");
   if (filter.kind === "group") p.set("group", filter.group);
   if (filter.kind === "knockouts") p.set("stage", "knockouts");
   if (filter.kind === "team") p.set("team", filter.team.short_code);
   const q = p.toString();
-  return q ? `/matches?${q}` : "/matches";
+  return q ? `${basePath}?${q}` : basePath;
 }
 
 function inFilter(m: Match, f: Filter): boolean {
@@ -52,7 +69,25 @@ function sameFilter(a: Filter, b: Filter): boolean {
   return true;
 }
 
-export function MatchesView() {
+const PUBLIC_OPTIONS: MatchesViewOptions = {
+  basePath: "/matches",
+  heading: (
+    <>
+      <h1 className="font-display text-[28px] leading-tight font-bold">Matches</h1>
+      <PublicSubtitle />
+    </>
+  ),
+  sticky: true,
+  footer: <SponsorsFooter />,
+};
+
+function PublicSubtitle() {
+  const { matches } = useTournament();
+  return <p className="text-sm text-muted">Every result and fixture, all {matches.length} matches.</p>;
+}
+
+export function MatchesView({ options = PUBLIC_OPTIONS }: { options?: MatchesViewOptions }) {
+  const { basePath, rowHref, rowFlags } = options;
   const params = useSearchParams();
   const { matches, teams } = useTournament();
   const now = useServerNow(60_000);
@@ -60,7 +95,9 @@ export function MatchesView() {
   const filter = readFilter(params, teams);
 
   // Filters change the URL in place (no server round trip; Next keeps useSearchParams in sync).
-  const go = (v: View, f: Filter) => window.history.replaceState(null, "", hrefFor(v, f));
+  const go = (v: View, f: Filter) => window.history.replaceState(null, "", hrefFor(v, f, basePath));
+  const listHref = hrefFor(view, filter, basePath);
+  const row = { href: rowHref ? (m: Match) => rowHref(m, listHref) : undefined, flags: rowFlags };
 
   const filtered = matches.filter((m) => inFilter(m, filter));
   const live = filtered.filter(isLive);
@@ -75,14 +112,17 @@ export function MatchesView() {
 
   return (
     <div>
-      <header className="px-1">
-        <h1 className="font-display text-[28px] leading-tight font-bold">Matches</h1>
-        <p className="text-sm text-muted">Every result and fixture, all {matches.length} matches.</p>
-      </header>
+      <header className="px-1">{options.heading}</header>
 
-      <TeamSearch teams={teams} onPick={(team) => go(view, { kind: "team", team })} />
+      <TeamSearch
+        teams={teams}
+        onPick={(team) => go(view, { kind: "team", team })}
+        findMatch={options.matchSearch && row.href ? (q) => findMatch(q, matches, row.href!) : undefined}
+      />
 
-      <div className="sticky top-0 z-20 -mx-4 mt-3 space-y-2.5 border-b border-border/70 bg-bg/95 px-4 py-2.5 backdrop-blur">
+      <div
+        className={`${options.sticky ? "sticky top-0 z-20 border-b border-border/70 bg-bg/95 backdrop-blur" : ""} -mx-4 mt-3 space-y-2.5 px-4 py-2.5`}
+      >
         <div role="tablist" aria-label="Show" className="grid grid-cols-2 gap-1 rounded-xl bg-card p-1 ring-1 ring-border">
           {(["results", "upcoming"] as const).map((v) => (
             <button
@@ -114,9 +154,9 @@ export function MatchesView() {
             </Empty>
           ) : (
             <>
-              {live.length > 0 && <DayList title="Live now" matches={live} />}
+              {live.length > 0 && <DayList title="Live now" matches={live} row={row} />}
               {byDay(played).map(([key, list]) => (
-                <DayList key={key} title={dayTitle(list[0].kickoff_at, now)} matches={list} />
+                <DayList key={key} title={dayTitle(list[0].kickoff_at, now)} matches={list} row={row} />
               ))}
             </>
           )
@@ -125,12 +165,21 @@ export function MatchesView() {
             No upcoming matches
           </Empty>
         ) : (
-          byDay(upcoming).map(([key, list]) => <DayList key={key} title={dayTitle(list[0].kickoff_at, now)} matches={list} />)
+          byDay(upcoming).map(([key, list]) => <DayList key={key} title={dayTitle(list[0].kickoff_at, now)} matches={list} row={row} />)
         )}
       </div>
-      <SponsorsFooter />
+      {options.footer}
     </div>
   );
+}
+
+type RowOptions = { href?: (m: Match) => string; flags?: (m: Match) => string[] };
+
+/** "33" or "#33": that match, if there is one. */
+function findMatch(q: string, matches: Match[], href: (m: Match) => string): { match: Match; href: string } | null {
+  const n = /^#?(\d{1,2})$/.exec(q)?.[1];
+  const match = n ? matches.find((m) => m.id === Number(n)) : undefined;
+  return match ? { match, href: href(match) } : null;
 }
 
 function byDay(list: Match[]): [string, Match[]][] {
@@ -150,13 +199,13 @@ function dayTitle(iso: string, now: number): string {
   return relative ? `${relative} · ${formatDay(iso)}` : formatDay(iso);
 }
 
-function DayList({ title, matches }: { title: string; matches: Match[] }) {
+function DayList({ title, matches, row }: { title: string; matches: Match[]; row: RowOptions }) {
   return (
     <section>
       <h2 className="mb-2 px-1 text-xs font-bold text-muted">{title}</h2>
       <ul className="divide-y divide-border overflow-hidden rounded-xl shadow-sm ring-1 ring-border/60">
         {matches.map((m) => (
-          <MatchListRow key={m.id} match={m} />
+          <MatchListRow key={m.id} match={m} href={row.href?.(m)} flags={row.flags?.(m)} />
         ))}
       </ul>
     </section>
@@ -269,11 +318,21 @@ function TeamChipLabel({ team }: { team: Team }) {
 }
 
 /** Find a team by short name, second line, official name or code; picking one filters both views. */
-function TeamSearch({ teams, onPick }: { teams: Team[]; onPick: (team: Team) => void }) {
+function TeamSearch({
+  teams,
+  onPick,
+  findMatch,
+}: {
+  teams: Team[];
+  onPick: (team: Team) => void;
+  findMatch?: (q: string) => { match: Match; href: string } | null;
+}) {
   const [query, setQuery] = useState("");
   const listId = useId();
+  const router = useRouter();
   const q = query.trim().toLowerCase();
   const hits = q ? teams.filter((t) => teamSearchText(t).includes(q)).slice(0, 6) : [];
+  const matchHit = q ? (findMatch?.(q) ?? null) : null;
 
   const pick = (team: Team) => {
     setQuery("");
@@ -290,11 +349,12 @@ function TeamSearch({ teams, onPick }: { teams: Team[]; onPick: (team: Team) => 
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === "Enter" && hits[0]) pick(hits[0]);
+            if (e.key === "Enter" && matchHit) router.push(matchHit.href);
+            else if (e.key === "Enter" && hits[0]) pick(hits[0]);
             if (e.key === "Escape") setQuery("");
           }}
-          placeholder="Search for a team"
-          aria-label="Search for a team"
+          placeholder={findMatch ? "Search for a team or match number" : "Search for a team"}
+          aria-label={findMatch ? "Search for a team or match number" : "Search for a team"}
           role="combobox"
           aria-expanded={q.length > 0}
           aria-controls={listId}
@@ -310,8 +370,9 @@ function TeamSearch({ teams, onPick }: { teams: Team[]; onPick: (team: Team) => 
       </label>
       {q && (
         <ul id={listId} role="listbox" aria-label="Teams" className="absolute inset-x-0 top-full z-30 mt-1 overflow-hidden rounded-xl bg-card shadow-lg ring-1 ring-border">
+          {matchHit && <MatchHit hit={matchHit} />}
           {hits.length === 0 ? (
-            <li className="px-4 py-3 text-sm text-muted">No team matches &ldquo;{query.trim()}&rdquo;</li>
+            !matchHit && <li className="px-4 py-3 text-sm text-muted">No team matches &ldquo;{query.trim()}&rdquo;</li>
           ) : (
             hits.map((t) => (
               <li key={t.id} role="option" aria-selected={false}>
@@ -330,5 +391,30 @@ function TeamSearch({ teams, onPick }: { teams: Team[]; onPick: (team: Team) => 
         </ul>
       )}
     </div>
+  );
+}
+
+/** The match whose number was typed: opens it. */
+function MatchHit({ hit }: { hit: { match: Match; href: string } }) {
+  const { teamsById } = useTournament();
+  const { match } = hit;
+  const side = (id: number | null) => teamShort(id != null ? teamsById.get(id) : undefined, "TBD");
+  return (
+    <li role="option" aria-selected={false}>
+      <Link href={hit.href} className="flex h-12 w-full items-center gap-3 px-4 text-left active:bg-bg">
+        <span className="font-display text-[16px] font-bold tabular">Match {match.id}</span>
+        <span className="min-w-0 flex-1 truncate text-sm text-muted">
+          {side(match.home_team_id)} v {side(match.away_team_id)}
+        </span>
+        {match.group_code ? (
+          <>
+            <GroupSwatch group={match.group_code} className="size-2.5" />
+            <span className="text-xs font-medium text-muted">{match.group_code}</span>
+          </>
+        ) : (
+          <span className="text-xs font-medium text-muted">{slotDisplayName(match.slot_label ?? "")}</span>
+        )}
+      </Link>
+    </li>
   );
 }

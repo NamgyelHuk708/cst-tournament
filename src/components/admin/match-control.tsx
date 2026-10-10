@@ -75,7 +75,7 @@ function errorMessage(err: unknown): string {
   return displaySlotLabels(msg) || "Something went wrong. Try again.";
 }
 
-export function MatchControl({ matchId }: { matchId: number }) {
+export function MatchControl({ matchId, back }: { matchId: number; back?: string }) {
   const { matches, matchesById, teamsById, teams, events, playersById, substitutions, local } = useTournament();
   const supabase = useMemo(() => createClient(), []);
   const match = matchesById.get(matchId);
@@ -296,8 +296,8 @@ export function MatchControl({ matchId }: { matchId: number }) {
   return (
     <div className="mx-auto max-w-xl">
       <div className="flex items-center gap-1 px-2 pt-2">
-        <Link href="/admin" className="flex h-11 items-center gap-1 rounded-lg px-2 text-sm font-medium text-muted active:bg-card">
-          <ChevronIcon className="size-4 rotate-90" /> All matches
+        <Link href={back ?? "/admin"} className="flex h-11 items-center gap-1 rounded-lg px-2 text-sm font-medium text-muted active:bg-card">
+          <ChevronIcon className="size-4 rotate-90" /> {back ? "All matches" : "Today"}
         </Link>
         <span className="ml-auto text-xs text-muted">
           {match.group_code ? `Group ${match.group_code}` : slotDisplayName(match.slot_label ?? "")} · Match {match.id}

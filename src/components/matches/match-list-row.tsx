@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { formatTime, relativeDay } from "@/lib/format";
 import {
   isFinished,
@@ -25,9 +26,10 @@ import { continuesLabel } from "../stoppage-note";
 
 /**
  * One match as a result line: "THS 4–2 IMM", match number and stage on the left.
- * The winner is in bold with a check; the loser is muted. Tapping opens the match sheet.
+ * The winner is in bold with a check; the loser is muted. Tapping opens the match sheet, or goes to
+ * `href` (the admin's list, which also flags problems under the row: "Result needed").
  */
-export function MatchListRow({ match }: { match: Match }) {
+export function MatchListRow({ match, href, flags }: { match: Match; href?: string; flags?: string[] }) {
   const sides = useResolvedSides(match);
   const openSheet = useMatchSheet();
   const now = useServerNow(15_000);
@@ -48,6 +50,7 @@ export function MatchListRow({ match }: { match: Match }) {
       ? `${name(sides.home)} ${match.home_score}, ${name(sides.away)} ${match.away_score}${pens ? `, ${pens} on penalties` : ""}`
       : `${name(sides.home)} v ${name(sides.away)}, ${formatTime(match.kickoff_at)}`,
     live ? `live, ${clock}` : isFinished(match) ? (winner ? `${name(sides[winner])} won` : "draw") : started ? "" : "not started",
+    ...(flags ?? []),
   ]
     .filter(Boolean)
     .join(", ");
@@ -107,7 +110,7 @@ export function MatchListRow({ match }: { match: Match }) {
             </span>
             {pens && <span className="mt-1 text-[11px] font-medium whitespace-nowrap text-muted tabular">({pens} pens)</span>}
           </>
-        ) : isFinished(match) ? null : Date.parse(match.kickoff_at) <= now ? (
+        ) : isFinished(match) ? null : Date.parse(match.kickoff_at) <= now && !flags ? (
           <span className="text-center text-[11px] leading-tight font-medium text-muted">Result to come</span>
         ) : (
           <span className="font-display text-lg font-semibold text-muted">vs</span>
@@ -120,6 +123,24 @@ export function MatchListRow({ match }: { match: Match }) {
   );
 
   const className = "flex min-h-[64px] w-full items-center gap-2 px-3 py-2.5 text-left";
+  if (href) {
+    return (
+      <li className="bg-card">
+        <Link href={href} aria-label={label} className="block active:bg-bg">
+          <span className={className}>{body}</span>
+          {flags && flags.length > 0 && (
+            <span className="-mt-1 flex flex-wrap gap-1.5 px-3 pb-2.5">
+              {flags.map((f) => (
+                <span key={f} className="rounded-full bg-text px-2.5 py-0.5 text-xs font-semibold text-white">
+                  {f}
+                </span>
+              ))}
+            </span>
+          )}
+        </Link>
+      </li>
+    );
+  }
   return (
     <li className="bg-card">
       {openSheet ? (
