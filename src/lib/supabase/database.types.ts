@@ -315,6 +315,62 @@ export type Database = {
           },
         ]
       }
+      match_stoppages: {
+        Row: {
+          abandoned: boolean
+          at_minute: number
+          away_score: number
+          created_at: string
+          ended_at: string | null
+          half: string
+          home_score: number
+          id: number
+          is_demo: boolean
+          match_id: number
+          outcome: string | null
+          reason: string | null
+          resume_at: string | null
+        }
+        Insert: {
+          abandoned?: boolean
+          at_minute: number
+          away_score: number
+          created_at?: string
+          ended_at?: string | null
+          half: string
+          home_score: number
+          id?: never
+          is_demo?: boolean
+          match_id: number
+          outcome?: string | null
+          reason?: string | null
+          resume_at?: string | null
+        }
+        Update: {
+          abandoned?: boolean
+          at_minute?: number
+          away_score?: number
+          created_at?: string
+          ended_at?: string | null
+          half?: string
+          home_score?: number
+          id?: never
+          is_demo?: boolean
+          match_id?: number
+          outcome?: string | null
+          reason?: string | null
+          resume_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "match_stoppages_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       matches: {
         Row: {
           away_pens: number | null
@@ -756,6 +812,30 @@ export type Database = {
       }
     }
     Functions: {
+      admin_abandon_match: {
+        Args: { p_match: number; p_resume_at?: string }
+        Returns: {
+          abandoned: boolean
+          at_minute: number
+          away_score: number
+          created_at: string
+          ended_at: string | null
+          half: string
+          home_score: number
+          id: number
+          is_demo: boolean
+          match_id: number
+          outcome: string | null
+          reason: string | null
+          resume_at: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "match_stoppages"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       admin_add_event: {
         Args: {
           p_client_id: string
@@ -859,6 +939,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      admin_cancel_suspension: { Args: { p_match: number }; Returns: undefined }
       admin_change_kickoff: {
         Args: { p_match: number; p_new: string; p_reason?: string }
         Returns: {
@@ -1012,6 +1093,72 @@ export type Database = {
         }
       }
       admin_reset_match_clean: {
+        Args: { p_match: number }
+        Returns: {
+          away_pens: number | null
+          away_score: number
+          away_source: Database["public"]["Enums"]["slot_source"] | null
+          away_source_group: string | null
+          away_source_match: number | null
+          away_team_id: number | null
+          group_code: string | null
+          home_pens: number | null
+          home_score: number
+          home_source: Database["public"]["Enums"]["slot_source"] | null
+          home_source_group: string | null
+          home_source_match: number | null
+          home_team_id: number | null
+          id: number
+          is_demo: boolean
+          kickoff_at: string
+          notes: string | null
+          period_started_at: string | null
+          slot_label: string | null
+          stage: Database["public"]["Enums"]["match_stage"]
+          status: Database["public"]["Enums"]["match_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "matches"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      admin_restart_match: {
+        Args: { p_match: number; p_new_kickoff?: string }
+        Returns: {
+          away_pens: number | null
+          away_score: number
+          away_source: Database["public"]["Enums"]["slot_source"] | null
+          away_source_group: string | null
+          away_source_match: number | null
+          away_team_id: number | null
+          group_code: string | null
+          home_pens: number | null
+          home_score: number
+          home_source: Database["public"]["Enums"]["slot_source"] | null
+          home_source_group: string | null
+          home_source_match: number | null
+          home_team_id: number | null
+          id: number
+          is_demo: boolean
+          kickoff_at: string
+          notes: string | null
+          period_started_at: string | null
+          slot_label: string | null
+          stage: Database["public"]["Enums"]["match_stage"]
+          status: Database["public"]["Enums"]["match_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "matches"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      admin_resume_play: {
         Args: { p_match: number }
         Returns: {
           away_pens: number | null
@@ -1288,6 +1435,30 @@ export type Database = {
           to: "team_staff"
           isOneToOne: false
           isSetofReturn: true
+        }
+      }
+      admin_suspend_play: {
+        Args: { p_match: number; p_reason?: string }
+        Returns: {
+          abandoned: boolean
+          at_minute: number
+          away_score: number
+          created_at: string
+          ended_at: string | null
+          half: string
+          home_score: number
+          id: number
+          is_demo: boolean
+          match_id: number
+          outcome: string | null
+          reason: string | null
+          resume_at: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "match_stoppages"
+          isOneToOne: true
+          isSetofReturn: false
         }
       }
       admin_undo: { Args: { p_match: number }; Returns: Json }

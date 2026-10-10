@@ -20,6 +20,8 @@ import { useResolvedSides } from "../use-resolved-sides";
 import { LivePill } from "../live-pill";
 import { fitNameSize, teamShort, teamSub } from "@/data/team-names";
 import { isPostponed } from "@/lib/tournament";
+import { isAbandoned, stoppageMinuteLabel } from "@/lib/tournament";
+import { continuesLabel } from "../stoppage-note";
 
 /**
  * One match as a result line: "THS 4–2 IMM", match number and stage on the left.
@@ -30,7 +32,7 @@ export function MatchListRow({ match }: { match: Match }) {
   const openSheet = useMatchSheet();
   const now = useServerNow(15_000);
   const live = isLive(match);
-  const started = live || isFinished(match);
+  const started = live || isFinished(match) || isAbandoned(match);
   const outcome = matchOutcome(match);
   const winner = outcome?.winner ?? null;
   const pens = match.home_pens != null && match.away_pens != null ? `${match.home_pens}–${match.away_pens}` : null;
@@ -72,6 +74,11 @@ export function MatchListRow({ match }: { match: Match }) {
               {day} {time}
             </span>
             <LivePill match={match} />
+          </>
+        ) : isAbandoned(match) ? (
+          <>
+            <span className="text-xs font-semibold">Abandoned <span className="whitespace-nowrap">{match.stoppage && stoppageMinuteLabel(match.stoppage)}</span></span>
+            <span className="text-[11px] leading-tight font-medium text-muted">{continuesLabel(match)}</span>
           </>
         ) : isPostponed(match) ? (
           <>

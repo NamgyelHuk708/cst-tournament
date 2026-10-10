@@ -358,6 +358,10 @@ export function MatchControl({ matchId }: { matchId: number }) {
         onPens={setPens}
         onAddEvent={() => setAdding(true)}
         onSetFinal={() => openTool("final")}
+        onStoppageChanged={() => {
+          setToast(null);
+          loadLastAction();
+        }}
         onChangeStatus={() => openTool("status")}
         onChooseTeams={match.stage !== "group" ? () => openTool("teams") : undefined}
       />

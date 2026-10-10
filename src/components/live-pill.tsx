@@ -45,10 +45,10 @@ export function LivePill({
   const inPlay = isBallInPlay(match);
   const minute = clock.label.endsWith("'") ? clock.label : null;
   const word = statusWord(match);
-  const text = word === "Live" && minute ? `Live ${minute}` : word;
+  const text = (word === "Live" || word === "Suspended") && minute ? `${word} ${minute}` : word;
   const spoken = [
     word,
-    inPlay ? spokenMinute(minute, clock.label) : null,
+    inPlay || word === "Suspended" ? spokenMinute(minute, clock.label) : null,
     size === "lg" && home && away ? `${home.name} ${match.home_score}, ${away.name} ${match.away_score}` : null,
   ]
     .filter(Boolean)
@@ -72,7 +72,8 @@ export function LivePill({
   );
 }
 
-function statusWord(match: Match): "Half-time" | "Penalties" | "Live" {
+function statusWord(match: Match): "Half-time" | "Penalties" | "Live" | "Suspended" {
+  if (match.stoppage) return "Suspended";
   if (match.status === "half_time") return "Half-time";
   if (match.status === "penalties") return "Penalties";
   return "Live";

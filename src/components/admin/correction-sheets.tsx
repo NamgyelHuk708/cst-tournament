@@ -495,7 +495,7 @@ function Nudge({ label, value, onChange, disabled = false }: { label: string; va
 // ---------------------------------------------------------------------------
 
 /** "2026-10-13" and "16:00" in Bhutan time for an ISO time. */
-function bhutanParts(iso: string): { date: string; time: string } {
+export function bhutanParts(iso: string): { date: string; time: string } {
   const d = new Date(Date.parse(iso) + 6 * 3600_000).toISOString();
   return { date: d.slice(0, 10), time: d.slice(11, 16) };
 }

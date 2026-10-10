@@ -6,6 +6,7 @@ import { useServerNow } from "../tournament-provider";
 import type { PendingTap } from "./match-control";
 import { teamShort } from "@/data/team-names";
 import { ResultHoldPanel } from "./result-hold";
+import { StoppagePanel, SuspendButton } from "./stoppage-controls";
 
 type Props = {
   match: Match;
@@ -28,6 +29,8 @@ type Props = {
   onAddEvent: () => void;
   onSetFinal: () => void;
   onChangeStatus: () => void;
+  /** After a suspend, resume, abandon or restart: reload the undo history. */
+  onStoppageChanged: () => void;
   /** Knockout ties only. */
   onChooseTeams?: () => void;
 };
@@ -45,6 +48,7 @@ export function ControlDock(props: Props) {
   // Long past kick-off and never started: most likely a result being entered afterwards.
   const pastMatch = match.status === "scheduled" && now - Date.parse(match.kickoff_at) > PAST_MATCH_MS;
   const teamsSet = !!home && !!away;
+  const stopped = !!match.stoppage;
 
   return (
     <div className="fixed inset-x-0 bottom-0 z-20">
@@ -130,6 +134,8 @@ export function ControlDock(props: Props) {
                 </button>
               </div>
             </div>
+          ) : stopped ? (
+            <StoppagePanel match={match} home={home} away={away} onChanged={props.onStoppageChanged} />
           ) : match.status === "penalties" ? (
             <PenaltyControls match={match} home={home} away={away} busy={busy} onPens={props.onPens} />
           ) : (
@@ -182,7 +188,7 @@ export function ControlDock(props: Props) {
             </div>
           )}
 
-          {match.status === "scheduled" || match.status === "finished" ? null : step ? (
+          {match.status === "scheduled" || match.status === "finished" || stopped ? null : step ? (
             <button
               type="button"
               onClick={props.onStep}
@@ -200,6 +206,7 @@ export function ControlDock(props: Props) {
               Full time. Use undo to reopen the match.
             </p>
           )}
+          {inPlay && !stopped && <SuspendButton match={match} disabled={busy} onChanged={props.onStoppageChanged} />}
           {match.status === "half_time" && (
             <p className="mt-2 text-center text-xs text-muted">Goals can be recorded once play restarts.</p>
           )}

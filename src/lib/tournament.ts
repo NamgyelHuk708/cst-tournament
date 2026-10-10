@@ -13,6 +13,20 @@ export type Team = Pick<Tables["teams"]["Row"], "id" | "slot" | "group_code" | "
 export type Match = Tables["matches"]["Row"] & {
   /** Kick-off changes (kickoff_changes): postponed, or moved from another time. Absent: as scheduled. */
   schedule?: MatchSchedule;
+  /** Play stopped and not yet resumed or restarted (match_stoppages). Absent: no stoppage. */
+  stoppage?: MatchStoppage;
+};
+export type MatchStoppage = {
+  id: number;
+  match_id: number;
+  at_minute: number;
+  half: "first_half" | "second_half";
+  home_score: number;
+  away_score: number;
+  reason: string | null;
+  abandoned: boolean;
+  resume_at: string | null;
+  outcome: "resumed" | "restarted" | null;
 };
 export type MatchSchedule = {
   /** Postponed, new time to be announced (kickoff_at still holds the old time). */
@@ -64,7 +78,31 @@ export type Snapshot = {
   resultHolds: ResultHold[];
   kickoffChanges: KickoffChange[];
   notices: Notice[];
+  stoppages: MatchStoppage[];
 };
+
+/** Matches with their open stoppage (if any) attached. */
+export function withStoppages(matches: Match[], stoppages: MatchStoppage[]): Match[] {
+  const open = new Map(stoppages.filter((s) => s.outcome == null).map((s) => [s.match_id, s]));
+  if (!open.size) return matches;
+  return matches.map((m) => (open.has(m.id) ? { ...m, stoppage: open.get(m.id) } : m));
+}
+
+/** Play suspended (power cut, weather...), expected to restart today: the clock is stopped. */
+export function isSuspended(match: Pick<Match, "stoppage">): boolean {
+  return !!match.stoppage && !match.stoppage.abandoned;
+}
+
+/** Abandoned for today: to be resumed or started again later. Not live, listed as upcoming. */
+export function isAbandoned(match: Pick<Match, "stoppage">): boolean {
+  return !!match.stoppage?.abandoned;
+}
+
+/** The minute play stopped at, as the clock shows it: "37'", "45+2'". */
+export function stoppageMinuteLabel(s: Pick<MatchStoppage, "at_minute" | "half">): string {
+  const end = s.half === "first_half" ? HALF_LENGTH_MINUTES : HALF_LENGTH_MINUTES * 2;
+  return s.at_minute > end ? `${end}+${s.at_minute - end}'` : `${s.at_minute}'`;
+}
 
 /** Matches with their schedule state attached from the kick-off changes that haven't been undone. */
 export function withSchedule(matches: Match[], changes: KickoffChange[]): Match[] {
@@ -202,13 +240,14 @@ export type GroupCode = (typeof GROUP_CODES)[number];
 
 const LIVE_STATUSES: readonly MatchStatus[] = ["first_half", "half_time", "second_half", "penalties"];
 
-/** A half is being played (the clock runs). Not at half-time, penalties or before/after the match. */
-export function isBallInPlay(match: Pick<Match, "status">): boolean {
-  return match.status === "first_half" || match.status === "second_half";
+/** A half is being played (the clock runs). Not at half-time, penalties, a stoppage, or before/after the match. */
+export function isBallInPlay(match: Pick<Match, "status" | "stoppage">): boolean {
+  return (match.status === "first_half" || match.status === "second_half") && !match.stoppage;
 }
 
-export function isLive(match: Pick<Match, "status">): boolean {
-  return LIVE_STATUSES.includes(match.status);
+export function isLive(match: Pick<Match, "status" | "stoppage">): boolean {
+  // Abandoned for today: not live (it continues or starts again another time).
+  return LIVE_STATUSES.includes(match.status) && !match.stoppage?.abandoned;
 }
 
 export function isFinished(match: Pick<Match, "status">): boolean {
@@ -222,8 +261,8 @@ export function isFinished(match: Pick<Match, "status">): boolean {
 export const RESULT_PENDING_AFTER_MS = 3 * 60 * 60 * 1000;
 
 /** Not started, and not so long past kick-off that it is really a missing result. A postponed match is always upcoming. */
-export function isUpcoming(match: Pick<Match, "status" | "kickoff_at" | "schedule">, now: number): boolean {
-  if (isPostponed(match)) return true;
+export function isUpcoming(match: Pick<Match, "status" | "kickoff_at" | "schedule" | "stoppage">, now: number): boolean {
+  if (isPostponed(match) || isAbandoned(match)) return true;
   return match.status === "scheduled" && Date.parse(match.kickoff_at) > now - RESULT_PENDING_AFTER_MS;
 }
 
@@ -247,7 +286,9 @@ export type MatchClock = {
  * Counts like a broadcast clock: the first minute is 1', and play beyond the
  * end of a half is shown as stoppage time (45+2', 90+3') instead of 47', 93'.
  */
-export function matchClock(match: Pick<Match, "status" | "period_started_at">, now: number | null): MatchClock {
+export function matchClock(match: Pick<Match, "status" | "period_started_at" | "stoppage">, now: number | null): MatchClock {
+  // Play stopped: the clock stays at the minute it stopped.
+  if (match.stoppage) return { label: stoppageMinuteLabel(match.stoppage), running: false };
   switch (match.status) {
     case "scheduled":
       return { label: "", running: false };

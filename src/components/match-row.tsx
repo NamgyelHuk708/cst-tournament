@@ -17,6 +17,8 @@ import { useFlashOnChange } from "./use-flash";
 import { LivePill } from "./live-pill";
 import { teamShort, teamSub } from "@/data/team-names";
 import { isPostponed } from "@/lib/tournament";
+import { isAbandoned, stoppageMinuteLabel } from "@/lib/tournament";
+import { continuesLabel } from "./stoppage-note";
 
 type Props = {
   match: Match;
@@ -34,7 +36,7 @@ export function MatchRow({ match, placeholders, oneLine = false }: Props) {
   const { teamsById } = useTournament();
   const openSheet = useMatchSheet();
 
-  const started = isFinished(match) || isLive(match);
+  const started = isFinished(match) || isLive(match) || isAbandoned(match);
   const outcome = matchOutcome(match);
 
   const home = match.home_team_id != null ? teamsById.get(match.home_team_id) : undefined;
@@ -154,6 +156,14 @@ function StatusCell({ match }: { match: Match }) {
         <span className="mt-0.5 block text-[11px] leading-tight font-medium text-muted tabular">
           {day} <span className="whitespace-nowrap">{time}</span>
         </span>
+      </span>
+    );
+  }
+  if (isAbandoned(match)) {
+    return (
+      <span className="w-[5rem] shrink-0 leading-tight">
+        <span className="block text-xs font-semibold">Abandoned <span className="whitespace-nowrap">{match.stoppage && stoppageMinuteLabel(match.stoppage)}</span></span>
+        <span className="block text-[11px] font-medium text-muted">{continuesLabel(match)}</span>
       </span>
     );
   }

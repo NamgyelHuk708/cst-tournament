@@ -26,6 +26,8 @@ import { Sponsors } from "../sponsors";
 import { LivePill } from "../live-pill";
 import { isPostponed } from "@/lib/tournament";
 import { wasLabel } from "../schedule-note";
+import { isAbandoned } from "@/lib/tournament";
+import { continuesLabel, stoppageLabel } from "../stoppage-note";
 
 /** One match detail sheet for the public pages; any match opens it via useMatchSheet(). */
 export function MatchSheetProvider({ children }: { children: React.ReactNode }) {
@@ -59,7 +61,7 @@ function MatchDetail({ match, onLeave }: { match: Match; onLeave: () => void }) 
   const tabsId = useId();
   const home = match.home_team_id != null ? teamsById.get(match.home_team_id) : undefined;
   const away = match.away_team_id != null ? teamsById.get(match.away_team_id) : undefined;
-  const started = isLive(match) || isFinished(match);
+  const started = isLive(match) || isFinished(match) || isAbandoned(match);
 
   return (
     // Any link inside (a team's matches) leaves the sheet, even if it points at the current page.
@@ -132,6 +134,7 @@ function MatchDetail({ match, onLeave }: { match: Match; onLeave: () => void }) 
 function Status({ match }: { match: Match }) {
   if (isLive(match)) return <LivePill match={match} size="md" />;
   if (isFinished(match)) return <span className="shrink-0 font-display text-sm font-semibold text-muted">Full time</span>;
+  if (isAbandoned(match)) return <span className="shrink-0 text-xs font-semibold">Abandoned</span>;
   if (isPostponed(match)) return <span className="shrink-0 text-xs font-semibold">Postponed</span>;
   return (
     <span className="shrink-0 text-xs font-semibold text-muted tabular">
@@ -151,7 +154,7 @@ function SummaryPanel({ match }: { match: Match }) {
   const now = useServerNow(60_000);
   const matchEvents = eventsForMatch(match, events, playersById, teamsById);
   const matchSubs = subsForMatch(match, substitutions, playersById);
-  const started = isLive(match) || isFinished(match);
+  const started = isLive(match) || isFinished(match) || isAbandoned(match);
 
   return (
     <div className="space-y-4">
@@ -213,6 +216,12 @@ function SummaryPanel({ match }: { match: Match }) {
         <Info label="Kick-off">
           {isPostponed(match) ? "Postponed, new time to be announced" : `${formatDay(match.kickoff_at)} · ${formatTime(match.kickoff_at)}`}
         </Info>
+        {match.stoppage && (
+          <Info label="Stopped">
+            <span className="block">{stoppageLabel(match).replace(/^\w+ at /, "")}</span>
+            {match.stoppage.abandoned && <span className="block text-muted">{continuesLabel(match)}</span>}
+          </Info>
+        )}
         {match.schedule && (
           <Info label={match.schedule.postponed ? "Was" : "Rescheduled"}>
             <span className="block">{match.schedule.postponed ? wasLabel(match) : `was ${wasLabel(match)}`}</span>

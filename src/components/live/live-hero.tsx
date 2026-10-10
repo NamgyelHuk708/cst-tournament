@@ -44,6 +44,7 @@ export function LiveHero({ match }: { match: Match }) {
             )}
           </span>
         </div>
+        {match.stoppage && <p className="mt-1.5 text-center text-sm font-medium text-muted">Play suspended{match.stoppage.reason ? `: ${match.stoppage.reason}` : ""}</p>}
 
         <Matchup
           className="mt-2"
