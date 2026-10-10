@@ -3,7 +3,7 @@ import { AppHeader } from "@/components/app-header";
 import { BottomNav } from "@/components/bottom-nav";
 import { IntroGate } from "@/components/intro/intro-gate";
 import { MatchSheetProvider } from "@/components/match-sheet/match-sheet";
-import { NoticeBanner } from "@/components/notice-banner";
+import { NoticeTicker } from "@/components/notice-ticker";
 import { PageSkeleton } from "@/components/skeletons";
 import { TournamentData } from "@/components/tournament-data";
 
@@ -30,10 +30,10 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
           <MatchSheetProvider>
             <AppHeader />
             <main className={MAIN}>
-              {/* Organisers' notices (schedule changes and the like), live. */}
-              <NoticeBanner />
               {children}
             </main>
+            {/* Organisers' notices (schedule changes and the like), live: a ticker above the tab bar. */}
+            <NoticeTicker />
             <BottomNav />
           </MatchSheetProvider>
         </TournamentData>

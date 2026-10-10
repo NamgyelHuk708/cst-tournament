@@ -40,6 +40,7 @@
   --group-h: #b0457e;
 
   --nav-height: 4rem;
+  --ticker-height: 34px;
 }
 
 /* Dark mode, prepared but not switched on yet (dark mode is out of scope for now): setting
@@ -123,6 +124,33 @@ body {
   animation: live-underline 2s cubic-bezier(0.65, 0, 0.35, 1) infinite;
 }
 
+/*
+ * Notice ticker (Live page): the line moves left by one copy's width per loop, at a constant speed
+ * (duration set from the width). Paused while touched, hovered (mouse) or focused; soft edges.
+ */
+@keyframes ticker {
+  to { transform: translateX(calc(-1 * var(--ticker-shift))); }
+}
+
+.ticker-track {
+  animation: ticker var(--ticker-duration) linear infinite;
+}
+
+.ticker-view {
+  mask-image: linear-gradient(90deg, transparent, black 16px, black calc(100% - 24px), transparent);
+}
+
+.ticker-view[data-held] .ticker-track,
+.ticker:focus-visible .ticker-track {
+  animation-play-state: paused;
+}
+
+@media (hover: hover) {
+  .ticker:hover .ticker-track {
+    animation-play-state: paused;
+  }
+}
+
 /* Brief highlight when a score changes. */
 @keyframes score-flash {
   0% { background-color: var(--live-soft); }
@@ -153,7 +181,7 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .score-flash, .skeleton::after {
+  .score-flash, .skeleton::after, .ticker-track {
     animation: none;
   }
   /* Still, at full width. */

@@ -122,7 +122,7 @@ export function isPostponed(match: Pick<Match, "status" | "schedule">): boolean 
   return match.status === "scheduled" && !!match.schedule?.postponed;
 }
 
-/** Notices showing now: all on the Live page, important ones on every public page. */
+/** Notices showing now, important first (all, or only the important ones), newest first within each. */
 export function activeNotices(notices: Notice[], now: number, importantOnly: boolean): Notice[] {
   return notices
     .filter((n) => Date.parse(n.starts_at) <= now && now < Date.parse(n.ends_at) && (!importantOnly || n.level === "important"))
