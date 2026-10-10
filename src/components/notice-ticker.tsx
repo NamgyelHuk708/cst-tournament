@@ -3,6 +3,7 @@
 import { useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { usePathname } from "next/navigation";
 import { activeNotices, type Notice } from "@/lib/tournament";
+import { BellIcon } from "./icons";
 import { Sheet } from "./sheet";
 import { useServerNow, useTournament } from "./tournament-provider";
 
@@ -23,7 +24,7 @@ function subscribeReducedMotion(onChange: () => void) {
 }
 
 /**
- * Organisers' notices as a TV-style ticker fixed above the tab bar: a fixed label ("Notification"),
+ * Organisers' notices as a TV-style ticker fixed above the tab bar: a fixed label (bell, "Notification"),
  * then every current notice scrolling right to left in a loop,
  * important ones first. Touching or hovering pauses it; tapping opens all of them in a sheet.
  * Notices arrive, change and end live (server time). Renders nothing when there are none.
@@ -61,7 +62,7 @@ export function NoticeTicker() {
         >
           <span className="sr-only">Read all notices</span>
           <span aria-hidden="true" className="flex shrink-0 items-center gap-1.5 bg-brand-deep px-3 text-xs font-semibold">
-            <span className="size-1.5 rounded-full bg-card-yellow" />
+            <BellIcon className="size-3.5 shrink-0" />
             Notification
           </span>
           <TickerText notices={shown} />

@@ -1,5 +1,21 @@
 type IconProps = { className?: string };
 
+/** Notification bell (the notice ticker's label). */
+export function BellIcon({ className = "size-3.5" }: IconProps) {
+  return (
+    <svg viewBox="0 0 16 16" className={className} aria-hidden="true">
+      <path
+        d="M4 11.5V7a4 4 0 0 1 8 0v4.5l1.2 1.2H2.8ZM6.5 13.5a1.5 1.5 0 0 0 3 0"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export function BallIcon({ className = "size-3.5" }: IconProps) {
   return (
     <svg viewBox="0 0 16 16" className={className} aria-hidden="true">
