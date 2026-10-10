@@ -23,8 +23,8 @@ function subscribeReducedMotion(onChange: () => void) {
 }
 
 /**
- * Organisers' notices as a TV-style ticker fixed above the tab bar: a fixed label ("Notice", or
- * "Important" when any notice is), then every current notice scrolling right to left in a loop,
+ * Organisers' notices as a TV-style ticker fixed above the tab bar: a fixed label ("Notification"),
+ * then every current notice scrolling right to left in a loop,
  * important ones first. Touching or hovering pauses it; tapping opens all of them in a sheet.
  * Notices arrive, change and end live (server time). Renders nothing when there are none.
  */
@@ -36,7 +36,6 @@ export function NoticeTicker() {
   const shown = NOTICES_ON_LIVE_PAGE_ONLY && !onLive ? [] : activeNotices(notices, now, !onLive);
   if (!shown.length) return null;
 
-  const important = shown.some((n) => n.level === "important");
   return (
     <>
       {/* Room at the bottom of the page so the last item scrolls fully above the bar. */}
@@ -63,7 +62,7 @@ export function NoticeTicker() {
           <span className="sr-only">Read all notices</span>
           <span aria-hidden="true" className="flex shrink-0 items-center gap-1.5 bg-brand-deep px-3 text-xs font-semibold">
             <span className="size-1.5 rounded-full bg-card-yellow" />
-            {important ? "Important" : "Notice"}
+            Notification
           </span>
           <TickerText notices={shown} />
         </button>
