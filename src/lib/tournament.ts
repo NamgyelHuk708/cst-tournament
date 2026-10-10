@@ -10,7 +10,28 @@ export type Team = Pick<Tables["teams"]["Row"], "id" | "slot" | "group_code" | "
   /** Display names set by the admin (team_display_names); absent: src/data/team-names.ts is used. */
   display?: { short: string; full: string | null };
 };
-export type Match = Tables["matches"]["Row"];
+export type Match = Tables["matches"]["Row"] & {
+  /** Kick-off changes (kickoff_changes): postponed, or moved from another time. Absent: as scheduled. */
+  schedule?: MatchSchedule;
+};
+export type MatchSchedule = {
+  /** Postponed, new time to be announced (kickoff_at still holds the old time). */
+  postponed: boolean;
+  /** The kick-off announced before the first change, for "Rescheduled · was Fri 9 Oct, 8:00 PM". */
+  was: string;
+  /** The latest reason given, e.g. "Floodlight failure". */
+  reason: string | null;
+};
+export type KickoffChange = {
+  id: number;
+  match_id: number;
+  old_kickoff: string;
+  new_kickoff: string | null;
+  reason: string | null;
+  undone_at: string | null;
+  created_at: string;
+};
+export type Notice = { id: number; message: string; level: "info" | "important"; starts_at: string; ends_at: string };
 export type MatchEvent = Pick<
   Tables["match_events"]["Row"],
   "id" | "match_id" | "type" | "team_id" | "player_id" | "minute" | "added_time" | "client_id"
@@ -41,7 +62,34 @@ export type Snapshot = {
   staff: TeamStaff[];
   displayNames: TeamDisplayName[];
   resultHolds: ResultHold[];
+  kickoffChanges: KickoffChange[];
+  notices: Notice[];
 };
+
+/** Matches with their schedule state attached from the kick-off changes that haven't been undone. */
+export function withSchedule(matches: Match[], changes: KickoffChange[]): Match[] {
+  const open = new Map<number, KickoffChange[]>();
+  for (const c of changes) if (!c.undone_at) open.set(c.match_id, [...(open.get(c.match_id) ?? []), c]);
+  if (!open.size) return matches;
+  return matches.map((m) => {
+    const list = open.get(m.id)?.sort((a, b) => a.id - b.id);
+    if (!list) return m;
+    const latest = list[list.length - 1];
+    const reason = [...list].reverse().find((c) => c.reason)?.reason ?? null;
+    return { ...m, schedule: { postponed: latest.new_kickoff == null, was: list[0].old_kickoff, reason } };
+  });
+}
+
+export function isPostponed(match: Pick<Match, "status" | "schedule">): boolean {
+  return match.status === "scheduled" && !!match.schedule?.postponed;
+}
+
+/** Notices showing now: all on the Live page, important ones on every public page. */
+export function activeNotices(notices: Notice[], now: number, importantOnly: boolean): Notice[] {
+  return notices
+    .filter((n) => Date.parse(n.starts_at) <= now && now < Date.parse(n.ends_at) && (!importantOnly || n.level === "important"))
+    .sort((a, b) => (a.level === b.level ? b.starts_at.localeCompare(a.starts_at) : a.level === "important" ? -1 : 1));
+}
 
 /**
  * How long a finished match stays the main card on the Live page, by default. The admin can extend
@@ -173,8 +221,9 @@ export function isFinished(match: Pick<Match, "status">): boolean {
  */
 export const RESULT_PENDING_AFTER_MS = 3 * 60 * 60 * 1000;
 
-/** Not started, and not so long past kick-off that it is really a missing result. */
-export function isUpcoming(match: Pick<Match, "status" | "kickoff_at">, now: number): boolean {
+/** Not started, and not so long past kick-off that it is really a missing result. A postponed match is always upcoming. */
+export function isUpcoming(match: Pick<Match, "status" | "kickoff_at" | "schedule">, now: number): boolean {
+  if (isPostponed(match)) return true;
   return match.status === "scheduled" && Date.parse(match.kickoff_at) > now - RESULT_PENDING_AFTER_MS;
 }
 

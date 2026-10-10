@@ -13,6 +13,7 @@ import {
   MAX_STOPPAGE_MINUTES,
   clockMinute,
 } from "@/lib/tournament";
+import { formatDay, formatTime } from "@/lib/format";
 import { Sheet } from "../sheet";
 import { useServerNow } from "../tournament-provider";
 import { teamShort } from "@/data/team-names";
@@ -42,12 +43,13 @@ export function MoreSheet({
 }: {
   open: boolean;
   onClose: () => void;
-  onPick: (tool: "final" | "status" | "reset" | "clock") => void;
+  onPick: (tool: "final" | "status" | "reset" | "clock" | "kickoff") => void;
   eventCount: number;
   /** A half is being played, so the clock can be corrected. */
   inPlay?: boolean;
 }) {
   const items = [
+    { tool: "kickoff" as const, label: "Change kick-off", hint: "Move the match to another time, or postpone it. Fans see that it was rescheduled." },
     ...(inPlay
       ? [{ tool: "clock" as const, label: "Correct clock", hint: "Set the minute being played now, e.g. after an accidental undo of kick-off." }]
       : []),
@@ -485,5 +487,157 @@ function Nudge({ label, value, onChange, disabled = false }: { label: string; va
         +
       </button>
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Change kick-off / postpone
+// ---------------------------------------------------------------------------
+
+/** "2026-10-13" and "16:00" in Bhutan time for an ISO time. */
+function bhutanParts(iso: string): { date: string; time: string } {
+  const d = new Date(Date.parse(iso) + 6 * 3600_000).toISOString();
+  return { date: d.slice(0, 10), time: d.slice(11, 16) };
+}
+
+/**
+ * Move a match to a new kick-off (Bhutan time), or postpone it with the new time to be announced.
+ * The sheet is the confirmation: it says what fans will see, and the button names the new time.
+ * A match that has started can only have its time corrected on the same day.
+ */
+export function KickoffSheet({
+  match,
+  matches,
+  teamName,
+  error,
+  busy,
+  onClose,
+  onSubmit,
+}: {
+  match: Match;
+  matches: Match[];
+  teamName: (id: number | null) => string;
+  error: string | null;
+  busy: boolean;
+  onClose: () => void;
+  onSubmit: (newKickoff: string | null, reason: string) => void;
+}) {
+  const current = bhutanParts(match.kickoff_at);
+  const [date, setDate] = useState(current.date);
+  const [time, setTime] = useState(current.time);
+  const [reason, setReason] = useState(match.schedule?.reason ?? "");
+  const [confirmPostpone, setConfirmPostpone] = useState(false);
+  const started = match.status !== "scheduled";
+  const postponed = match.schedule?.postponed && !started;
+  const iso = date && time ? `${date}T${time}:00+06:00` : null;
+  const when = iso ? `${formatDay(iso)}, ${formatTime(iso)}` : "";
+  const unchanged = iso != null && Date.parse(iso) === Date.parse(match.kickoff_at) && !postponed;
+  // Other matches within two hours of the new time.
+  const clashes = iso
+    ? matches.filter((m) => m.id !== match.id && Math.abs(Date.parse(m.kickoff_at) - Date.parse(iso)) < 2 * 3600_000)
+    : [];
+  const label = (m: Match) => `Match ${m.id}, ${teamName(m.home_team_id)} v ${teamName(m.away_team_id)}, ${formatTime(m.kickoff_at)}`;
+
+  return (
+    <Sheet open onClose={onClose} title="Change kick-off">
+      <p className="text-sm text-muted">
+        Now: {postponed ? "postponed, new time to be announced" : `${formatDay(match.kickoff_at)}, ${formatTime(match.kickoff_at)}`} (Bhutan time).
+      </p>
+      <div className="mt-4 grid grid-cols-[1fr_8rem] gap-2">
+        <label className="block">
+          <span className="mb-1 block text-sm font-semibold text-muted">Date</span>
+          <input
+            type="date"
+            value={date}
+            min="2026-09-26"
+            max="2026-10-31"
+            disabled={started}
+            onChange={(e) => setDate(e.target.value)}
+            className="h-12 w-full rounded-xl px-3 text-base ring-1 ring-border outline-none focus:ring-2 focus:ring-text disabled:opacity-60"
+          />
+        </label>
+        <label className="block">
+          <span className="mb-1 block text-sm font-semibold text-muted">Time</span>
+          <input
+            type="time"
+            value={time}
+            step={300}
+            onChange={(e) => setTime(e.target.value)}
+            className="h-12 w-full rounded-xl px-3 text-base tabular ring-1 ring-border outline-none focus:ring-2 focus:ring-text"
+          />
+        </label>
+      </div>
+      {started && <p className="mt-1 text-xs text-muted">This match has started, so only its time on the same day can be corrected.</p>}
+      <label className="mt-3 block">
+        <span className="mb-1 flex justify-between text-sm font-semibold text-muted">
+          Reason (optional) <span className="font-normal tabular">{reason.length}/80</span>
+        </span>
+        <input
+          value={reason}
+          onChange={(e) => setReason(e.target.value.slice(0, 80))}
+          placeholder="e.g. Floodlight failure"
+          autoComplete="off"
+          className="h-12 w-full rounded-xl px-3 text-base ring-1 ring-border outline-none focus:ring-2 focus:ring-text"
+        />
+      </label>
+      {clashes.length > 0 && (
+        <div role="alert" className="mt-3 rounded-xl border-l-4 border-text bg-bg px-4 py-3 text-sm font-medium">
+          Within two hours of another match:
+          {clashes.map((m) => (
+            <span key={m.id} className="block font-normal">
+              {label(m)}
+            </span>
+          ))}
+        </div>
+      )}
+      {iso && !unchanged && (
+        <p className="mt-3 rounded-xl bg-bg px-4 py-3 text-base">
+          The match moves to <strong className="font-semibold">{when}</strong>. Fans see it at the new time, marked
+          &ldquo;Rescheduled&rdquo;{reason.trim() ? ` (${reason.trim()})` : ""}. You can undo this.
+        </p>
+      )}
+      {error && (
+        <p role="alert" className="mt-3 rounded-xl border-l-4 border-text bg-card px-4 py-3 text-sm font-medium ring-1 ring-border">
+          {error}
+        </p>
+      )}
+      <div className="mt-4 grid grid-cols-2 gap-3">
+        <button type="button" onClick={onClose} className={BTN_SECONDARY}>
+          Cancel
+        </button>
+        <button type="button" disabled={busy || !iso || unchanged} onClick={() => iso && onSubmit(new Date(iso).toISOString(), reason)} className={BTN_PRIMARY}>
+          {busy ? "Saving…" : iso && !unchanged ? `Move to ${formatTime(iso)}` : "Move"}
+        </button>
+      </div>
+      {!started && !postponed && (
+        <button type="button" onClick={() => setConfirmPostpone(true)} className="mt-3 h-12 w-full text-sm font-semibold underline-offset-2 active:underline">
+          Postpone: new time to be announced
+        </button>
+      )}
+      {confirmPostpone && (
+        <Sheet open onClose={() => setConfirmPostpone(false)} title="Postpone this match?">
+          <p className="text-base">
+            Fans see &ldquo;Postponed, new time to be announced&rdquo;{reason.trim() ? ` (${reason.trim()})` : ""}, and the match leaves the
+            countdown and Up next. Set its new kick-off here when it&apos;s known. You can undo this.
+          </p>
+          <div className="mt-5 grid grid-cols-2 gap-3">
+            <button type="button" onClick={() => setConfirmPostpone(false)} className={BTN_SECONDARY}>
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => {
+                setConfirmPostpone(false);
+                onSubmit(null, reason);
+              }}
+              className={BTN_PRIMARY}
+            >
+              Postpone
+            </button>
+          </div>
+        </Sheet>
+      )}
+    </Sheet>
   );
 }

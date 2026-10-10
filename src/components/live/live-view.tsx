@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { dayKey, formatDay } from "@/lib/format";
-import { heldResult, isFinished, isLive, isUpcoming, type Match } from "@/lib/tournament";
+import { heldResult, isFinished, isLive, isPostponed, isUpcoming, type Match } from "@/lib/tournament";
 import { ChevronIcon } from "../icons";
 import { MatchRow } from "../match-row";
 import { useServerNow, useTournament } from "../tournament-provider";
@@ -25,7 +25,8 @@ export function LiveView() {
 
   const live = matches.filter(isLive);
   // Already in kick-off order.
-  const scheduled = matches.filter((m) => isUpcoming(m, now));
+  // Postponed matches (new time to be announced) stay out of the next-match card and Up next.
+  const scheduled = matches.filter((m) => isUpcoming(m, now) && !isPostponed(m));
   // Only results that have actually been played (kick-off in the past).
   const finished = matches.filter((m) => isFinished(m) && Date.parse(m.kickoff_at) <= now);
 

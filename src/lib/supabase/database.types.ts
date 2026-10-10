@@ -105,6 +105,47 @@ export type Database = {
           },
         ]
       }
+      kickoff_changes: {
+        Row: {
+          created_at: string
+          id: number
+          is_demo: boolean
+          match_id: number
+          new_kickoff: string | null
+          old_kickoff: string
+          reason: string | null
+          undone_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: never
+          is_demo?: boolean
+          match_id: number
+          new_kickoff?: string | null
+          old_kickoff: string
+          reason?: string | null
+          undone_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: never
+          is_demo?: boolean
+          match_id?: number
+          new_kickoff?: string | null
+          old_kickoff?: string
+          reason?: string | null
+          undone_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kickoff_changes_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       match_actions: {
         Row: {
           created_at: string
@@ -391,6 +432,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      notices: {
+        Row: {
+          created_at: string
+          ends_at: string
+          id: number
+          is_demo: boolean
+          level: string
+          message: string
+          starts_at: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          ends_at: string
+          id?: never
+          is_demo?: boolean
+          level?: string
+          message: string
+          starts_at?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          ends_at?: string
+          id?: never
+          is_demo?: boolean
+          level?: string
+          message?: string
+          starts_at?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       players: {
         Row: {
@@ -785,6 +859,25 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      admin_change_kickoff: {
+        Args: { p_match: number; p_new: string; p_reason?: string }
+        Returns: {
+          created_at: string
+          id: number
+          is_demo: boolean
+          match_id: number
+          new_kickoff: string | null
+          old_kickoff: string
+          reason: string | null
+          undone_at: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "kickoff_changes"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       admin_clear_qualifier_order: {
         Args: { p_group: string }
         Returns: undefined
@@ -859,6 +952,7 @@ export type Database = {
         }
       }
       admin_delete_event: { Args: { p_event: number }; Returns: undefined }
+      admin_delete_notice: { Args: { p_id: number }; Returns: undefined }
       admin_delete_substitution: { Args: { p_sub: number }; Returns: undefined }
       admin_edit_player: {
         Args: {
@@ -946,6 +1040,31 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "matches"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      admin_save_notice: {
+        Args: {
+          p_demo?: boolean
+          p_ends_at: string
+          p_id: number
+          p_level: string
+          p_message: string
+        }
+        Returns: {
+          created_at: string
+          ends_at: string
+          id: number
+          is_demo: boolean
+          level: string
+          message: string
+          starts_at: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "notices"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -1206,6 +1325,25 @@ export type Database = {
         }
       }
       admin_undo_extra: { Args: { p_match: number }; Returns: string }
+      admin_undo_kickoff: {
+        Args: { p_match: number }
+        Returns: {
+          created_at: string
+          id: number
+          is_demo: boolean
+          match_id: number
+          new_kickoff: string | null
+          old_kickoff: string
+          reason: string | null
+          undone_at: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "kickoff_changes"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       admin_update_event: {
         Args: {
           p_added_time: number

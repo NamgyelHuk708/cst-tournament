@@ -6,6 +6,7 @@ import { GroupTag } from "../group-tag";
 import { MatchDetailsHint, OpenMatchOverlay } from "../match-sheet/open-overlay";
 import { useServerNow, useTournament } from "../tournament-provider";
 import { Matchup } from "./live-hero";
+import { RescheduledNote } from "../schedule-note";
 
 /** Shown when nothing is live: the next match and a countdown to kick-off. */
 export function NextMatchHero({ match, placeholders }: { match: Match; placeholders: { home: string; away: string } }) {
@@ -44,6 +45,7 @@ export function NextMatchHero({ match, placeholders }: { match: Match; placehold
             {relativeDay(match.kickoff_at, now)} · {formatTime(match.kickoff_at)}
           </p>
           {msToKickoff <= COUNTDOWN_FROM_MS && <Countdown ms={msToKickoff} />}
+          <RescheduledNote match={match} className="mt-1" />
         </div>
       </div>
       <MatchDetailsHint />

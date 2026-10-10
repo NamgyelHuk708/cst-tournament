@@ -3,6 +3,7 @@ import { AppHeader } from "@/components/app-header";
 import { BottomNav } from "@/components/bottom-nav";
 import { IntroGate } from "@/components/intro/intro-gate";
 import { MatchSheetProvider } from "@/components/match-sheet/match-sheet";
+import { NoticeBanner } from "@/components/notice-banner";
 import { PageSkeleton } from "@/components/skeletons";
 import { TournamentData } from "@/components/tournament-data";
 
@@ -28,7 +29,11 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
           {/* Tapping any match opens its detail sheet. */}
           <MatchSheetProvider>
             <AppHeader />
-            <main className={MAIN}>{children}</main>
+            <main className={MAIN}>
+              {/* Organisers' notices (schedule changes and the like), live. */}
+              <NoticeBanner />
+              {children}
+            </main>
             <BottomNav />
           </MatchSheetProvider>
         </TournamentData>

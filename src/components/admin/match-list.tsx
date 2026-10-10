@@ -8,6 +8,7 @@ import { ChevronIcon } from "../icons";
 import { useServerNow, useTournament } from "../tournament-provider";
 import { LivePill } from "../live-pill";
 import { teamShort } from "@/data/team-names";
+import { NoticesSection } from "./notices";
 
 const RECENT_COUNT = 6;
 const UPCOMING_COUNT = 6;
@@ -28,6 +29,7 @@ export function AdminMatchList() {
   return (
     <main className="mx-auto max-w-xl space-y-6 px-4 pt-4 pb-10">
       <h1 className="sr-only">Matches</h1>
+      <NoticesSection />
       {live.length > 0 && <Section title="Live now" matches={live} now={now} />}
       <Section title="Today" matches={todays} now={now} empty="No other matches today." />
       {upcoming.length > 0 && <Section title="Upcoming" matches={upcoming} now={now} />}

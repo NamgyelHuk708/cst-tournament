@@ -16,6 +16,7 @@ import { useServerNow, useTournament } from "./tournament-provider";
 import { useFlashOnChange } from "./use-flash";
 import { LivePill } from "./live-pill";
 import { teamShort, teamSub } from "@/data/team-names";
+import { isPostponed } from "@/lib/tournament";
 
 type Props = {
   match: Match;
@@ -156,6 +157,14 @@ function StatusCell({ match }: { match: Match }) {
       </span>
     );
   }
+  if (isPostponed(match)) {
+    return (
+      <span className="w-[5rem] shrink-0 leading-tight">
+        <span className="block text-xs font-semibold">Postponed</span>
+        <span className="block text-[11px] font-medium text-muted">Time to be announced</span>
+      </span>
+    );
+  }
   return (
     <span className="w-[5rem] shrink-0 leading-tight">
       <span className="block truncate text-xs font-semibold text-muted">{day}</span>
@@ -163,6 +172,7 @@ function StatusCell({ match }: { match: Match }) {
         <span className={`font-display text-[15px] font-semibold tabular ${isFinished(match) ? "text-muted" : ""}`}>{time}</span>
         {isFinished(match) && <span className="font-display text-xs font-bold text-muted">FT</span>}
       </span>
+      {match.schedule && <span className="mt-0.5 block text-[11px] font-semibold text-brand-text">Rescheduled</span>}
     </span>
   );
 }

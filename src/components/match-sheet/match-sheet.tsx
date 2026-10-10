@@ -24,6 +24,8 @@ import { MatchSheetContext } from "./context";
 import { PlayersPanel } from "./players-panel";
 import { Sponsors } from "../sponsors";
 import { LivePill } from "../live-pill";
+import { isPostponed } from "@/lib/tournament";
+import { wasLabel } from "../schedule-note";
 
 /** One match detail sheet for the public pages; any match opens it via useMatchSheet(). */
 export function MatchSheetProvider({ children }: { children: React.ReactNode }) {
@@ -130,6 +132,7 @@ function MatchDetail({ match, onLeave }: { match: Match; onLeave: () => void }) 
 function Status({ match }: { match: Match }) {
   if (isLive(match)) return <LivePill match={match} size="md" />;
   if (isFinished(match)) return <span className="shrink-0 font-display text-sm font-semibold text-muted">Full time</span>;
+  if (isPostponed(match)) return <span className="shrink-0 text-xs font-semibold">Postponed</span>;
   return (
     <span className="shrink-0 text-xs font-semibold text-muted tabular">
       {formatDay(match.kickoff_at)} · {formatTime(match.kickoff_at)}
@@ -208,8 +211,14 @@ function SummaryPanel({ match }: { match: Match }) {
       )}
       <dl className="divide-y divide-border rounded-xl text-sm ring-1 ring-border">
         <Info label="Kick-off">
-          {formatDay(match.kickoff_at)} · {formatTime(match.kickoff_at)}
+          {isPostponed(match) ? "Postponed, new time to be announced" : `${formatDay(match.kickoff_at)} · ${formatTime(match.kickoff_at)}`}
         </Info>
+        {match.schedule && (
+          <Info label={match.schedule.postponed ? "Was" : "Rescheduled"}>
+            <span className="block">{match.schedule.postponed ? wasLabel(match) : `was ${wasLabel(match)}`}</span>
+            {match.schedule.reason && <span className="block text-muted">{match.schedule.reason}</span>}
+          </Info>
+        )}
         <Info label="Venue">CST Artificial Turf</Info>
         <Info label="Stage">{stageLabel(match)}</Info>
       </dl>

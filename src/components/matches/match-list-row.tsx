@@ -19,6 +19,7 @@ import { useServerNow } from "../tournament-provider";
 import { useResolvedSides } from "../use-resolved-sides";
 import { LivePill } from "../live-pill";
 import { fitNameSize, teamShort, teamSub } from "@/data/team-names";
+import { isPostponed } from "@/lib/tournament";
 
 /**
  * One match as a result line: "THS 4–2 IMM", match number and stage on the left.
@@ -72,8 +73,14 @@ export function MatchListRow({ match }: { match: Match }) {
             </span>
             <LivePill match={match} />
           </>
+        ) : isPostponed(match) ? (
+          <>
+            <span className="text-xs font-semibold">Postponed</span>
+            <span className="text-[11px] leading-tight font-medium text-muted">Time to be announced</span>
+          </>
         ) : (
           <>
+            {match.schedule && <span className="text-[11px] font-semibold text-brand-text">Rescheduled</span>}
             <span className="max-w-full truncate text-xs font-semibold text-muted">{day}</span>
             <span className="flex items-baseline gap-1 whitespace-nowrap">
               <span className={`font-display text-sm font-semibold tabular ${started || isFinished(match) ? "text-muted" : ""}`}>{time}</span>

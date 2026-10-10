@@ -17,6 +17,9 @@ import {
   type Team,
   type TeamDisplayName,
   type ResultHold,
+  type KickoffChange,
+  type Notice,
+  withSchedule,
   type TeamStaff,
   withDisplayNames,
 } from "@/lib/tournament";
@@ -46,6 +49,9 @@ type TournamentContextValue = Snapshot & {
     setStaff: (teamId: number, rows: TeamStaff[]) => void;
     upsertDisplayName: (row: TeamDisplayName) => void;
     upsertResultHold: (row: ResultHold) => void;
+    upsertKickoffChange: (row: KickoffChange) => void;
+    upsertNotice: (row: Notice) => void;
+    removeNotice: (id: number) => void;
     refresh: () => Promise<void>;
   };
 };
@@ -175,6 +181,12 @@ export function TournamentProvider({
         .on<TeamDisplayName>("postgres_changes", { event: "*", schema: "public", table: "team_display_names" }, (p) =>
           apply((d) => ({ ...d, displayNames: applyChange(d.displayNames, p) })),
         )
+        .on<KickoffChange>("postgres_changes", { event: "*", schema: "public", table: "kickoff_changes" }, (p) =>
+          apply((d) => ({ ...d, kickoffChanges: applyChange(d.kickoffChanges, p) })),
+        )
+        .on<Notice>("postgres_changes", { event: "*", schema: "public", table: "notices" }, (p) =>
+          apply((d) => ({ ...d, notices: applyChange(d.notices, p) })),
+        )
         .on<ResultHold>("postgres_changes", { event: "*", schema: "public", table: "result_holds" }, (p) =>
           apply((d) => ({ ...d, resultHolds: applyHoldChange(d.resultHolds, p) })),
         )
@@ -259,6 +271,9 @@ export function TournamentProvider({
       // A save replaces the team's real rows (the function returns the team's demo rows too).
       setStaff: (teamId, rows) => setData((d) => ({ ...d, staff: [...d.staff.filter((x) => x.team_id !== teamId), ...rows] })),
       upsertDisplayName: (row) => setData((d) => ({ ...d, displayNames: upsert(d.displayNames, row) })),
+      upsertKickoffChange: (row) => setData((d) => ({ ...d, kickoffChanges: upsert(d.kickoffChanges, row) })),
+      upsertNotice: (row) => setData((d) => ({ ...d, notices: upsert(d.notices, row) })),
+      removeNotice: (id) => setData((d) => ({ ...d, notices: d.notices.filter((n) => n.id !== id) })),
       upsertResultHold: (row) => setData((d) => ({ ...d, resultHolds: [...d.resultHolds.filter((h) => h.match_id !== row.match_id), row] })),
       refresh,
     }),
@@ -268,13 +283,16 @@ export function TournamentProvider({
   const value = useMemo<TournamentContextValue>(() => {
     // Teams carry the admin's display names, so every view (tables, rows, search) uses them.
     const teams = withDisplayNames(data.teams, data.displayNames);
+    // Matches carry their schedule state (postponed, rescheduled from), so every view can show it.
+    const matches = withSchedule(data.matches, data.kickoffChanges);
     return {
       ...data,
       teams,
       teamsById: new Map(teams.map((t) => [t.id, t])),
-      matchesById: new Map(data.matches.map((m) => [m.id, m])),
+      matches,
+      matchesById: new Map(matches.map((m) => [m.id, m])),
       playersById: new Map(data.players.map((p) => [p.id, p])),
-      standings: computeStandings(teams, data.matches),
+      standings: computeStandings(teams, matches),
       connection,
       clockOffset,
       renderedAt,
