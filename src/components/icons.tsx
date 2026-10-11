@@ -1,9 +1,9 @@
 type IconProps = { className?: string };
 
-/** Notification bell (the notice ticker's label). */
-export function BellIcon({ className = "size-3.5" }: IconProps) {
+/** Notification bell (the notice ticker's label). With `label`, screen readers hear it as an image. */
+export function BellIcon({ className = "size-3.5", label }: IconProps & { label?: string }) {
   return (
-    <svg viewBox="0 0 16 16" className={className} aria-hidden="true">
+    <svg viewBox="0 0 16 16" className={className} {...(label ? { role: "img", "aria-label": label } : { "aria-hidden": true })}>
       <path
         d="M4 11.5V7a4 4 0 0 1 8 0v4.5l1.2 1.2H2.8ZM6.5 13.5a1.5 1.5 0 0 0 3 0"
         fill="none"

@@ -24,8 +24,8 @@ function subscribeReducedMotion(onChange: () => void) {
 }
 
 /**
- * Organisers' notices as a TV-style ticker fixed above the tab bar: a fixed label (bell, "Notification"),
- * then every current notice scrolling right to left in a loop,
+ * Organisers' notices as a TV-style ticker fixed above the tab bar: a fixed label (a ringing bell, plus
+ * "Notification" from 640 px; yellow when a notice is important), then every current notice scrolling right to left in a loop,
  * important ones first. Touching or hovering pauses it; tapping opens all of them in a sheet.
  * Notices arrive, change and end live (server time). Renders nothing when there are none.
  */
@@ -37,6 +37,7 @@ export function NoticeTicker() {
   const shown = NOTICES_ON_LIVE_PAGE_ONLY && !onLive ? [] : activeNotices(notices, now, !onLive);
   if (!shown.length) return null;
 
+  const important = shown.some((n) => n.level === "important");
   return (
     <>
       {/* Room at the bottom of the page so the last item scrolls fully above the bar. */}
@@ -60,11 +61,14 @@ export function NoticeTicker() {
           onClick={() => setOpen(true)}
           className="ticker flex h-[var(--ticker-height)] w-full items-stretch text-left focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-white"
         >
-          <span className="sr-only">Read all notices</span>
-          <span aria-hidden="true" className="flex shrink-0 items-center gap-1.5 bg-brand-deep px-3 text-xs font-semibold">
-            <BellIcon className="size-3.5 shrink-0" />
-            Notification
+          {/* Phones: the bell alone, in a square, so more of the message fits; from 640 px also the word. */}
+          <span className="flex w-[var(--ticker-height)] shrink-0 items-center justify-center gap-1.5 bg-brand-deep text-xs font-semibold sm:w-auto sm:px-3">
+            <RingingBell important={important} newest={Math.max(...shown.map((n) => n.id))} />
+            <span aria-hidden="true" className="hidden sm:inline">
+              Notification
+            </span>
           </span>
+          <span className="sr-only">, read all notices</span>
           <TickerText notices={shown} />
         </button>
       </section>
@@ -84,6 +88,21 @@ export function NoticeTicker() {
         </ul>
       </Sheet>
     </>
+  );
+}
+
+/**
+ * The bell swings gently from its top for about a second, then rests a few seconds, and repeats
+ * (no movement with reduce motion). A newly posted notice (an id not seen before) rings it at once:
+ * the animation restarts from the swing.
+ */
+function RingingBell({ important, newest }: { important: boolean; newest: number }) {
+  const [ring, setRing] = useState({ highest: newest, key: 0 });
+  if (newest > ring.highest) setRing({ highest: newest, key: ring.key + 1 });
+  return (
+    <span key={ring.key} className={`bell-ring flex ${important ? "text-card-yellow" : ""}`}>
+      <BellIcon className="size-4 shrink-0 sm:size-3.5" label={important ? "Important notice" : "Notifications"} />
+    </span>
   );
 }
 

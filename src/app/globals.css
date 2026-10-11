@@ -151,6 +151,22 @@ body {
   }
 }
 
+/* Notice ticker bell: a gentle swing from the top for about a second, then a rest (5 s cycle). */
+@keyframes bell-ring {
+  0%, 20%, 100% { transform: rotate(0); }
+  3% { transform: rotate(14deg); }
+  6% { transform: rotate(-12deg); }
+  9% { transform: rotate(9deg); }
+  12% { transform: rotate(-6deg); }
+  15% { transform: rotate(3deg); }
+  18% { transform: rotate(-1deg); }
+}
+
+.bell-ring {
+  transform-origin: 50% 8%;
+  animation: bell-ring 5s ease-in-out infinite;
+}
+
 /* Brief highlight when a score changes. */
 @keyframes score-flash {
   0% { background-color: var(--live-soft); }
@@ -181,7 +197,7 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .score-flash, .skeleton::after, .ticker-track {
+  .score-flash, .skeleton::after, .ticker-track, .bell-ring {
     animation: none;
   }
   /* Still, at full width. */
