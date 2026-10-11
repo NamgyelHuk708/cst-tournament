@@ -101,6 +101,15 @@ export function isSuspended(match: Pick<Match, "stoppage">): boolean {
   return !!match.stoppage && !match.stoppage.abandoned;
 }
 
+/**
+ * A water break: play suspended with the reason "Water break" (any case). Only the wording changes
+ * (calm "Water break 25'" instead of "Suspended"); the clock is frozen and resumes like any suspension.
+ */
+export const WATER_BREAK_REASON = "Water break";
+export function isWaterBreak(match: Pick<Match, "stoppage">): boolean {
+  return isSuspended(match) && match.stoppage?.reason?.trim().toLowerCase() === WATER_BREAK_REASON.toLowerCase();
+}
+
 /** Abandoned for today: to be resumed or started again later. Not live, listed as upcoming. */
 export function isAbandoned(match: Pick<Match, "stoppage">): boolean {
   return !!match.stoppage?.abandoned;

@@ -1,6 +1,6 @@
 "use client";
 
-import { isBallInPlay, matchClock, type Match, type Team } from "@/lib/tournament";
+import { isBallInPlay, isWaterBreak, matchClock, type Match, type Team } from "@/lib/tournament";
 import { useServerNow } from "./tournament-provider";
 
 /** Height, padding and text size per place. The width follows the text (see the sizer below). */
@@ -45,10 +45,11 @@ export function LivePill({
   const inPlay = isBallInPlay(match);
   const minute = clock.label.endsWith("'") ? clock.label : null;
   const word = statusWord(match);
-  const text = (word === "Live" || word === "Suspended") && minute ? `${word} ${minute}` : word;
+  const withMinute = word === "Live" || word === "Suspended" || word === "Water break";
+  const text = withMinute && minute ? `${word} ${minute}` : word;
   const spoken = [
     word,
-    inPlay || word === "Suspended" ? spokenMinute(minute, clock.label) : null,
+    inPlay || (withMinute && word !== "Live") ? spokenMinute(minute, clock.label) : null,
     size === "lg" && home && away ? `${home.name} ${match.home_score}, ${away.name} ${match.away_score}` : null,
   ]
     .filter(Boolean)
@@ -72,7 +73,9 @@ export function LivePill({
   );
 }
 
-function statusWord(match: Match): "Half-time" | "Penalties" | "Live" | "Suspended" {
+function statusWord(match: Match): "Half-time" | "Penalties" | "Live" | "Suspended" | "Water break" {
+  // A water break reads calmly (no underline, like half-time); any other stoppage is "Suspended".
+  if (isWaterBreak(match)) return "Water break";
   if (match.stoppage) return "Suspended";
   if (match.status === "half_time") return "Half-time";
   if (match.status === "penalties") return "Penalties";

@@ -1,6 +1,6 @@
 "use client";
 
-import { compareEventTime, eventsForMatch, isFinished, slotDisplayName, subsForMatch, type Match, type Team } from "@/lib/tournament";
+import { compareEventTime, eventsForMatch, isFinished, isWaterBreak, slotDisplayName, subsForMatch, type Match, type Team } from "@/lib/tournament";
 import { LatestSub, ScorerColumns } from "../event-list";
 import { GroupTag } from "../group-tag";
 import { TeamLink } from "../team-link";
@@ -44,7 +44,11 @@ export function LiveHero({ match }: { match: Match }) {
             )}
           </span>
         </div>
-        {match.stoppage && <p className="mt-1.5 text-center text-sm font-medium text-muted">Play suspended{match.stoppage.reason ? `: ${match.stoppage.reason}` : ""}</p>}
+        {match.stoppage && (
+          <p className="mt-1.5 text-center text-sm font-medium text-muted">
+            {isWaterBreak(match) ? "Short water break · play resumes shortly" : `Play suspended${match.stoppage.reason ? `: ${match.stoppage.reason}` : ""}`}
+          </p>
+        )}
 
         <Matchup
           className="mt-2"

@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { teamShort } from "@/data/team-names";
 import { formatDay, formatTime } from "@/lib/format";
 import { createClient } from "@/lib/supabase/client";
-import { isAbandoned, stoppageMinuteLabel, type Match, type MatchStoppage, type Team } from "@/lib/tournament";
+import { isAbandoned, isWaterBreak, stoppageMinuteLabel, WATER_BREAK_REASON, type Match, type MatchStoppage, type Team } from "@/lib/tournament";
 import { Sheet } from "../sheet";
 import { continuesLabel } from "../stoppage-note";
 import { useTournament } from "../tournament-provider";
@@ -14,7 +14,8 @@ const PRIMARY = "h-13 w-full rounded-xl bg-text text-base font-semibold text-whi
 const SECONDARY = "h-13 w-full rounded-xl bg-card text-base font-semibold text-text ring-1 ring-border active:bg-bg disabled:opacity-50";
 const BTN_SECONDARY = "h-14 rounded-xl font-semibold ring-1 ring-border active:bg-bg";
 const BTN_PRIMARY = "h-14 rounded-xl bg-text font-semibold text-white active:opacity-90 disabled:opacity-40";
-const REASONS = ["Power cut", "Heavy rain", "Lightning", "Floodlight failure"];
+// Water break first: only when the referee stops the clock for it (fans then see a calm "Water break 25'").
+const REASONS = [WATER_BREAK_REASON, "Power cut", "Heavy rain", "Lightning", "Floodlight failure"];
 
 const message = (e: { message?: string } | null) =>
   /fetch|network|Failed/i.test(e?.message ?? "") ? "No connection. Check the signal and try again." : (e?.message ?? "Couldn't save. Try again.");
@@ -76,8 +77,18 @@ export function SuspendButton({ match, disabled, onChanged }: { match: Match; di
       {open && (
         <Sheet open onClose={() => setOpen(false)} title="Suspend play?">
           <p className="text-base">
-            The clock stops at the current minute for everyone, and fans see &ldquo;Suspended&rdquo;. The score stays as it is. Later you choose: resume
-            from that minute, or, if play can&apos;t restart today, mark it abandoned and decide on another day.
+            {reason.trim().toLowerCase() === WATER_BREAK_REASON.toLowerCase() ? (
+              <>
+                The clock stops at the current minute for everyone, and fans see &ldquo;Water break&rdquo;. Tap &ldquo;Resume play&rdquo; when the
+                referee restarts; the clock continues from that minute. Only use this if the referee stops the clock: if it keeps running, don&apos;t
+                suspend, just add the time at the end of the half.
+              </>
+            ) : (
+              <>
+                The clock stops at the current minute for everyone, and fans see &ldquo;Suspended&rdquo;. The score stays as it is. Later you choose:
+                resume from that minute, or, if play can&apos;t restart today, mark it abandoned and decide on another day.
+              </>
+            )}
           </p>
           <fieldset className="mt-4">
             <legend className="mb-2 text-sm font-semibold text-muted">Reason (optional, shown to fans)</legend>
@@ -139,6 +150,7 @@ export function StoppagePanel({
   const s = match.stoppage;
   if (!s) return null;
   const abandoned = isAbandoned(match);
+  const waterBreak = isWaterBreak(match);
   const minute = stoppageMinuteLabel(s);
   const scoreLine = `${teamShort(home)} ${s.home_score}–${s.away_score} ${teamShort(away)}`;
   const open = (x: typeof sheet) => {
@@ -151,13 +163,14 @@ export function StoppagePanel({
     <div className="space-y-2">
       <div className="rounded-xl border-l-4 border-text bg-bg px-4 py-3">
         <p className="text-base font-semibold">
-          {abandoned ? "Abandoned" : "Play suspended"} at {minute}
-          {s.reason ? ` · ${s.reason}` : ""}
+          {waterBreak ? `Water break at ${minute}` : `${abandoned ? "Abandoned" : "Play suspended"} at ${minute}${s.reason ? ` · ${s.reason}` : ""}`}
         </p>
         <p className="mt-0.5 text-sm text-muted">
           {abandoned
             ? `${scoreLine} when play stopped. ${continuesLabel(match)}.`
-            : "The clock is stopped for everyone. Goals and the status buttons wait until play resumes."}
+            : waterBreak
+              ? "Fans see \"Water break\". The clock is stopped; resume when the referee restarts play."
+              : "The clock is stopped for everyone. Goals and the status buttons wait until play resumes."}
         </p>
       </div>
       <button type="button" onClick={() => open("resume")} disabled={busy} className={PRIMARY}>
