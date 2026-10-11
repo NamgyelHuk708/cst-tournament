@@ -115,7 +115,7 @@ function NoticeSheet({ notice, onClose }: { notice: Notice | null; onClose: () =
             value={text}
             onChange={(e) => setText(e.target.value.slice(0, 280))}
             rows={4}
-            placeholder="e.g. Power cut at the ground: tonight's 6 PM match starts at 8 PM. ICP v CST Kangtsey moves to Tue 13 Oct, 4 PM."
+            placeholder="e.g. Rescheduled: OG United vs BSMPL moved from Sun 18 Oct to Thu 15 Oct, 4:00 PM."
             className="w-full rounded-xl px-3 py-2.5 text-base ring-1 ring-border outline-none focus:ring-2 focus:ring-text"
           />
         </label>

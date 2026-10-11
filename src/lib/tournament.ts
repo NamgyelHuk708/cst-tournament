@@ -45,7 +45,15 @@ export type KickoffChange = {
   undone_at: string | null;
   created_at: string;
 };
-export type Notice = { id: number; message: string; level: "info" | "important"; starts_at: string; ends_at: string };
+export type Notice = {
+  id: number;
+  message: string;
+  level: "info" | "important";
+  starts_at: string;
+  ends_at: string;
+  /** When it was posted or last edited (shown to fans in the announcements sheet). */
+  updated_at?: string;
+};
 export type MatchEvent = Pick<
   Tables["match_events"]["Row"],
   "id" | "match_id" | "type" | "team_id" | "player_id" | "minute" | "added_time" | "client_id"

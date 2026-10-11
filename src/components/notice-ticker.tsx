@@ -2,6 +2,7 @@
 
 import { useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { usePathname } from "next/navigation";
+import { formatTime, relativeDay } from "@/lib/format";
 import { activeNotices, type Notice } from "@/lib/tournament";
 import { BellIcon } from "./icons";
 import { Sheet } from "./sheet";
@@ -24,8 +25,8 @@ function subscribeReducedMotion(onChange: () => void) {
 }
 
 /**
- * Organisers' notices as a TV-style ticker fixed above the tab bar: a fixed label (a ringing bell, plus
- * "Notification" from 640 px; yellow when a notice is important), then every current notice scrolling right to left in a loop,
+ * Organisers' notices ("Announcements" to fans) as a TV-style ticker fixed above the tab bar: a fixed label
+ * (a ringing bell, plus "Announcements" from 640 px), then every current notice scrolling right to left in a loop,
  * important ones first. Touching or hovering pauses it; tapping opens all of them in a sheet.
  * Notices arrive, change and end live (server time). Renders nothing when there are none.
  */
@@ -43,7 +44,7 @@ export function NoticeTicker() {
       {/* Room at the bottom of the page so the last item scrolls fully above the bar. */}
       <div aria-hidden="true" className="h-[var(--ticker-height)]" />
       <section
-        aria-label="Notices from the organisers"
+        aria-label="Announcements"
         className="fixed inset-x-0 bottom-[calc(var(--nav-height)+env(safe-area-inset-bottom)+1px)] z-30 bg-brand text-white"
       >
         {/* Screen readers get the notices once, as a list; the scroll is hidden from them. */}
@@ -65,24 +66,23 @@ export function NoticeTicker() {
           <span className="flex w-[var(--ticker-height)] shrink-0 items-center justify-center gap-1.5 bg-brand-deep text-xs font-semibold sm:w-auto sm:px-3">
             <RingingBell important={important} newest={Math.max(...shown.map((n) => n.id))} />
             <span aria-hidden="true" className="hidden sm:inline">
-              Notification
+              Announcements
             </span>
           </span>
-          <span className="sr-only">, read all notices</span>
+          <span className="sr-only">, read all announcements</span>
           <TickerText notices={shown} />
         </button>
       </section>
-      <Sheet open={open} onClose={() => setOpen(false)} title="Notices">
+      <Sheet open={open} onClose={() => setOpen(false)} title="Announcements">
         <ul className="space-y-3">
           {shown.map((n) => (
             <li key={n.id} className="rounded-xl bg-bg px-4 py-3">
-              {n.level === "important" && (
-                <p className="mb-1 flex items-center gap-1.5 text-xs font-semibold text-brand-text">
-                  <span aria-hidden="true" className="size-1.5 rounded-full bg-card-yellow" />
-                  Important
-                </p>
-              )}
+              {n.level === "important" && <p className="mb-1 text-xs font-semibold text-brand-text">Important</p>}
               <p className="text-[15px] leading-snug">{n.message}</p>
+              {/* Posted or last edited: "Today, 3:40 PM", "Sun 11 Oct, 9:15 AM". */}
+              <p className="mt-1.5 text-xs text-muted">
+                <time dateTime={n.updated_at ?? n.starts_at}>{postedLabel(n.updated_at ?? n.starts_at, now)}</time>
+              </p>
             </li>
           ))}
         </ul>
@@ -100,10 +100,15 @@ function RingingBell({ important, newest }: { important: boolean; newest: number
   const [ring, setRing] = useState({ highest: newest, key: 0 });
   if (newest > ring.highest) setRing({ highest: newest, key: ring.key + 1 });
   return (
-    <span key={ring.key} className={`bell-ring flex ${important ? "text-card-yellow" : ""}`}>
-      <BellIcon className="size-4 shrink-0 sm:size-3.5" label={important ? "Important notice" : "Notifications"} />
+    <span key={ring.key} className="bell-ring flex">
+      <BellIcon className="size-4 shrink-0 sm:size-3.5" label={important ? "Important announcements" : "Announcements"} />
     </span>
   );
+}
+
+/** "Today, 3:40 PM", "Yesterday, 9:15 AM", "Sun 11 Oct, 9:15 AM" (Bhutan time). */
+function postedLabel(iso: string, now: number): string {
+  return `${relativeDay(iso, now)}, ${formatTime(iso)}`;
 }
 
 /** The moving part: copies of the notice line side by side, shifted by one copy's width per loop. */

@@ -16,7 +16,7 @@ export async function fetchSnapshot(supabase: SupabaseClient<Database>): Promise
     supabase.from("result_holds").select("match_id, finished_at, hold_until"),
     supabase.from("kickoff_changes").select("id, match_id, old_kickoff, new_kickoff, reason, undone_at, created_at"),
     // Only notices that haven't ended (the table keeps old ones until the admin removes them).
-    supabase.from("notices").select("id, message, level, starts_at, ends_at").gt("ends_at", new Date().toISOString()),
+    supabase.from("notices").select("id, message, level, starts_at, ends_at, updated_at").gt("ends_at", new Date().toISOString()),
     supabase.from("match_stoppages").select("id, match_id, at_minute, half, home_score, away_score, reason, abandoned, resume_at, outcome"),
   ]);
   const error =
