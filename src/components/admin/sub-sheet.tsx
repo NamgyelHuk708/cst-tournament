@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { uuid } from "@/lib/uuid";
-import { byShirtOrder, subMarks, substitutionWarnings, type Match, type Substitution } from "@/lib/tournament";
+import { byShirtOrder, shirtLabel, subMarks, substitutionWarnings, type Match, type Substitution } from "@/lib/tournament";
 import { Sheet } from "../sheet";
 import { useTournament } from "../tournament-provider";
 import { MinuteField, useMinuteInput } from "./minute-field";
@@ -97,7 +97,7 @@ export function SubSheet({
   const at = minuteState.minute == null || Number.isNaN(minuteState.minute) ? null : { minute: minuteState.minute, added_time: minuteState.added };
   const label = (id: string) => {
     const p = teamPlayers.find((x) => x.id === id);
-    return p ? `${p.shirt_number != null ? `#${p.shirt_number} ` : ""}${p.name}` : "This player";
+    return p ? `${p.shirt_number != null ? `#${shirtLabel(p.shirt_number)} ` : ""}${p.name}` : "This player";
   };
   const warnings = substitutionWarnings({
     matchId: match.id,

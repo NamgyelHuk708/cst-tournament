@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { uuid } from "@/lib/uuid";
-import { byShirtOrder, eventAfterSubWarning, eventMinuteLabel, scoreFromEvents, subMarks, type EventType, type Match, type MatchEvent, type Side } from "@/lib/tournament";
+import { byShirtOrder, shirtLabel, eventAfterSubWarning, eventMinuteLabel, scoreFromEvents, subMarks, type EventType, type Match, type MatchEvent, type Side } from "@/lib/tournament";
 import { useTournament } from "../tournament-provider";
 import { Sheet } from "../sheet";
 import { MinuteField, useMinuteInput } from "./minute-field";
@@ -82,9 +82,9 @@ export function EventSheet({
   // Preview of what Save will record, with the score it leads to.
   const picked = effectivePlayer && effectivePlayer !== NEW_PLAYER ? teamPlayers.find((p) => p.id === effectivePlayer) : undefined;
   const who = picked
-    ? `${picked.shirt_number != null ? `#${picked.shirt_number} ` : ""}${picked.name} (${code(playerSide)})`
+    ? `${picked.shirt_number != null ? `#${shirtLabel(picked.shirt_number)} ` : ""}${picked.name} (${code(playerSide)})`
     : effectivePlayer === NEW_PLAYER && newName.trim()
-      ? `${newShirt ? `#${newShirt} ` : ""}${newName.trim()} (${code(playerSide)})`
+      ? `${newShirt ? `#${shirtLabel(Number(newShirt))} ` : ""}${newName.trim()} (${code(playerSide)})`
       : `a ${code(playerSide)} player (name not recorded)`;
   const before = scoreFromEvents(match, events);
   const after = scoreFromEvents(match, [
@@ -111,7 +111,7 @@ export function EventSheet({
     noun: { goal: "goal", own_goal: "own goal", yellow_card: "card", red_card: "card" }[type],
     label: (id) => {
       const p = teamPlayers.find((x) => x.id === id);
-      return p ? `${p.shirt_number != null ? `#${p.shirt_number} ` : ""}${p.name}` : "This player";
+      return p ? `${p.shirt_number != null ? `#${shirtLabel(p.shirt_number)} ` : ""}${p.name}` : "This player";
     },
   });
   const check = useSubWarnings(subWarning ? [subWarning] : [], save);

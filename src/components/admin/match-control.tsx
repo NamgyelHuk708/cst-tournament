@@ -22,6 +22,7 @@ import {
   type Team,
 } from "@/lib/tournament";
 import { ChevronIcon } from "../icons";
+import { shirtLabel } from "@/lib/tournament";
 import { useTournament } from "../tournament-provider";
 import { ControlDock } from "./control-dock";
 import { ClockSheet, FinalScoreSheet, KickoffSheet, MoreSheet, ResetSheet, StatusSheet } from "./correction-sheets";
@@ -685,7 +686,7 @@ function describeUndo(action: LastAction | null, events: MatchEvent[], shortCode
 /** "#5 Dorji (BSM)", or "a BSM player" when no name was recorded. */
 function ownGoalScorer(event: MatchEvent, playersById: Map<string, Player>, shortCode: (id: number) => string): string {
   const p = event.player_id ? playersById.get(event.player_id) : undefined;
-  return p ? `${p.shirt_number != null ? `#${p.shirt_number} ` : ""}${p.name} (${shortCode(event.team_id)})` : `a ${shortCode(event.team_id)} player`;
+  return p ? `${p.shirt_number != null ? `#${shirtLabel(p.shirt_number)} ` : ""}${p.name} (${shortCode(event.team_id)})` : `a ${shortCode(event.team_id)} player`;
 }
 
 function DeleteSummary({

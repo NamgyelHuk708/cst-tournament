@@ -842,7 +842,14 @@ export type PlayerRef = { name: string; number: number | null };
 
 export type DisplaySub = Substitution & { side: Side; off: PlayerRef | null; on: PlayerRef | null };
 
-/** Shirt order: by shirt number, players without one last, then by name. */
+/** Shirt numbers go from 00 to 99. Number 0 is shown as "00" (a jersey worn in this tournament). */
+export const MIN_SHIRT = 0;
+export const MAX_SHIRT = 99;
+export function shirtLabel(n: number): string {
+  return n === 0 ? "00" : String(n);
+}
+
+/** Shirt order: by shirt number (00 first), players without one last, then by name. */
 export function byShirtOrder(a: Player, b: Player): number {
   return (a.shirt_number ?? 999) - (b.shirt_number ?? 999) || a.name.localeCompare(b.name);
 }

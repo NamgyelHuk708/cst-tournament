@@ -1,6 +1,6 @@
 "use client";
 
-import { byShirtOrder, staffLines, type Match, type Player, type Team } from "@/lib/tournament";
+import { byShirtOrder, shirtLabel, staffLines, type Match, type Player, type Team } from "@/lib/tournament";
 import { BallIcon, CardIcon } from "../icons";
 import { TeamLink } from "../team-link";
 import { TeamLogo } from "../team-logo";
@@ -70,7 +70,7 @@ function TeamPlayers({ team, players, tally }: { team: Team; players: Player[]; 
         <ul className="divide-y divide-border rounded-xl text-sm ring-1 ring-border">
           {players.map((p) => (
             <li key={p.id} className="flex min-h-10 items-center gap-3 px-3 py-2">
-              <span className="w-6 shrink-0 text-right font-display font-bold text-muted tabular">{p.shirt_number ?? "–"}</span>
+              <span className="w-6 shrink-0 text-right font-display font-bold text-muted tabular">{p.shirt_number != null ? shirtLabel(p.shirt_number) : "–"}</span>
               <span className="min-w-0 flex-1 truncate font-medium">{p.name}</span>
               <Marks t={tally.get(p.id)} />
             </li>

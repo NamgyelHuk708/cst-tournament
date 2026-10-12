@@ -1,4 +1,4 @@
-import { eventMinuteLabel, matchTimeline, scorerLines, type DisplayEvent, type DisplaySub, type Match, type ScorerLine, type Side } from "@/lib/tournament";
+import { eventMinuteLabel, matchTimeline, scorerLines, type DisplayEvent, type DisplaySub, type Match, type ScorerLine, type Side, shirtLabel } from "@/lib/tournament";
 import { BallIcon, CardIcon } from "./icons";
 
 function EventIcon({ type, className = "" }: { type: DisplayEvent["type"]; className?: string }) {
@@ -18,7 +18,7 @@ const FALLBACK: Record<DisplayEvent["type"], string> = {
 function PlayerLabel({ name, number }: { name: string; number: number | null }) {
   return (
     <>
-      {number != null && <span className="font-medium text-muted tabular">#{number} </span>}
+      {number != null && <span className="font-medium text-muted tabular">#{shirtLabel(number)} </span>}
       {name}
     </>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { compareEventTime, eventMinuteLabel, type EventType, type Match, type MatchEvent, type Substitution } from "@/lib/tournament";
+import { compareEventTime, eventMinuteLabel, shirtLabel, type EventType, type Match, type MatchEvent, type Substitution } from "@/lib/tournament";
 import Link from "next/link";
 import { BallIcon, CardIcon } from "../icons";
 import { useTournament } from "../tournament-provider";
@@ -131,7 +131,7 @@ export function EventLog({
                       Own goal by{" "}
                       {player ? (
                         <>
-                          {player.shirt_number != null && <span className="tabular">#{player.shirt_number} </span>}
+                          {player.shirt_number != null && <span className="tabular">#{shirtLabel(player.shirt_number)} </span>}
                           {player.name} ({teamShort(teamsById.get(e.team_id))})
                         </>
                       ) : (
@@ -148,7 +148,7 @@ export function EventLog({
                     <span className="block truncate text-sm text-muted">
                       {player ? (
                         <>
-                          {player.shirt_number != null && <span className="tabular">#{player.shirt_number} </span>}
+                          {player.shirt_number != null && <span className="tabular">#{shirtLabel(player.shirt_number)} </span>}
                           {player.name}
                         </>
                       ) : isGoal ? (

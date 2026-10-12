@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { GROUP_CODES, byShirtOrder, type Player, type Team } from "@/lib/tournament";
+import { GROUP_CODES, MAX_SHIRT, MIN_SHIRT, byShirtOrder, shirtLabel, type Player, type Team } from "@/lib/tournament";
 import { ChevronIcon } from "../icons";
 import { GroupSwatch } from "../group-tag";
 import { Sheet } from "../sheet";
@@ -115,7 +115,7 @@ export function TeamPage({ code, fromMatch }: { code: string; fromMatch?: number
         <ul className="mt-4 divide-y divide-border rounded-xl bg-card ring-1 ring-border/60">
           {teamPlayers.map((p) => (
             <li key={p.id} className="flex min-h-14 items-center gap-3 py-1.5 pr-1.5 pl-4">
-              <span className="w-7 shrink-0 text-right font-display text-lg font-bold text-muted tabular">{p.shirt_number ?? "–"}</span>
+              <span className="w-7 shrink-0 text-right font-display text-lg font-bold text-muted tabular">{p.shirt_number != null ? shirtLabel(p.shirt_number) : "–"}</span>
               <span className="min-w-0 flex-1 truncate font-medium">{p.name}</span>
               {/* Edit and delete apart, like the event log, so one isn't tapped for the other. */}
               <span className="flex shrink-0 items-center gap-3">
@@ -203,14 +203,14 @@ function PlayerFields({
 /** The same rules as the database, checked as the admin types so problems show before saving. */
 function playerProblem(shirt: number | null, name: string, teamPlayers: Player[], except?: string): string | null {
   const n = tidy(name);
-  if (shirt == null) return "Enter a shirt number (1 to 99).";
-  if (shirt < 1 || shirt > 99) return "Shirt numbers go from 1 to 99.";
+  if (shirt == null) return "Enter a shirt number (00 to 99).";
+  if (shirt < MIN_SHIRT || shirt > MAX_SHIRT) return "Shirt numbers go from 00 to 99.";
   if (!n) return "Enter the player's name.";
   if (n.length > MAX_NAME) return "The name is too long (80 characters at most).";
   const byNumber = teamPlayers.find((p) => p.id !== except && p.shirt_number === shirt);
-  if (byNumber) return `#${shirt} is already ${byNumber.name}.`;
+  if (byNumber) return `#${shirtLabel(shirt)} is already ${byNumber.name}.`;
   const byName = teamPlayers.find((p) => p.id !== except && p.name.toLowerCase() === n.toLowerCase());
-  if (byName) return `${byName.name} is already in the team${byName.shirt_number != null ? ` as #${byName.shirt_number}` : ""}.`;
+  if (byName) return `${byName.name} is already in the team${byName.shirt_number != null ? ` as #${shirtLabel(byName.shirt_number)}` : ""}.`;
   return null;
 }
 
@@ -229,10 +229,8 @@ function AddPlayerSheet({ team, teamPlayers, onClose }: { team: Team; teamPlayer
     shirt !== "" && name.trim()
       ? playerProblem(shirtNo, name, teamPlayers)
       : taken
-        ? `#${shirtNo} is already ${taken.name}.`
-        : shirtNo === 0
-          ? "Shirt numbers go from 1 to 99."
-          : null;
+        ? `#${shirtLabel(shirtNo!)} is already ${taken.name}.`
+        : null;
 
   async function save() {
     const p = playerProblem(shirtNo, name, teamPlayers);
@@ -276,7 +274,7 @@ function EditTeamPlayerSheet({ player, team, teamPlayers, onClose }: { player: P
   const supabase = useMemo(() => createClient(), []);
   const remove = useRemovePlayer(player, onClose);
   const blocked = useRemovalBlock(player) ?? remove.error;
-  const [shirt, setShirt] = useState(player.shirt_number != null ? String(player.shirt_number) : "");
+  const [shirt, setShirt] = useState(player.shirt_number != null ? shirtLabel(player.shirt_number) : "");
   const [name, setName] = useState(player.name);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -332,7 +330,7 @@ function EditTeamPlayerSheet({ player, team, teamPlayers, onClose }: { player: P
   );
 }
 
-const playerLabel = (p: Player) => `${p.shirt_number != null ? `#${p.shirt_number} ` : ""}${p.name}`;
+const playerLabel = (p: Player) => `${p.shirt_number != null ? `#${shirtLabel(p.shirt_number)} ` : ""}${p.name}`;
 
 /**
  * Why a player can't be removed, or null if they can: anyone named on a goal, card or substitution
@@ -444,7 +442,7 @@ function parseList(text: string, teamPlayers: Player[]): PastedLine[] {
     if (r.problem) continue;
     const first = rows.find((o) => o !== r && (o.shirt === r.shirt || o.name.toLowerCase() === r.name.toLowerCase()));
     if (first && rows.indexOf(first) < rows.indexOf(r)) {
-      r.problem = first.shirt === r.shirt ? `#${r.shirt} is in the list twice` : `${r.name} is in the list twice`;
+      r.problem = first.shirt === r.shirt ? `#${shirtLabel(r.shirt!)} is in the list twice` : `${r.name} is in the list twice`;
     }
   }
   return rows;
@@ -497,7 +495,7 @@ function PasteListSheet({ team, teamPlayers, onClose }: { team: Team; teamPlayer
             <ul className="divide-y divide-border rounded-xl text-sm ring-1 ring-border">
               {rows.map((r) => (
                 <li key={r.line} className="flex items-start gap-3 px-3 py-2">
-                  <span className="w-6 shrink-0 text-right font-display font-bold text-muted tabular">{r.shirt ?? "?"}</span>
+                  <span className="w-6 shrink-0 text-right font-display font-bold text-muted tabular">{r.shirt != null ? shirtLabel(r.shirt) : "?"}</span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate font-medium">{r.name || r.text}</span>
                     {r.problem && <span className="block text-xs font-semibold">Line {r.line}: {r.problem.replace(/\.$/, "")}</span>}

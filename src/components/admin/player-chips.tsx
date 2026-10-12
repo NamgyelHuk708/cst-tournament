@@ -1,6 +1,6 @@
 "use client";
 
-import type { Player } from "@/lib/tournament";
+import { shirtLabel, type Player } from "@/lib/tournament";
 
 export const NEW_PLAYER = "new";
 
@@ -34,7 +34,7 @@ export function PlayerChips({
         <div className="flex flex-wrap gap-2">
           {ordered.map((p) => (
             <Chip key={p.id} selected={selected === p.id} onClick={() => onPick(p.id)} quiet={off?.has(p.id)}>
-              {p.shirt_number != null && <span className="tabular opacity-60">#{p.shirt_number} </span>}
+              {p.shirt_number != null && <span className="tabular opacity-60">#{shirtLabel(p.shirt_number)} </span>}
               {p.name}
               {marks[p.id] && <span className="ml-1.5 text-xs font-semibold tabular opacity-70">· {marks[p.id]}</span>}
             </Chip>
