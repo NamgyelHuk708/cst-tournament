@@ -15,7 +15,7 @@ import {
 } from "@/lib/tournament";
 import { formatDay, formatTime } from "@/lib/format";
 import { Sheet } from "../sheet";
-import { useServerNow } from "../tournament-provider";
+import { useServerNow, useServerTime } from "../tournament-provider";
 import { teamShort } from "@/data/team-names";
 
 const BTN_SECONDARY = "h-14 rounded-xl font-semibold ring-1 ring-border active:bg-bg";
@@ -423,7 +423,11 @@ export function ClockSheet({
   onClose: () => void;
   onSubmit: (minute: number) => void;
 }) {
-  const now = useServerNow(5_000);
+  // Read when the sheet opens (server time now), then ticking: the first useServerNow value can be the page's load time.
+  const serverTime = useServerTime();
+  const [openedAt] = useState(serverTime);
+  const ticking = useServerNow(5_000);
+  const now = Math.max(openedAt, ticking);
   const second = match.status === "second_half";
   const first = second ? HALF_LENGTH_MINUTES + 1 : 1;
   const end = second ? HALF_LENGTH_MINUTES * 2 : HALF_LENGTH_MINUTES;

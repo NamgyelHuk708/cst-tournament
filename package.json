@@ -16,6 +16,7 @@
     "verify:standings": "tsx --env-file=.env.local scripts/verify-standings.ts",
     "test:admin": "tsx --env-file=.env.local scripts/test-admin.ts",
     "test:days": "tsx scripts/test-day-labels.tsx",
+    "test:minutes": "tsx scripts/test-minutes.tsx",
     "test": "npm run -s test:rls && npm run -s verify:standings && npm run -s test:admin",
     "dev:lan": "next dev -H 0.0.0.0 -p 3000",
     "demo": "next build && next start -H 0.0.0.0 -p 3000",

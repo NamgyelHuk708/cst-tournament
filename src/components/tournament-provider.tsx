@@ -344,3 +344,25 @@ export function useServerNow(intervalMs = 1000): number {
 
   return deviceNow == null || clockOffset == null ? renderedAt : deviceNow + clockOffset;
 }
+
+// Device time when this script loaded (close to when the page's server render arrived): until the
+// server clock is measured, server time is estimated as the render time plus the time elapsed since.
+const deviceAtLoad = typeof window === "undefined" ? null : Date.now();
+
+/**
+ * Server time at a given device time: the device time plus the measured offset, or, before the offset
+ * is known, the page's server render time plus the time elapsed since the page loaded. Pure, for tests.
+ */
+export function estimateServerNow(deviceNow: number, clockOffset: number | null, renderedAt: number, loadedAt: number | null): number {
+  if (clockOffset != null) return deviceNow + clockOffset;
+  return loadedAt == null ? renderedAt : renderedAt + Math.max(0, deviceNow - loadedAt);
+}
+
+/**
+ * Reads the server time right now, for a value taken at a moment, such as the minute when a sheet
+ * opens. Unlike `useServerNow`, its first value is never the page's load time.
+ */
+export function useServerTime(): () => number {
+  const { clockOffset, renderedAt } = useTournament();
+  return useCallback(() => estimateServerNow(Date.now(), clockOffset, renderedAt, deviceAtLoad), [clockOffset, renderedAt]);
+}

@@ -10,27 +10,56 @@ import {
   minuteProblem,
   type Match,
 } from "@/lib/tournament";
-import { useServerNow } from "../tournament-provider";
+import { useServerNow, useServerTime } from "../tournament-provider";
 
 export type MinuteState = ReturnType<typeof useMinuteInput>;
 
 /**
  * Minute and stoppage time for a goal, card or substitution. `initial` undefined: start at the match
- * clock (45 + 2 in stoppage time); null: "Not known"; otherwise that minute.
+ * clock, exactly as the admin scoreboard shows it (`clockMinute`: 45 + 2 in stoppage time, the stopped
+ * minute while play is suspended); null: "Not known"; otherwise that minute.
+ *
+ * The clock minute is read when the sheet opens (server time at that moment, never the page's load
+ * time). While the sheet stays open it follows the clock until the admin edits the minute, stoppage
+ * time or "Not known"; from then on it keeps what they entered.
  */
 export function useMinuteInput(match: Match, initial: { minute: number; added: number } | null | undefined) {
-  const now = useServerNow(15_000);
-  const [start] = useState(() => (initial === undefined ? clockMinute(match, now) : initial));
+  const serverTime = useServerTime();
+  // Server time when the sheet opened; `useServerNow` ticks after that (its first value can be stale).
+  const [openedAt] = useState(serverTime);
+  const ticking = useServerNow(1_000);
+  const now = Math.max(openedAt, ticking);
+  const fromClockNow = initial === undefined;
+  const [edited, setEdited] = useState(!fromClockNow);
+  const clock = clockMinute(match, now);
   // Typed as text, so the field can be briefly empty while the admin types a new number.
-  const [minuteText, setMinuteText] = useState<string | null>(start ? String(start.minute) : null);
-  const [addedText, setAddedText] = useState(start ? String(start.added) : "0");
+  const [typedMinute, setTypedMinute] = useState<string | null>(initial ? String(initial.minute) : null);
+  const [typedAdded, setTypedAdded] = useState(initial ? String(initial.added) : "0");
+  const minuteText = edited ? typedMinute : clock ? String(clock.minute) : null;
+  const addedText = edited ? typedAdded : String(clock?.added ?? 0);
+  // The first edit keeps the clock's current values as the starting point, then applies the change.
+  const startEditing = () => {
+    if (edited) return;
+    setTypedMinute(minuteText);
+    setTypedAdded(addedText);
+    setEdited(true);
+  };
+  const setMinuteText = (v: string | null) => {
+    startEditing();
+    setTypedMinute(v);
+  };
+  const setAddedText = (v: string) => {
+    startEditing();
+    setTypedAdded(v);
+  };
   const minute = minuteText == null ? null : minuteText === "" ? NaN : Number(minuteText);
   const atHalfEnd = minute != null && isHalfEnd(minute);
   // Stoppage time only at the end of a half; anywhere else it is 0.
   const added = atHalfEnd ? Number(addedText || 0) : 0;
   const problem = minute == null ? null : Number.isNaN(minute) ? "Enter the minute, or choose Not known." : minuteProblem(minute, added);
+  // "Add minute" after "Not known": the clock as it is now.
   const fromClock = () => {
-    const c = clockMinute(match, now);
+    const c = clockMinute(match, Math.max(serverTime(), ticking));
     setMinuteText(String(c?.minute ?? HALF_LENGTH_MINUTES));
     setAddedText(String(c?.added ?? 0));
   };

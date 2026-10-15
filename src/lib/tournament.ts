@@ -248,8 +248,6 @@ export function groupOfficials(officials: Official[], matchId: number): { label:
 /** Length of one half in minutes. To be confirmed with the organisers. */
 export const HALF_LENGTH_MINUTES = 45;
 export const POINTS_FOR_WIN = 3;
-/** Most stoppage minutes the admin's minute field pre-fills from the clock (the clock itself shows the actual number). */
-export const MAX_STOPPAGE_SHOWN = 15;
 export const POINTS_FOR_DRAW = 1;
 export const QUALIFIERS_PER_GROUP = 2;
 export const GROUP_CODES = ["A", "B", "C", "D", "E", "F", "G", "H"] as const;
@@ -317,27 +315,36 @@ export function matchClock(match: Pick<Match, "status" | "period_started_at" | "
       return { label: "FT", running: false };
   }
 
-  const halfStart = match.status === "first_half" ? 0 : HALF_LENGTH_MINUTES;
-  const halfEnd = halfStart + HALF_LENGTH_MINUTES;
-  if (!match.period_started_at || now == null) {
-    return { label: match.status === "first_half" ? "1st half" : "2nd half", running: true };
-  }
-
-  const elapsed = Math.max(0, Math.floor((now - Date.parse(match.period_started_at)) / 60_000));
-  const minute = halfStart + elapsed + 1;
-  const stoppage = minute - halfEnd;
+  const running = runningMinute(match, now);
+  if (!running) return { label: match.status === "first_half" ? "1st half" : "2nd half", running: true };
   // Always the actual added minutes ("45+2'", "90+17'"), the same form as event minutes elsewhere.
-  const label = stoppage > 0 ? `${halfEnd}+${stoppage}'` : `${minute}'`;
-  return { label, running: true };
+  return { label: running.added > 0 ? `${running.minute}+${running.added}'` : `${running.minute}'`, running: true };
 }
 
-/** The clock as a minute and stoppage time (45 + 2), or null when no half is running. */
-export function clockMinute(match: Pick<Match, "status" | "period_started_at">, now: number | null): { minute: number; added: number } | null {
+/** The running clock of the half in play as minute + actual stoppage (45 + 2), or null. Shared by the scoreboard and the sheets. */
+function runningMinute(match: Pick<Match, "status" | "period_started_at">, now: number | null): { minute: number; added: number } | null {
   if ((match.status !== "first_half" && match.status !== "second_half") || !match.period_started_at || now == null) return null;
   const halfStart = match.status === "first_half" ? 0 : HALF_LENGTH_MINUTES;
   const halfEnd = halfStart + HALF_LENGTH_MINUTES;
   const minute = halfStart + Math.max(0, Math.floor((now - Date.parse(match.period_started_at)) / 60_000)) + 1;
-  return minute > halfEnd ? { minute: halfEnd, added: Math.min(minute - halfEnd, MAX_STOPPAGE_SHOWN) } : { minute, added: 0 };
+  return minute > halfEnd ? { minute: halfEnd, added: minute - halfEnd } : { minute, added: 0 };
+}
+
+/**
+ * The minute the admin scoreboard's clock shows, as minute + stoppage time (45 + 2), or null when no
+ * half is being played (not started, half-time, penalties, finished). Every admin sheet that pre-fills a
+ * minute (goal, own goal, card, substitution) uses this, so it always matches the clock: frozen at the
+ * stopped minute while play is suspended, and stoppage time as shown, up to the 30 minutes a minute can have.
+ */
+export function clockMinute(match: Pick<Match, "status" | "period_started_at" | "stoppage">, now: number | null): { minute: number; added: number } | null {
+  if (match.stoppage) {
+    if (match.stoppage.abandoned) return null;
+    const end = match.stoppage.half === "first_half" ? HALF_LENGTH_MINUTES : HALF_LENGTH_MINUTES * 2;
+    const at = match.stoppage.at_minute;
+    return at > end ? { minute: end, added: Math.min(at - end, MAX_STOPPAGE_MINUTES) } : { minute: at, added: 0 };
+  }
+  const running = runningMinute(match, now);
+  return running && { minute: running.minute, added: Math.min(running.added, MAX_STOPPAGE_MINUTES) };
 }
 
 /** Stoppage time recorded per half at most. */
