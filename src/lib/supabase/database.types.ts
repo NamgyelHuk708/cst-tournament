@@ -713,6 +713,64 @@ export type Database = {
           },
         ]
       }
+      team_kits: {
+        Row: {
+          id: number
+          is_demo: boolean
+          match_id: number | null
+          pattern: string | null
+          shirt: string
+          shirt2: string | null
+          shorts: string
+          team_id: number
+          updated_at: string
+        }
+        Insert: {
+          id?: never
+          is_demo?: boolean
+          match_id?: number | null
+          pattern?: string | null
+          shirt: string
+          shirt2?: string | null
+          shorts: string
+          team_id: number
+          updated_at?: string
+        }
+        Update: {
+          id?: never
+          is_demo?: boolean
+          match_id?: number | null
+          pattern?: string | null
+          shirt?: string
+          shirt2?: string | null
+          shorts?: string
+          team_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_kits_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_kits_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "group_standings"
+            referencedColumns: ["team_id"]
+          },
+          {
+            foreignKeyName: "team_kits_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       team_staff: {
         Row: {
           created_at: string
@@ -1396,6 +1454,33 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      admin_set_team_kit: {
+        Args: {
+          p_match: number
+          p_pattern?: string
+          p_shirt: string
+          p_shirt2?: string
+          p_shorts: string
+          p_team: number
+        }
+        Returns: {
+          id: number
+          is_demo: boolean
+          match_id: number | null
+          pattern: string | null
+          shirt: string
+          shirt2: string | null
+          shorts: string
+          team_id: number
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "team_kits"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       admin_set_team_name: {
         Args: {
           p_demo?: boolean
@@ -1648,6 +1733,10 @@ export type Database = {
       }
       half_length_minutes: { Args: never; Returns: number }
       is_admin: { Args: never; Returns: boolean }
+      kit_colour: {
+        Args: { p_colour: string; p_what: string }
+        Returns: string
+      }
       knockouts_have_real_results: { Args: never; Returns: boolean }
       match_result_team: {
         Args: {
@@ -1658,6 +1747,7 @@ export type Database = {
       }
       require_admin: { Args: never; Returns: undefined }
       restore_events: { Args: { p_rows: Json }; Returns: undefined }
+      shirt_label: { Args: { p_shirt: number }; Returns: string }
       slot_name: { Args: { p_slot: string }; Returns: string }
       tidy_name: { Args: { p_name: string }; Returns: string }
     }

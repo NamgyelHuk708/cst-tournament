@@ -1,6 +1,5 @@
 "use client";
 
-import type { SupabaseClient } from "@supabase/supabase-js";
 import { useMemo, useState } from "react";
 import { teamShort } from "@/data/team-names";
 import { createClient } from "@/lib/supabase/client";
@@ -104,7 +103,7 @@ function KitSheet({
   onClose: () => void;
 }) {
   const { local } = useTournament();
-  const supabase = useMemo(() => createClient() as unknown as SupabaseClient, []);
+  const supabase = useMemo(() => createClient(), []);
   const start = current ?? fallback ?? null;
   const [shirt, setShirt] = useState(start?.shirt ?? "#1E5BC6");
   const [pattern, setPattern] = useState<Pattern>(start?.pattern ?? null);
@@ -119,13 +118,15 @@ function KitSheet({
   async function send(remove: boolean) {
     setSaving(true);
     setError(null);
+    // SQL nulls (usual kit, remove, no second colour), which the generated types don't express.
+    const nullable = <T,>(v: T | null) => v as T;
     const { data, error } = await supabase.rpc("admin_set_team_kit", {
       p_team: team.id,
-      p_match: matchId,
-      p_shirt: remove ? null : shirt,
-      p_shorts: remove ? null : shorts,
-      p_shirt2: remove || !pattern ? null : shirt2,
-      p_pattern: remove ? null : pattern,
+      p_match: nullable(matchId),
+      p_shirt: nullable(remove ? null : shirt),
+      p_shorts: nullable(remove ? null : shorts),
+      p_shirt2: nullable(remove || !pattern ? null : shirt2),
+      p_pattern: nullable(remove ? null : pattern),
     });
     setSaving(false);
     if (error) return setError(message(error));
