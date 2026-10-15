@@ -22,6 +22,7 @@ import {
   withSchedule,
   withStoppages,
   type MatchStoppage,
+  type TeamKit,
   type TeamStaff,
   withDisplayNames,
 } from "@/lib/tournament";
@@ -56,6 +57,8 @@ type TournamentContextValue = Snapshot & {
     removeNotice: (id: number) => void;
     upsertStoppage: (row: MatchStoppage) => void;
     removeStoppagesFor: (matchId: number) => void;
+    /** A kit saved (row) or removed (null) for a team, usual (matchId null) or for one match. */
+    setKit: (teamId: number, matchId: number | null, row: TeamKit | null) => void;
     refresh: () => Promise<void>;
   };
 };
@@ -194,6 +197,9 @@ export function TournamentProvider({
         .on<MatchStoppage>("postgres_changes", { event: "*", schema: "public", table: "match_stoppages" }, (p) =>
           apply((d) => ({ ...d, stoppages: applyChange(d.stoppages, p) })),
         )
+        .on<TeamKit>("postgres_changes", { event: "*", schema: "public", table: "team_kits" }, (p) =>
+          apply((d) => ({ ...d, kits: applyChange(d.kits, p) })),
+        )
         .on<ResultHold>("postgres_changes", { event: "*", schema: "public", table: "result_holds" }, (p) =>
           apply((d) => ({ ...d, resultHolds: applyHoldChange(d.resultHolds, p) })),
         )
@@ -284,6 +290,8 @@ export function TournamentProvider({
       removeStoppagesFor: (matchId) => setData((d) => ({ ...d, stoppages: d.stoppages.filter((x) => x.match_id !== matchId || x.outcome != null) })),
       removeNotice: (id) => setData((d) => ({ ...d, notices: d.notices.filter((n) => n.id !== id) })),
       upsertResultHold: (row) => setData((d) => ({ ...d, resultHolds: [...d.resultHolds.filter((h) => h.match_id !== row.match_id), row] })),
+      setKit: (teamId, matchId, row) =>
+        setData((d) => ({ ...d, kits: [...d.kits.filter((k) => !(k.team_id === teamId && k.match_id === matchId)), ...(row ? [row] : [])] })),
       refresh,
     }),
     [refresh],

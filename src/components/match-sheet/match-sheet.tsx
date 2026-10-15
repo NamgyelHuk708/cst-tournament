@@ -81,6 +81,7 @@ function MatchDetail({ match, onLeave }: { match: Match; onLeave: () => void }) 
 
       <Matchup
         className="mt-4"
+        matchId={match.id}
         home={home}
         away={away}
         placeholders={{ home: sides.home.placeholder, away: sides.away.placeholder }}

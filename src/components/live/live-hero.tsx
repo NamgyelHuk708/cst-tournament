@@ -1,6 +1,7 @@
 "use client";
 
-import { compareEventTime, eventsForMatch, isFinished, isWaterBreak, slotDisplayName, subsForMatch, type Match, type Team } from "@/lib/tournament";
+import { compareEventTime, eventsForMatch, isFinished, isWaterBreak, kitFor, slotDisplayName, subsForMatch, type Match, type Team } from "@/lib/tournament";
+import { KitIcon } from "../kit-icon";
 import { LatestSub, ScorerColumns } from "../event-list";
 import { GroupTag } from "../group-tag";
 import { TeamLink } from "../team-link";
@@ -52,6 +53,7 @@ export function LiveHero({ match }: { match: Match }) {
 
         <Matchup
           className="mt-2"
+          matchId={match.id}
           home={home}
           away={away}
           center={<Score home={match.home_score} away={match.away_score} />}
@@ -95,8 +97,11 @@ export function Matchup({
   placeholders,
   center,
   linkTeams = false,
+  matchId,
   className = "",
 }: {
+  /** For "kit for this match"; without it, each team's usual kit. */
+  matchId?: number;
   home?: Team;
   away?: Team;
   placeholders?: { home?: string; away?: string };
@@ -109,7 +114,26 @@ export function Matchup({
   // Up to 34px when both names are short, 28px otherwise, smaller if a word wouldn't fit.
   const names = [teamShort(home, "TBD"), teamShort(away, "TBD")];
   const size = fitNameSize(names, names.every((n) => n.length <= 5) ? 34 : 28, 0.45);
-  const logo = (team?: Team) => <div className="grid h-12 place-items-center">{team && <TeamLogo team={team} size={48} />}</div>;
+  const { kits } = useTournament();
+  // The kit (if entered) as a small badge on the logo's outer lower corner: the columns beside a big
+  // score are too narrow for it to sit beside the logo, and the names keep their size and alignment.
+  const logo = (team: Team | undefined, side: "home" | "away") => {
+    const kit = kitFor(kits, team?.id, matchId);
+    return (
+      <div className="grid h-12 place-items-center">
+        {team && (
+          <span className="relative">
+            <TeamLogo team={team} size={48} />
+            {kit && (
+              <span className={`absolute -bottom-1.5 grid place-items-center rounded-md bg-card p-0.5 shadow-sm ring-1 ring-border ${side === "home" ? "-left-3" : "-right-3"}`}>
+                <KitIcon kit={kit} size={20} />
+              </span>
+            )}
+          </span>
+        )}
+      </div>
+    );
+  };
   const short = (team?: Team) => {
     const text = teamShort(team, "TBD");
     return (
@@ -141,9 +165,9 @@ export function Matchup({
   };
   return (
     <div className={`grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-x-2 gap-y-1.5 ${className}`}>
-      {logo(home)}
+      {logo(home, "home")}
       <div className="row-span-3 self-center">{center}</div>
-      {logo(away)}
+      {logo(away, "away")}
       {short(home)}
       {short(away)}
       {sub(home, placeholders?.home)}

@@ -33,6 +33,7 @@ export function NextMatchHero({ match, placeholders }: { match: Match; placehold
 
         <Matchup
           className="mt-5"
+          matchId={match.id}
           home={home}
           away={away}
           placeholders={placeholders}

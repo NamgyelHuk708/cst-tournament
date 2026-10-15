@@ -1,10 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "./supabase/database.types";
-import type { KickoffChange, MatchStoppage, Notice, Official, ResultHold, Snapshot, TeamStaff } from "./tournament";
+import type { KickoffChange, MatchStoppage, Notice, Official, ResultHold, Snapshot, TeamKit, TeamStaff } from "./tournament";
 
 /** Everything the public pages need, in twelve small queries. Works with the server or browser client. */
 export async function fetchSnapshot(supabase: SupabaseClient<Database>): Promise<Snapshot> {
-  const [teams, matches, events, players, substitutions, officials, staff, displayNames, resultHolds, kickoffChanges, notices, stoppages] = await Promise.all([
+  const [teams, matches, events, players, substitutions, officials, staff, displayNames, resultHolds, kickoffChanges, notices, stoppages, kits] = await Promise.all([
     supabase.from("teams").select("id, slot, group_code, short_code, name, tiebreak_rank").order("slot"),
     supabase.from("matches").select("*").order("kickoff_at").order("id"),
     supabase.from("match_events").select("id, match_id, type, team_id, player_id, minute, added_time, client_id"),
@@ -18,6 +18,8 @@ export async function fetchSnapshot(supabase: SupabaseClient<Database>): Promise
     // Only notices that haven't ended (the table keeps old ones until the admin removes them).
     supabase.from("notices").select("id, message, level, starts_at, ends_at, updated_at").gt("ends_at", new Date().toISOString()),
     supabase.from("match_stoppages").select("id, match_id, at_minute, half, home_score, away_score, reason, abandoned, resume_at, outcome"),
+    // Kit colours. Before the team_kits migration is applied the table doesn't exist: no kits, no icons.
+    (supabase as unknown as SupabaseClient).from("team_kits").select("id, team_id, match_id, shirt, shirt2, pattern, shorts"),
   ]);
   const error =
     teams.error ?? matches.error ?? events.error ?? players.error ?? substitutions.error ?? officials.error ?? staff.error ?? displayNames.error ?? resultHolds.error ?? kickoffChanges.error ?? notices.error ?? stoppages.error;
@@ -26,5 +28,6 @@ export async function fetchSnapshot(supabase: SupabaseClient<Database>): Promise
     kickoffChanges: kickoffChanges.data as KickoffChange[],
     notices: notices.data as Notice[],
     stoppages: stoppages.data as MatchStoppage[],
+    kits: kits.error ? [] : (kits.data as TeamKit[]),
   };
 }

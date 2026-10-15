@@ -90,7 +90,7 @@ async function main() {
   const { SubSheet } = await import("../src/components/admin/sub-sheet");
   const { matchClock } = await import("../src/lib/tournament");
 
-  const snapshotFor = (m: Match): Snapshot => ({ teams, matches: [m], events: [], players: [], substitutions: [], officials: [], staff: [], displayNames: [], resultHolds: [], kickoffChanges: [], notices: [], stoppages: [] });
+  const snapshotFor = (m: Match): Snapshot => ({ teams, matches: [m], events: [], players: [], substitutions: [], officials: [], staff: [], displayNames: [], resultHolds: [], kickoffChanges: [], notices: [], stoppages: [], kits: [] });
   const render = (node: React.ReactNode, m: Match, renderedAt = NOW) =>
     renderToStaticMarkup(
       <TournamentProvider initial={snapshotFor(m)} renderedAt={renderedAt}>

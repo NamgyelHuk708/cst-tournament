@@ -11,6 +11,7 @@ import { TeamLogo } from "../team-logo";
 import { useTournament } from "../tournament-provider";
 import { teamShort, teamSub } from "@/data/team-names";
 import { TeamNameSection } from "./team-name";
+import { TeamKitSection } from "./team-kits";
 import { StaffSection } from "./team-staff";
 
 const MAX_NAME = 80;
@@ -100,6 +101,7 @@ export function TeamPage({ code, fromMatch }: { code: string; fromMatch?: number
       </div>
 
       <TeamNameSection team={team} />
+      <TeamKitSection team={team} />
 
       <h2 className="mt-6 px-1 text-sm font-semibold text-muted">Players</h2>
       <div className="mt-2 grid grid-cols-2 gap-2">

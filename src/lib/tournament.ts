@@ -87,7 +87,75 @@ export type Snapshot = {
   kickoffChanges: KickoffChange[];
   notices: Notice[];
   stoppages: MatchStoppage[];
+  kits: TeamKit[];
 };
+
+// ---------------------------------------------------------------------------
+// Team kits (shirt and shorts colours, shown as a small shirt next to team names)
+// ---------------------------------------------------------------------------
+
+/** A team's kit colours ('#RRGGBB'). match_id null: its usual kit; otherwise the kit for that match. */
+export type TeamKit = {
+  id: number;
+  team_id: number;
+  match_id: number | null;
+  shirt: string;
+  shirt2: string | null;
+  pattern: "stripes" | "halves" | null;
+  shorts: string;
+};
+
+/** The kit a team wears: the one set for this match, else its usual kit, else none (no icon). */
+export function kitFor(kits: TeamKit[], teamId: number | null | undefined, matchId?: number | null): TeamKit | null {
+  if (teamId == null) return null;
+  return (
+    (matchId != null ? kits.find((k) => k.team_id === teamId && k.match_id === matchId) : undefined) ??
+    kits.find((k) => k.team_id === teamId && k.match_id == null) ??
+    null
+  );
+}
+
+const rgb = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+
+/** Light enough to vanish on a white card: such colours get a thin outline. */
+export function isLightColour(hex: string): boolean {
+  const [r, g, b] = rgb(hex).map((v) => {
+    const c = v / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.7;
+}
+
+// Plain names for the spoken label: the nearest of these (by perceived distance).
+const COLOUR_NAMES: [string, string][] = [
+  ["black", "#000000"], ["white", "#FFFFFF"], ["grey", "#808080"], ["light grey", "#C8C8C8"], ["dark grey", "#404040"],
+  ["red", "#D32F2F"], ["maroon", "#7B1E2B"], ["pink", "#F06292"], ["orange", "#F57C00"], ["yellow", "#FBC02D"],
+  ["gold", "#C9A227"], ["cream", "#F3E5C0"], ["brown", "#6D4C41"], ["green", "#2E7D32"], ["light green", "#8BC34A"],
+  ["dark green", "#1B4D2E"], ["teal", "#00897B"], ["sky blue", "#64B5F6"], ["blue", "#1E5BC6"], ["navy", "#1A2A5A"],
+  ["purple", "#6A1B9A"], ["lilac", "#B39DDB"],
+];
+
+/** "blue", "navy", "white": the nearest plain colour name. */
+export function colourName(hex: string): string {
+  const [r, g, b] = rgb(hex);
+  let best = COLOUR_NAMES[0][0];
+  let bestD = Infinity;
+  for (const [name, h] of COLOUR_NAMES) {
+    const [r2, g2, b2] = rgb(h);
+    const rm = (r + r2) / 2;
+    const d = (2 + rm / 256) * (r - r2) ** 2 + 4 * (g - g2) ** 2 + (2 + (255 - rm) / 256) * (b - b2) ** 2;
+    if (d < bestD) [best, bestD] = [name, d];
+  }
+  return best;
+}
+
+/** "Kit: blue shirt, white shorts", "Kit: red and white striped shirt, black shorts". */
+export function kitLabel(kit: Pick<TeamKit, "shirt" | "shirt2" | "pattern" | "shorts">): string {
+  const shirt = kit.shirt2 && kit.pattern
+    ? `${colourName(kit.shirt)} and ${colourName(kit.shirt2)} ${kit.pattern === "stripes" ? "striped" : "halved"} shirt`
+    : `${colourName(kit.shirt)} shirt`;
+  return `Kit: ${shirt}, ${colourName(kit.shorts)} shorts`;
+}
 
 /** Matches with their open stoppage (if any) attached. */
 export function withStoppages(matches: Match[], stoppages: MatchStoppage[]): Match[] {
