@@ -26,7 +26,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
 function Gate({ children }: { children: React.ReactNode }) {
   return (
-    <TournamentData gate={requireAdmin}>
+    <TournamentData gate={requireAdmin} fresh>
       <AdminHeader />
       {children}
     </TournamentData>
