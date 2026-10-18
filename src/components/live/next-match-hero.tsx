@@ -1,7 +1,8 @@
 "use client";
 
 import { countdownParts, formatTime, relativeDay } from "@/lib/format";
-import { slotDisplayName, type Match } from "@/lib/tournament";
+import { tieLabel, type Match } from "@/lib/tournament";
+import { StageLabel } from "../stage-label";
 import { GroupTag } from "../group-tag";
 import { MatchDetailsHint, OpenMatchOverlay } from "../match-sheet/open-overlay";
 import { useServerNow, useTournament } from "../tournament-provider";
@@ -20,16 +21,19 @@ export function NextMatchHero({ match, placeholders }: { match: Match; placehold
     <article aria-label="Next match" className="relative overflow-hidden rounded-2xl bg-card shadow-[0_1px_2px_rgb(27_34_48/0.06),0_8px_24px_-12px_rgb(27_34_48/0.18)]">
       <div className="h-1 bg-brand" />
       <div className="px-5 pt-4 pb-5">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-bold text-brand-text">Next match</span>
-          {match.group_code ? (
+        {match.group_code ? (
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-brand-text">Next match</span>
             <GroupTag group={match.group_code} />
-          ) : (
-            <span className="text-xs font-semibold text-muted">
-              {match.slot_label ? slotDisplayName(match.slot_label) : ""}
-            </span>
-          )}
-        </div>
+          </div>
+        ) : (
+          // Knockouts: the stage centred as the card's label, the tie (M1, QF2) small on the right.
+          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+            <span className="text-xs font-bold text-brand-text">Next match</span>
+            <StageLabel match={match} />
+            <span className="justify-self-end text-xs font-semibold text-muted">{tieLabel(match)}</span>
+          </div>
+        )}
 
         <Matchup
           className="mt-5"

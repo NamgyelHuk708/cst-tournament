@@ -700,6 +700,37 @@ export function slotDisplayName(slotLabel: string): string {
   return slotLabel.replace(/^R16-/, "");
 }
 
+const STAGE_NAMES: Record<Exclude<MatchStage, "group">, string> = {
+  round_of_16: "Round of 16",
+  quarter_final: "Quarter-final",
+  semi_final: "Semi-final",
+  third_place: "3rd place match",
+  final: "Final",
+};
+const STAGE_SHORT: Record<Exclude<MatchStage, "group">, string> = {
+  round_of_16: "R16",
+  quarter_final: "QF",
+  semi_final: "SF",
+  third_place: "3rd place",
+  final: "Final",
+};
+
+/** "Round of 16", "Quarter-final", "Semi-final", "3rd place match", "Final"; null for a group match. */
+export function stageName(match: Pick<Match, "stage">): string | null {
+  return match.stage === "group" ? null : STAGE_NAMES[match.stage];
+}
+
+/** The short tag for match rows: "R16", "QF", "SF", "3rd place", "Final"; null for a group match. */
+export function stageShort(match: Pick<Match, "stage">): string | null {
+  return match.stage === "group" ? null : STAGE_SHORT[match.stage];
+}
+
+/** The tie within its round ("M1", "QF2", "SF1"); null for group matches, the 3rd place match and the Final. */
+export function tieLabel(match: Pick<Match, "stage" | "slot_label">): string | null {
+  if (match.stage === "group" || match.stage === "third_place" || match.stage === "final" || !match.slot_label) return null;
+  return slotDisplayName(match.slot_label);
+}
+
 /** Bracket labels inside a message from the database ("Reset R16-M1 first") in display form. */
 export function displaySlotLabels(text: string): string {
   return text.replace(/\bR16-(M\d)\b/g, "$1");

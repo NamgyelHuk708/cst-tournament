@@ -9,6 +9,7 @@ import {
   isLive,
   groupOfficials,
   slotDisplayName,
+  tieLabel,
   subsForMatch,
   type Match,
   teamManagers,
@@ -17,6 +18,7 @@ import { teamShort } from "@/data/team-names";
 import { MatchTimeline, ScorerColumns } from "../event-list";
 import { GroupTag } from "../group-tag";
 import { Matchup } from "../live/live-hero";
+import { StageLabel } from "../stage-label";
 import { Sheet } from "../sheet";
 import { useServerNow, useTournament } from "../tournament-provider";
 import { useResolvedSides } from "../use-resolved-sides";
@@ -66,14 +68,27 @@ function MatchDetail({ match, onLeave }: { match: Match; onLeave: () => void }) 
   return (
     // Any link inside (a team's matches) leaves the sheet, even if it points at the current page.
     <div onClickCapture={(e) => (e.target as Element).closest("a[href]") && onLeave()}>
+      {/* Knockouts: the stage centred above, as the sheet's label. */}
+      {!match.group_code && (
+        <p className="mb-2 text-center">
+          <StageLabel match={match} />
+        </p>
+      )}
       <div className="flex items-center justify-between gap-3">
         <span className="flex min-w-0 items-center gap-2 text-xs font-medium text-muted">
           {match.group_code ? (
-            <GroupTag group={match.group_code} />
+            <>
+              <GroupTag group={match.group_code} />
+              <span aria-hidden="true">·</span>
+            </>
           ) : (
-            <span className="font-semibold">{match.slot_label ? slotDisplayName(match.slot_label) : "Knockout"}</span>
+            tieLabel(match) && (
+              <>
+                <span className="font-semibold">{tieLabel(match)}</span>
+                <span aria-hidden="true">·</span>
+              </>
+            )
           )}
-          <span aria-hidden="true">·</span>
           <span className="tabular">Match {match.id}</span>
         </span>
         <Status match={match} />

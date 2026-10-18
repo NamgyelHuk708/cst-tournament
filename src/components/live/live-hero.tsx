@@ -1,6 +1,7 @@
 "use client";
 
-import { compareEventTime, eventsForMatch, isFinished, isWaterBreak, kitFor, slotDisplayName, subsForMatch, type Match, type Team } from "@/lib/tournament";
+import { compareEventTime, eventsForMatch, isFinished, isWaterBreak, kitFor, subsForMatch, tieLabel, type Match, type Team } from "@/lib/tournament";
+import { StageLabel } from "../stage-label";
 import { KitIcon } from "../kit-icon";
 import { LatestSub, ScorerColumns } from "../event-list";
 import { GroupTag } from "../group-tag";
@@ -28,10 +29,21 @@ export function LiveHero({ match }: { match: Match }) {
   return (
     <article aria-label={finished ? "Final result" : "Live match"} className="relative overflow-hidden rounded-2xl bg-card shadow-[0_1px_2px_rgb(27_34_48/0.06),0_8px_24px_-12px_rgb(27_34_48/0.18)]">
       <div className="px-5 pt-4 pb-5">
-        <div className="flex items-center justify-between">
-          {match.group_code ? <GroupTag group={match.group_code} /> : <StageTag match={match} />}
-          <span className="text-xs font-medium text-muted tabular">Match {match.id}</span>
-        </div>
+        {match.group_code ? (
+          <div className="flex items-center justify-between">
+            <GroupTag group={match.group_code} />
+            <span className="text-xs font-medium text-muted tabular">Match {match.id}</span>
+          </div>
+        ) : (
+          // Knockouts: the stage centred as the card's label, the tie (M1, QF2) and match number small on the right.
+          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+            <span />
+            <StageLabel match={match} />
+            <span className="justify-self-end text-xs font-medium text-muted tabular">
+              {tieLabel(match) ? `${tieLabel(match)} · ` : ""}Match {match.id}
+            </span>
+          </div>
+        )}
 
         <div className="mt-4 flex justify-center">
           <span role="status" aria-live="polite">
@@ -75,14 +87,6 @@ export function LiveHero({ match }: { match: Match }) {
       <MatchDetailsHint />
       <OpenMatchOverlay matchId={match.id} label={`Match details: ${home?.name ?? "TBD"} v ${away?.name ?? "TBD"}`} />
     </article>
-  );
-}
-
-function StageTag({ match }: { match: Match }) {
-  return (
-    <span className="text-xs font-semibold text-muted">
-      {match.slot_label ? slotDisplayName(match.slot_label) : "Knockout"}
-    </span>
   );
 }
 

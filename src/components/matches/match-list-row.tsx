@@ -7,7 +7,6 @@ import {
   isLive,
   matchClock,
   matchOutcome,
-  slotDisplayName,
   type Match,
   type ResolvedSide,
   type Side,
@@ -21,7 +20,7 @@ import { useResolvedSides } from "../use-resolved-sides";
 import { LivePill } from "../live-pill";
 import { fitNameSize, teamShort, teamSub } from "@/data/team-names";
 import { isPostponed } from "@/lib/tournament";
-import { isAbandoned, stoppageMinuteLabel } from "@/lib/tournament";
+import { isAbandoned, stageShort, stoppageMinuteLabel } from "@/lib/tournament";
 import { continuesLabel } from "../stoppage-note";
 
 /**
@@ -68,7 +67,7 @@ export function MatchListRow({ match, href, flags }: { match: Match; href?: stri
               {match.group_code}
             </>
           ) : (
-            slotDisplayName(match.slot_label ?? "")
+            stageShort(match)
           )}
         </span>
         {live ? (

@@ -17,7 +17,7 @@ import { useFlashOnChange } from "./use-flash";
 import { LivePill } from "./live-pill";
 import { teamShort, teamSub } from "@/data/team-names";
 import { isPostponed } from "@/lib/tournament";
-import { isAbandoned, stoppageMinuteLabel } from "@/lib/tournament";
+import { isAbandoned, stageShort, stoppageMinuteLabel } from "@/lib/tournament";
 import { continuesLabel } from "./stoppage-note";
 
 type Props = {
@@ -145,6 +145,12 @@ function TeamLine({
 }
 
 /** Day and kick-off time on every row ("Tomorrow" over "8:00 PM"), plus the live clock or FT. */
+/** Knockout matches: their stage as a short tag ("R16", "QF", "Final") under the time. Group rows have none. */
+function StageTagLine({ match }: { match: Match }) {
+  const tag = stageShort(match);
+  return tag ? <span className="mt-0.5 block text-[11px] font-semibold text-muted">{tag}</span> : null;
+}
+
 function StatusCell({ match }: { match: Match }) {
   const now = useServerNow(15_000);
   const day = relativeDay(match.kickoff_at, now);
@@ -156,6 +162,7 @@ function StatusCell({ match }: { match: Match }) {
         <span className="mt-0.5 block text-[11px] leading-tight font-medium text-muted tabular">
           {day} <span className="whitespace-nowrap">{time}</span>
         </span>
+        <StageTagLine match={match} />
       </span>
     );
   }
@@ -164,6 +171,7 @@ function StatusCell({ match }: { match: Match }) {
       <span className="w-[5rem] shrink-0 leading-tight">
         <span className="block text-xs font-semibold">Abandoned <span className="whitespace-nowrap">{match.stoppage && stoppageMinuteLabel(match.stoppage)}</span></span>
         <span className="block text-[11px] font-medium text-muted">{continuesLabel(match)}</span>
+        <StageTagLine match={match} />
       </span>
     );
   }
@@ -172,6 +180,7 @@ function StatusCell({ match }: { match: Match }) {
       <span className="w-[5rem] shrink-0 leading-tight">
         <span className="block text-xs font-semibold">Postponed</span>
         <span className="block text-[11px] font-medium text-muted">Time to be announced</span>
+        <StageTagLine match={match} />
       </span>
     );
   }
@@ -183,6 +192,7 @@ function StatusCell({ match }: { match: Match }) {
         {isFinished(match) && <span className="font-display text-xs font-bold text-muted">FT</span>}
       </span>
       {match.schedule && <span className="mt-0.5 block text-[11px] font-semibold text-brand-text">Rescheduled</span>}
+      <StageTagLine match={match} />
     </span>
   );
 }

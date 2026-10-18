@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { dayKey, formatTime, relativeDay } from "@/lib/format";
-import { isFinished, isLive, slotDisplayName, type Match } from "@/lib/tournament";
+import { isFinished, isLive, stageShort, type Match } from "@/lib/tournament";
 import { GroupSwatch } from "../group-tag";
 import { ChevronIcon } from "../icons";
 import { useServerNow, useTournament } from "../tournament-provider";
@@ -92,7 +92,7 @@ export function AdminMatchRow({ match, now, hideGroup = false }: { match: Match;
               <GroupSwatch group={match.group_code} className="size-2" /> Group {match.group_code}
             </>
           ) : (
-            slotDisplayName(match.slot_label ?? "")
+            stageShort(match)
           )}
           {!hideGroup && <span aria-hidden="true">·</span>} Match {match.id}
         </span>
