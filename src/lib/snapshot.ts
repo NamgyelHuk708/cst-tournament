@@ -21,7 +21,7 @@ export async function fetchSnapshot(supabase: SupabaseClient<Database>): Promise
     // Kit colours. Before the team_kits migration is applied the table doesn't exist: no kits, no icons.
     supabase.from("team_kits").select("id, team_id, match_id, shirt, shirt2, pattern, shorts"),
     // Extra time. Before its migration is applied the table doesn't exist: no extra time.
-    (supabase as unknown as SupabaseClient).from("match_extra_time").select("match_id, half_minutes, periods, phase, phase_started_at, second_half_started_at"),
+    supabase.from("match_extra_time").select("match_id, half_minutes, periods, phase, phase_started_at, second_half_started_at"),
   ]);
   const error =
     teams.error ?? matches.error ?? events.error ?? players.error ?? substitutions.error ?? officials.error ?? staff.error ?? displayNames.error ?? resultHolds.error ?? kickoffChanges.error ?? notices.error ?? stoppages.error;

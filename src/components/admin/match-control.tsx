@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { uuid } from "@/lib/uuid";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   canStartExtraTime,
   clockMinute,
@@ -91,8 +90,6 @@ function errorMessage(err: unknown): string {
 export function MatchControl({ matchId, back }: { matchId: number; back?: string }) {
   const { matches, matchesById, teamsById, teams, events, playersById, substitutions, local } = useTournament();
   const supabase = useMemo(() => createClient(), []);
-  // Extra-time functions and table, untyped until the generated database types include them.
-  const db = supabase as unknown as SupabaseClient;
   const serverTime = useServerTime();
   const match = matchesById.get(matchId);
 
@@ -176,7 +173,7 @@ export function MatchControl({ matchId, back }: { matchId: number; back?: string
         .order("id", { ascending: false })
         .limit(1)
         .maybeSingle(),
-      db
+      supabase
         .from("extra_time_actions")
         .select("id, kind, created_at")
         .eq("match_id", matchId)
@@ -193,7 +190,7 @@ export function MatchControl({ matchId, back }: { matchId: number; back?: string
       etRow.data ? ({ source: "et", ...etRow.data } as LastAction) : null,
     ].filter((x): x is LastAction => x != null);
     setLastAction(candidates.reduce<LastAction | null>((best, x) => (!best || x.created_at > best.created_at ? x : best), null));
-  }, [supabase, db, matchId]);
+  }, [supabase, matchId]);
 
   // Refresh the undo label whenever the match changes (here or on another device).
   useEffect(() => {
@@ -278,7 +275,7 @@ export function MatchControl({ matchId, back }: { matchId: number; back?: string
   // Extra-time step (break, second half, end); the end may also finish the match.
   const setExtraTimeStep = (to: ExtraTimeStepTo) =>
     run(
-      () => db.rpc("admin_extra_time_step", { p_match: matchId, p_to: to }),
+      () => supabase.rpc("admin_extra_time_step", { p_match: matchId, p_to: to }),
       (row) => {
         local.setExtraTime(matchId, row as MatchExtraTime);
         if (to === "over") local.refresh();
@@ -310,7 +307,7 @@ export function MatchControl({ matchId, back }: { matchId: number; back?: string
     run(
       () =>
         lastAction?.source === "et"
-          ? db.rpc("admin_undo_extra_time", { p_match: matchId })
+          ? supabase.rpc("admin_undo_extra_time", { p_match: matchId })
           : lastAction?.source === "extra"
           ? supabase.rpc("admin_undo_extra", { p_match: matchId })
           : lastAction?.source === "clock"
@@ -429,11 +426,9 @@ export function MatchControl({ matchId, back }: { matchId: number; back?: string
           error={toolError}
           onClose={() => setTool(null)}
           onSubmit={(half, periods) =>
-            runTool(() =>
-              tool === "et-start"
-                ? db.rpc("admin_start_extra_time", { p_match: matchId, p_half_minutes: half, p_periods: periods })
-                : db.rpc("admin_set_extra_time_length", { p_match: matchId, p_half_minutes: half, p_periods: periods }),
-            )
+            tool === "et-start"
+              ? runTool(() => supabase.rpc("admin_start_extra_time", { p_match: matchId, p_half_minutes: half, p_periods: periods }))
+              : runTool(() => supabase.rpc("admin_set_extra_time_length", { p_match: matchId, p_half_minutes: half, p_periods: periods }))
           }
         />
       )}
@@ -511,11 +506,9 @@ export function MatchControl({ matchId, back }: { matchId: number; back?: string
           busy={busy}
           onClose={() => setTool(null)}
           onSubmit={(minute) =>
-            runTool(() =>
-              isExtraTimeInPlay(match)
-                ? db.rpc("admin_correct_extra_time_clock", { p_match: matchId, p_minute: minute })
-                : supabase.rpc("admin_correct_clock", { p_match: matchId, p_minute: minute }),
-            )
+            isExtraTimeInPlay(match)
+              ? runTool(() => supabase.rpc("admin_correct_extra_time_clock", { p_match: matchId, p_minute: minute }))
+              : runTool(() => supabase.rpc("admin_correct_clock", { p_match: matchId, p_minute: minute }))
           }
         />
       )}

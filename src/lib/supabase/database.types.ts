@@ -105,6 +105,50 @@ export type Database = {
           },
         ]
       }
+      extra_time_actions: {
+        Row: {
+          created_at: string
+          id: number
+          is_demo: boolean
+          kind: string
+          match_id: number
+          new_et: Json
+          prev_et: Json | null
+          set_finished: boolean
+          undone_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: never
+          is_demo?: boolean
+          kind: string
+          match_id: number
+          new_et: Json
+          prev_et?: Json | null
+          set_finished?: boolean
+          undone_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: never
+          is_demo?: boolean
+          kind?: string
+          match_id?: number
+          new_et?: Json
+          prev_et?: Json | null
+          set_finished?: boolean
+          undone_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "extra_time_actions_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       kickoff_changes: {
         Row: {
           created_at: string
@@ -270,6 +314,47 @@ export type Database = {
             columns: ["team_id"]
             isOneToOne: false
             referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      match_extra_time: {
+        Row: {
+          half_minutes: number
+          is_demo: boolean
+          match_id: number
+          periods: number
+          phase: string
+          phase_started_at: string | null
+          second_half_started_at: string
+          updated_at: string
+        }
+        Insert: {
+          half_minutes: number
+          is_demo?: boolean
+          match_id: number
+          periods: number
+          phase: string
+          phase_started_at?: string | null
+          second_half_started_at: string
+          updated_at?: string
+        }
+        Update: {
+          half_minutes?: number
+          is_demo?: boolean
+          match_id?: number
+          periods?: number
+          phase?: string
+          phase_started_at?: string | null
+          second_half_started_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "match_extra_time_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: true
+            referencedRelation: "matches"
             referencedColumns: ["id"]
           },
         ]
@@ -1054,6 +1139,25 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      admin_correct_extra_time_clock: {
+        Args: { p_match: number; p_minute: number }
+        Returns: {
+          half_minutes: number
+          is_demo: boolean
+          match_id: number
+          periods: number
+          phase: string
+          phase_started_at: string | null
+          second_half_started_at: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "match_extra_time"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       admin_correct_status: {
         Args: {
           p_match: number
@@ -1111,6 +1215,25 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "players"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      admin_extra_time_step: {
+        Args: { p_match: number; p_to: string }
+        Returns: {
+          half_minutes: number
+          is_demo: boolean
+          match_id: number
+          periods: number
+          phase: string
+          phase_started_at: string | null
+          second_half_started_at: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "match_extra_time"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -1270,6 +1393,25 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "notices"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      admin_set_extra_time_length: {
+        Args: { p_half_minutes: number; p_match: number; p_periods: number }
+        Returns: {
+          half_minutes: number
+          is_demo: boolean
+          match_id: number
+          periods: number
+          phase: string
+          phase_started_at: string | null
+          second_half_started_at: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "match_extra_time"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -1522,6 +1664,25 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      admin_start_extra_time: {
+        Args: { p_half_minutes: number; p_match: number; p_periods: number }
+        Returns: {
+          half_minutes: number
+          is_demo: boolean
+          match_id: number
+          periods: number
+          phase: string
+          phase_started_at: string | null
+          second_half_started_at: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "match_extra_time"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       admin_suspend_play: {
         Args: { p_match: number; p_reason?: string }
         Returns: {
@@ -1581,6 +1742,25 @@ export type Database = {
         }
       }
       admin_undo_extra: { Args: { p_match: number }; Returns: string }
+      admin_undo_extra_time: {
+        Args: { p_match: number }
+        Returns: {
+          half_minutes: number
+          is_demo: boolean
+          match_id: number
+          periods: number
+          phase: string
+          phase_started_at: string | null
+          second_half_started_at: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "match_extra_time"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       admin_undo_kickoff: {
         Args: { p_match: number }
         Returns: {
@@ -1717,6 +1897,25 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      current_extra_time: {
+        Args: { m: Database["public"]["Tables"]["matches"]["Row"] }
+        Returns: {
+          half_minutes: number
+          is_demo: boolean
+          match_id: number
+          periods: number
+          phase: string
+          phase_started_at: string | null
+          second_half_started_at: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "matches"
+          to: "match_extra_time"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       current_match_minute: {
         Args: {
           p_started: string
@@ -1738,6 +1937,39 @@ export type Database = {
         Returns: string
       }
       knockouts_have_real_results: { Args: never; Returns: boolean }
+      lock_for_extra_time: {
+        Args: { p_match: number }
+        Returns: {
+          away_pens: number | null
+          away_score: number
+          away_source: Database["public"]["Enums"]["slot_source"] | null
+          away_source_group: string | null
+          away_source_match: number | null
+          away_team_id: number | null
+          group_code: string | null
+          home_pens: number | null
+          home_score: number
+          home_source: Database["public"]["Enums"]["slot_source"] | null
+          home_source_group: string | null
+          home_source_match: number | null
+          home_team_id: number | null
+          id: number
+          is_demo: boolean
+          kickoff_at: string
+          notes: string | null
+          period_started_at: string | null
+          slot_label: string | null
+          stage: Database["public"]["Enums"]["match_stage"]
+          status: Database["public"]["Enums"]["match_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "matches"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       match_result_team: {
         Args: {
           m: Database["public"]["Tables"]["matches"]["Row"]
