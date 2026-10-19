@@ -40,18 +40,24 @@ export function MoreSheet({
   onPick,
   eventCount,
   inPlay = false,
+  extraTime = false,
 }: {
   open: boolean;
   onClose: () => void;
-  onPick: (tool: "final" | "status" | "reset" | "clock" | "kickoff") => void;
+  onPick: (tool: "final" | "status" | "reset" | "clock" | "kickoff" | "et-length") => void;
   eventCount: number;
   /** A half is being played, so the clock can be corrected. */
   inPlay?: boolean;
+  /** Extra time is being played or at its break, so its length can be corrected. */
+  extraTime?: boolean;
 }) {
   const items = [
     { tool: "kickoff" as const, label: "Change kick-off", hint: "Move the match to another time, or postpone it. Fans see that it was rescheduled." },
     ...(inPlay
       ? [{ tool: "clock" as const, label: "Correct clock", hint: "Set the minute being played now, e.g. after an accidental undo of kick-off." }]
+      : []),
+    ...(extraTime
+      ? [{ tool: "et-length" as const, label: "Correct extra-time length", hint: "Change the length of each half of extra time, or two halves or one period." }]
       : []),
     { tool: "final" as const, label: "Set final score", hint: "Enter a result such as 3–1. Adds goals with no scorer." },
     { tool: "status" as const, label: "Change status", hint: "Correct the status, e.g. reopen a finished match." },
@@ -429,8 +435,11 @@ export function ClockSheet({
   const ticking = useServerNow(5_000);
   const now = Math.max(openedAt, ticking);
   const second = match.status === "second_half";
-  const first = second ? HALF_LENGTH_MINUTES + 1 : 1;
-  const end = second ? HALF_LENGTH_MINUTES * 2 : HALF_LENGTH_MINUTES;
+  // Extra time: the period being played (91'-100' for the first of 2 x 10, then 101'-110').
+  const et = match.extraTime && (match.extraTime.phase === "first" || match.extraTime.phase === "second") ? match.extraTime : null;
+  const etStart = et ? HALF_LENGTH_MINUTES * 2 + (et.phase === "second" ? et.half_minutes : 0) : 0;
+  const first = et ? etStart + 1 : second ? HALF_LENGTH_MINUTES + 1 : 1;
+  const end = et ? etStart + et.half_minutes : second ? HALF_LENGTH_MINUTES * 2 : HALF_LENGTH_MINUTES;
   const current = clockMinute(match, now);
   const [minute, setMinute] = useState(current?.minute ?? first);
   const [added, setAdded] = useState(current?.added ?? 0);
@@ -440,7 +449,7 @@ export function ClockSheet({
   return (
     <Sheet open onClose={onClose} title="Correct the clock">
       <p className="text-sm text-muted">
-        {second ? "Second half" : "First half"} · the clock shows <strong className="font-display text-base text-text tabular">{current ? (current.added ? `${current.minute}+${current.added}'` : `${current.minute}'`) : "–"}</strong> now.
+        {et ? (et.phase === "second" ? "Extra time, second half" : et.periods === 2 ? "Extra time, first half" : "Extra time") : second ? "Second half" : "First half"} · the clock shows <strong className="font-display text-base text-text tabular">{current ? (current.added ? `${current.minute}+${current.added}'` : `${current.minute}'`) : "–"}</strong> now.
       </p>
       <div className="mt-4 flex items-center justify-center gap-3">
         <Nudge label="Minute" value={minute} onChange={(v) => setMinute(clamp(v, first, end))} />

@@ -7,6 +7,7 @@ import {
   clockMinute,
   eventMinuteLabel,
   isHalfEnd,
+  lastMinute,
   minuteProblem,
   type Match,
 } from "@/lib/tournament";
@@ -53,22 +54,22 @@ export function useMinuteInput(match: Match, initial: { minute: number; added: n
     setTypedAdded(v);
   };
   const minute = minuteText == null ? null : minuteText === "" ? NaN : Number(minuteText);
-  const atHalfEnd = minute != null && isHalfEnd(minute);
+  const atHalfEnd = minute != null && isHalfEnd(minute, match.extraTime);
   // Stoppage time only at the end of a half; anywhere else it is 0.
   const added = atHalfEnd ? Number(addedText || 0) : 0;
-  const problem = minute == null ? null : Number.isNaN(minute) ? "Enter the minute, or choose Not known." : minuteProblem(minute, added);
+  const problem = minute == null ? null : Number.isNaN(minute) ? "Enter the minute, or choose Not known." : minuteProblem(minute, added, match.extraTime);
   // "Add minute" after "Not known": the clock as it is now.
   const fromClock = () => {
     const c = clockMinute(match, Math.max(serverTime(), ticking));
     setMinuteText(String(c?.minute ?? HALF_LENGTH_MINUTES));
     setAddedText(String(c?.added ?? 0));
   };
-  return { minuteText, setMinuteText, addedText, setAddedText, minute, added, atHalfEnd, problem, fromClock };
+  return { minuteText, setMinuteText, addedText, setAddedText, minute, added, atHalfEnd, problem, fromClock, extraTime: match.extraTime ?? null };
 }
 
 /** The minute input: typed (number keypad) or nudged, stoppage box only at 45 / 90, live preview. */
 export function MinuteField({ state }: { state: MinuteState }) {
-  const { minuteText, setMinuteText, addedText, setAddedText, minute, added, atHalfEnd, problem, fromClock } = state;
+  const { minuteText, setMinuteText, addedText, setAddedText, minute, added, atHalfEnd, problem, fromClock, extraTime } = state;
   if (minuteText == null) {
     return (
       <div className="flex items-center gap-3">
@@ -82,7 +83,7 @@ export function MinuteField({ state }: { state: MinuteState }) {
   return (
     <>
       <div className="flex items-center gap-3">
-        <Stepper text={minuteText} min={1} max={HALF_LENGTH_MINUTES * 2} onText={setMinuteText} label="Minute" />
+        <Stepper text={minuteText} min={1} max={lastMinute(extraTime)} onText={setMinuteText} label="Minute" />
         <span className={`text-lg font-semibold ${atHalfEnd ? "text-muted" : "text-border"}`}>+</span>
         <Stepper
           text={atHalfEnd ? addedText : "0"}
@@ -105,7 +106,9 @@ export function MinuteField({ state }: { state: MinuteState }) {
               {!atHalfEnd && (
                 <span>
                   {" "}
-                  · stoppage time only after {HALF_LENGTH_MINUTES} or {HALF_LENGTH_MINUTES * 2}
+                  {extraTime
+                    ? "· stoppage time only at the end of a half or a period of extra time"
+                    : `· stoppage time only after ${HALF_LENGTH_MINUTES} or ${HALF_LENGTH_MINUTES * 2}`}
                 </span>
               )}
             </>

@@ -9,6 +9,7 @@ import {
   type Match,
   type ResolvedSide,
   type Side,
+  wentToExtraTime,
 } from "@/lib/tournament";
 import { CheckIcon, ChevronIcon, TrophyIcon } from "../icons";
 import { GroupSwatch } from "../group-tag";
@@ -58,10 +59,14 @@ export function KnockoutCard({ match, featured = false }: { match: Match; featur
         <SideLine side={sides.away} which="away" match={match} started={started} winner={outcome?.winner} />
       </div>
 
-      {outcome?.decidedOnPenalties && winnerTeam && hasPens && (
+      {outcome?.decidedOnPenalties && winnerTeam && hasPens ? (
         <p className="border-t border-border bg-bg/60 px-3.5 py-1.5 text-xs font-medium text-muted">
           {teamShort(winnerTeam)} win {Math.max(match.home_pens!, match.away_pens!)}–{Math.min(match.home_pens!, match.away_pens!)} on penalties
+          {wentToExtraTime(match) && " (a.e.t.)"}
         </p>
+      ) : (
+        wentToExtraTime(match) &&
+        winnerTeam && <p className="border-t border-border bg-bg/60 px-3.5 py-1.5 text-xs font-medium text-muted">{teamShort(winnerTeam)} win after extra time</p>
       )}
       <OpenMatchOverlay matchId={match.id} label={`Match details: ${slotDisplayName(match.slot_label ?? "")}`} />
     </article>

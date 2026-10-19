@@ -17,7 +17,7 @@ import {
 import { teamShort } from "@/data/team-names";
 import { MatchTimeline, ScorerColumns } from "../event-list";
 import { GroupTag } from "../group-tag";
-import { Matchup } from "../live/live-hero";
+import { cardNote, Matchup } from "../live/live-hero";
 import { StageLabel } from "../stage-label";
 import { Sheet } from "../sheet";
 import { useServerNow, useTournament } from "../tournament-provider";
@@ -113,11 +113,7 @@ function MatchDetail({ match, onLeave }: { match: Match; onLeave: () => void }) 
           )
         }
       />
-      {match.home_pens != null && match.away_pens != null && (
-        <p className="mt-1 text-center text-sm font-semibold text-muted tabular">
-          Penalties {match.home_pens}–{match.away_pens}
-        </p>
-      )}
+      {cardNote(match) && <p className="mt-1 text-center text-sm font-semibold text-muted tabular">{cardNote(match)}</p>}
       <ScorerColumns events={eventsForMatch(match, events, playersById, teamsById)} className="mt-4" />
 
       <div role="tablist" aria-label="Match details" className="mt-5 grid grid-cols-2 gap-1 rounded-xl bg-bg p-1 ring-1 ring-border">

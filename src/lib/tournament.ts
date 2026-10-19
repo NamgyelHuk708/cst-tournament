@@ -15,6 +15,22 @@ export type Match = Tables["matches"]["Row"] & {
   schedule?: MatchSchedule;
   /** Play stopped and not yet resumed or restarted (match_stoppages). Absent: no stoppage. */
   stoppage?: MatchStoppage;
+  /** Extra time of this second half (match_extra_time). Absent: none (or left over from before a reset). */
+  extraTime?: MatchExtraTime;
+};
+
+/**
+ * Extra time of a knockout match, length chosen by the admin. The match keeps status "second_half"
+ * during extra time; phase: first (or only) period, break, second period, over (finished or level
+ * and going to penalties).
+ */
+export type MatchExtraTime = {
+  match_id: number;
+  half_minutes: number;
+  periods: number;
+  phase: "first" | "break" | "second" | "over";
+  phase_started_at: string | null;
+  second_half_started_at: string;
 };
 export type MatchStoppage = {
   id: number;
@@ -88,7 +104,51 @@ export type Snapshot = {
   notices: Notice[];
   stoppages: MatchStoppage[];
   kits: TeamKit[];
+  extraTimes: MatchExtraTime[];
 };
+
+/** Matches with their extra time attached, when it belongs to the second half that was played. */
+export function withExtraTime(matches: Match[], rows: MatchExtraTime[]): Match[] {
+  if (!rows.length) return matches;
+  const byMatch = new Map(rows.map((r) => [r.match_id, r]));
+  return matches.map((m) => {
+    const et = byMatch.get(m.id);
+    if (!et || !["second_half", "penalties", "finished"].includes(m.status) || !m.period_started_at) return m;
+    return Date.parse(et.second_half_started_at) === Date.parse(m.period_started_at) ? { ...m, extraTime: et } : m;
+  });
+}
+
+/** A period of extra time is being played (the clock runs from 91'). */
+export function isExtraTimeInPlay(match: Pick<Match, "status" | "extraTime">): boolean {
+  return match.status === "second_half" && (match.extraTime?.phase === "first" || match.extraTime?.phase === "second");
+}
+
+/** In extra time (being played, at the break, or just finished and level), not yet at penalties. */
+export function isInExtraTime(match: Pick<Match, "status" | "extraTime">): boolean {
+  return match.status === "second_half" && !!match.extraTime;
+}
+
+/** Knockout, second half in play, level, no extra time yet: the admin may start extra time. */
+export function canStartExtraTime(match: Pick<Match, "stage" | "status" | "extraTime" | "stoppage" | "home_score" | "away_score">): boolean {
+  return match.stage !== "group" && match.status === "second_half" && !match.extraTime && !match.stoppage && match.home_score === match.away_score;
+}
+
+/** The last minute of a match with this extra time (90, or 90 + its length). */
+export function lastMinute(extraTime?: Pick<MatchExtraTime, "half_minutes" | "periods"> | null): number {
+  return HALF_LENGTH_MINUTES * 2 + (extraTime ? extraTime.half_minutes * extraTime.periods : 0);
+}
+
+/** Decided after extra time (finished, or at penalties after it). */
+export function wentToExtraTime(match: Pick<Match, "status" | "extraTime">): boolean {
+  return match.extraTime?.phase === "over" && (match.status === "finished" || match.status === "penalties");
+}
+
+/** "a.e.t.", "a.e.t., 4–3 pens", "4–3 pens", or null: the note beside a knockout result. */
+export function resultNote(match: Pick<Match, "status" | "extraTime" | "home_pens" | "away_pens">): string | null {
+  const pens = match.home_pens != null && match.away_pens != null ? `${match.home_pens}–${match.away_pens} pens` : null;
+  if (wentToExtraTime(match)) return pens ? `a.e.t., ${pens}` : "a.e.t.";
+  return pens;
+}
 
 // ---------------------------------------------------------------------------
 // Team kits (shirt and shorts colours, shown as a small shirt next to team names)
@@ -324,8 +384,11 @@ export type GroupCode = (typeof GROUP_CODES)[number];
 const LIVE_STATUSES: readonly MatchStatus[] = ["first_half", "half_time", "second_half", "penalties"];
 
 /** A half is being played (the clock runs). Not at half-time, penalties, a stoppage, or before/after the match. */
-export function isBallInPlay(match: Pick<Match, "status" | "stoppage">): boolean {
-  return (match.status === "first_half" || match.status === "second_half") && !match.stoppage;
+export function isBallInPlay(match: Pick<Match, "status" | "stoppage" | "extraTime">): boolean {
+  if (match.stoppage) return false;
+  // Extra time: only while a period is played (not at its break, nor once it is over).
+  if (match.status === "second_half" && match.extraTime) return isExtraTimeInPlay(match);
+  return match.status === "first_half" || match.status === "second_half";
 }
 
 export function isLive(match: Pick<Match, "status" | "stoppage">): boolean {
@@ -369,7 +432,7 @@ export type MatchClock = {
  * Counts like a broadcast clock: the first minute is 1', and play beyond the
  * end of a half is shown as stoppage time (45+2', 90+3') instead of 47', 93'.
  */
-export function matchClock(match: Pick<Match, "status" | "period_started_at" | "stoppage">, now: number | null): MatchClock {
+export function matchClock(match: Pick<Match, "status" | "period_started_at" | "stoppage" | "extraTime">, now: number | null): MatchClock {
   // Play stopped: the clock stays at the minute it stopped.
   if (match.stoppage) return { label: stoppageMinuteLabel(match.stoppage), running: false };
   switch (match.status) {
@@ -383,6 +446,8 @@ export function matchClock(match: Pick<Match, "status" | "period_started_at" | "
       return { label: "FT", running: false };
   }
 
+  if (match.status === "second_half" && match.extraTime?.phase === "break") return { label: "ET break", running: false };
+  if (match.status === "second_half" && match.extraTime?.phase === "over") return { label: "AET", running: false };
   const running = runningMinute(match, now);
   if (!running) return { label: match.status === "first_half" ? "1st half" : "2nd half", running: true };
   // Always the actual added minutes ("45+2'", "90+17'"), the same form as event minutes elsewhere.
@@ -390,7 +455,16 @@ export function matchClock(match: Pick<Match, "status" | "period_started_at" | "
 }
 
 /** The running clock of the half in play as minute + actual stoppage (45 + 2), or null. Shared by the scoreboard and the sheets. */
-function runningMinute(match: Pick<Match, "status" | "period_started_at">, now: number | null): { minute: number; added: number } | null {
+function runningMinute(match: Pick<Match, "status" | "period_started_at" | "extraTime">, now: number | null): { minute: number; added: number } | null {
+  const et = match.status === "second_half" ? match.extraTime : undefined;
+  if (et) {
+    // Extra time continues from 90': with 2 x 10, 91'-100' (then 100+1') and 101'-110' (110+2').
+    if ((et.phase !== "first" && et.phase !== "second") || !et.phase_started_at || now == null) return null;
+    const start = HALF_LENGTH_MINUTES * 2 + (et.phase === "second" ? et.half_minutes : 0);
+    const end = start + et.half_minutes;
+    const minute = start + Math.max(0, Math.floor((now - Date.parse(et.phase_started_at)) / 60_000)) + 1;
+    return minute > end ? { minute: end, added: minute - end } : { minute, added: 0 };
+  }
   if ((match.status !== "first_half" && match.status !== "second_half") || !match.period_started_at || now == null) return null;
   const halfStart = match.status === "first_half" ? 0 : HALF_LENGTH_MINUTES;
   const halfEnd = halfStart + HALF_LENGTH_MINUTES;
@@ -404,7 +478,7 @@ function runningMinute(match: Pick<Match, "status" | "period_started_at">, now: 
  * minute (goal, own goal, card, substitution) uses this, so it always matches the clock: frozen at the
  * stopped minute while play is suspended, and stoppage time as shown, up to the 30 minutes a minute can have.
  */
-export function clockMinute(match: Pick<Match, "status" | "period_started_at" | "stoppage">, now: number | null): { minute: number; added: number } | null {
+export function clockMinute(match: Pick<Match, "status" | "period_started_at" | "stoppage" | "extraTime">, now: number | null): { minute: number; added: number } | null {
   if (match.stoppage) {
     if (match.stoppage.abandoned) return null;
     const end = match.stoppage.half === "first_half" ? HALF_LENGTH_MINUTES : HALF_LENGTH_MINUTES * 2;
@@ -418,18 +492,25 @@ export function clockMinute(match: Pick<Match, "status" | "period_started_at" | 
 /** Stoppage time recorded per half at most. */
 export const MAX_STOPPAGE_MINUTES = 30;
 
-/** Minutes that end a half (45, 90): the only ones that can have stoppage time. */
-export function isHalfEnd(minute: number): boolean {
-  return minute === HALF_LENGTH_MINUTES || minute === HALF_LENGTH_MINUTES * 2;
+/** Minutes that end a half (45, 90, and the end of each extra-time period): the only ones that can have stoppage time. */
+export function isHalfEnd(minute: number, extraTime?: Pick<MatchExtraTime, "half_minutes" | "periods"> | null): boolean {
+  if (minute === HALF_LENGTH_MINUTES || minute === HALF_LENGTH_MINUTES * 2) return true;
+  if (!extraTime) return false;
+  const full = HALF_LENGTH_MINUTES * 2;
+  return minute === full + extraTime.half_minutes || (extraTime.periods === 2 && minute === full + extraTime.half_minutes * 2);
 }
 
-/** Why a minute can't be right, or null if it's fine. */
-export function minuteProblem(minute: number, added: number): string | null {
-  const full = HALF_LENGTH_MINUTES * 2;
+/** Why a minute can't be right, or null if it's fine. With extra time, minutes up to its end count. */
+export function minuteProblem(minute: number, added: number, extraTime?: Pick<MatchExtraTime, "half_minutes" | "periods"> | null): string | null {
+  const full = lastMinute(extraTime);
   if (!Number.isInteger(minute) || minute < 1) return "The minute must be 1 or more.";
-  if (minute > full) return `The match has ${full} minutes. For a goal in stoppage time, use ${full} and add the extra minutes.`;
+  if (minute > full) {
+    return extraTime
+      ? `The match, with extra time, has ${full} minutes. For stoppage time, use ${full} and add the extra minutes.`
+      : `The match has ${full} minutes. For a goal in stoppage time, use ${full} and add the extra minutes.`;
+  }
   if (added < 0 || !Number.isInteger(added)) return "Stoppage time must be a whole number of minutes.";
-  if (added > 0 && !isHalfEnd(minute)) return `Stoppage time only goes after ${HALF_LENGTH_MINUTES} or ${full}.`;
+  if (added > 0 && !isHalfEnd(minute, extraTime)) return extraTime ? "Stoppage time only goes at the end of a half or of a period of extra time." : `Stoppage time only goes after ${HALF_LENGTH_MINUTES} or ${full}.`;
   if (added > MAX_STOPPAGE_MINUTES) return `Stoppage time can't be more than ${MAX_STOPPAGE_MINUTES} minutes.`;
   return null;
 }
@@ -469,7 +550,11 @@ export function scoreFromEvents(
   return { home, away };
 }
 
-export type StatusStep = { to: MatchStatus; label: string; confirm: boolean } | null;
+export type ExtraTimeStepTo = "break" | "second" | "over";
+export type StatusStep =
+  | { to: MatchStatus; et?: undefined; label: string; confirm: boolean }
+  | { et: ExtraTimeStepTo; to?: undefined; label: string; confirm: true }
+  | null;
 
 /** The next status the admin can move a match to, mirroring admin_set_status in the database. */
 export function nextStatusStep(match: Match): StatusStep {
@@ -481,10 +566,18 @@ export function nextStatusStep(match: Match): StatusStep {
       return { to: "half_time", label: "Half time", confirm: false };
     case "half_time":
       return { to: "second_half", label: "Start second half", confirm: false };
-    case "second_half":
+    case "second_half": {
+      const et = match.extraTime;
+      if (et) {
+        if (et.phase === "first") return et.periods === 2 ? { et: "break", label: "Extra-time break", confirm: true } : { et: "over", label: "End extra time", confirm: true };
+        if (et.phase === "break") return { et: "second", label: "Start second half of extra time", confirm: true };
+        if (et.phase === "second") return { et: "over", label: "End extra time", confirm: true };
+        return { to: "penalties", label: "Start penalties", confirm: true };
+      }
       return isKnockout(match) && level
-        ? { to: "penalties", label: "Full time: go to penalties", confirm: true }
+        ? { to: "penalties", label: canStartExtraTime(match) ? "Full time: straight to penalties" : "Full time: go to penalties", confirm: true }
         : { to: "finished", label: "Full time", confirm: true };
+    }
     case "penalties":
       return { to: "finished", label: "End shoot-out", confirm: true };
     case "finished":
@@ -1109,6 +1202,14 @@ export function matchTimeline(match: Match, events: DisplayEvent[], subs: Displa
   const score: [number, number] = [0, 0];
   const rows: TimelineRow[] = [];
   let halfTimeShown = false;
+  let extraTimeShown = false;
+  // Extra time: a divider with the score after 90', before the first extra-time entry.
+  const extraTime = () => {
+    if (extraTimeShown || !match.extraTime) return;
+    extraTimeShown = true;
+    rows.push({ kind: "divider", label: "Extra time", detail: halfTimeKnown ? `${score[0]}–${score[1]}` : undefined });
+  };
+  const FULL = HALF_LENGTH_MINUTES * 2;
   // The half-time score is only known if every goal has a minute.
   const halfTimeKnown = !untimed.some(isGoal);
   const halfTime = () => {
@@ -1121,6 +1222,7 @@ export function matchTimeline(match: Match, events: DisplayEvent[], subs: Displa
     for (const x of list) {
       if (placed.has(x.id)) continue;
       if (x.minute! > HALF_LENGTH_MINUTES) halfTime();
+      if (x.minute! > FULL) extraTime();
       placed.add(x.id);
       rows.push({ kind: "sub", sub: x });
     }
@@ -1128,13 +1230,15 @@ export function matchTimeline(match: Match, events: DisplayEvent[], subs: Displa
   for (const e of timed) {
     placeSubs(subsBefore(e));
     if (e.minute! > HALF_LENGTH_MINUTES) halfTime();
+    if (e.minute! > FULL) extraTime();
     if (isGoal(e)) score[e.side === "home" ? 0 : 1]++;
     rows.push({ kind: "event", event: e, score: isGoal(e) ? [score[0], score[1]] : null, hatTrick: hatTrickOn(e) });
   }
   placeSubs(timedSubs);
   halfTime();
   if (match.status === "penalties" || match.status === "finished") {
-    rows.push({ kind: "divider", label: "Full time", detail: `${match.home_score}–${match.away_score}` });
+    extraTime();
+    rows.push({ kind: "divider", label: wentToExtraTime(match) ? "After extra time" : "Full time", detail: `${match.home_score}–${match.away_score}` });
     if (match.home_pens != null && match.away_pens != null) {
       rows.push({ kind: "divider", label: "Penalties", detail: `${match.home_pens}–${match.away_pens}` });
     }

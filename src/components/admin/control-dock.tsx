@@ -1,6 +1,6 @@
 "use client";
 
-import { isLive, type EventType, type Match, type StatusStep, type Team } from "@/lib/tournament";
+import { isBallInPlay, isLive, type EventType, type Match, type StatusStep, type Team } from "@/lib/tournament";
 import { BallIcon, CardIcon } from "../icons";
 import { useServerNow } from "../tournament-provider";
 import type { PendingTap } from "./match-control";
@@ -25,6 +25,8 @@ type Props = {
   onAddScorer: () => void;
   onUndo: () => void;
   onStep: () => void;
+  /** A knockout level at the end of the second half: offer extra time (the step then goes straight to penalties). */
+  onStartExtraTime?: () => void;
   onPens: (home: number, away: number) => void;
   onAddEvent: () => void;
   onSetFinal: () => void;
@@ -42,7 +44,8 @@ const PAST_MATCH_MS = 2 * 60 * 60 * 1000;
 /** Everything the score keeper touches, in the bottom half of the screen. */
 export function ControlDock(props: Props) {
   const { match, home, away, step, busy, undoLabel, error, failed, toast } = props;
-  const inPlay = match.status === "first_half" || match.status === "second_half";
+  // A half (or a period of extra time) is being played: goals can be recorded.
+  const inPlay = isBallInPlay(match);
   const live = isLive(match);
   const now = useServerNow(60_000);
   // Long past kick-off and never started: most likely a result being entered afterwards.
@@ -188,6 +191,11 @@ export function ControlDock(props: Props) {
             </div>
           )}
 
+          {props.onStartExtraTime && !stopped && (
+            <button type="button" onClick={props.onStartExtraTime} disabled={busy} className="mt-3 h-13 w-full rounded-xl bg-text text-base font-semibold text-white active:opacity-90 disabled:opacity-50">
+              Start extra time
+            </button>
+          )}
           {match.status === "scheduled" || match.status === "finished" || stopped ? null : step ? (
             <button
               type="button"
@@ -206,7 +214,8 @@ export function ControlDock(props: Props) {
               Full time. Use undo to reopen the match.
             </p>
           )}
-          {inPlay && !stopped && <SuspendButton match={match} disabled={busy} onChanged={props.onStoppageChanged} />}
+          {/* Suspending isn't available in extra time (its minute would be counted from the second half). */}
+          {inPlay && !stopped && !match.extraTime && <SuspendButton match={match} disabled={busy} onChanged={props.onStoppageChanged} />}
           {match.status === "half_time" && (
             <p className="mt-2 text-center text-xs text-muted">Goals can be recorded once play restarts.</p>
           )}

@@ -20,7 +20,7 @@ import { useResolvedSides } from "../use-resolved-sides";
 import { LivePill } from "../live-pill";
 import { fitNameSize, teamShort, teamSub } from "@/data/team-names";
 import { isPostponed } from "@/lib/tournament";
-import { isAbandoned, stageShort, stoppageMinuteLabel } from "@/lib/tournament";
+import { isAbandoned, resultNote, stageShort, stoppageMinuteLabel } from "@/lib/tournament";
 import { continuesLabel } from "../stoppage-note";
 
 /**
@@ -107,7 +107,7 @@ export function MatchListRow({ match, href, flags }: { match: Match; href?: stri
             <span className="font-display text-[22px] font-bold tabular">
               {match.home_score}–{match.away_score}
             </span>
-            {pens && <span className="mt-1 text-[11px] font-medium whitespace-nowrap text-muted tabular">({pens} pens)</span>}
+            {resultNote(match) && <span className="mt-1 text-[11px] font-medium whitespace-nowrap text-muted tabular">({resultNote(match)})</span>}
           </>
         ) : isFinished(match) ? null : Date.parse(match.kickoff_at) <= now && !flags ? (
           <span className="text-center text-[11px] leading-tight font-medium text-muted">Result to come</span>

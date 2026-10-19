@@ -60,6 +60,23 @@ const match = (status: Match["status"], startedMinutesAgo: number, stoppage?: Pa
     : {}),
 });
 
+// A knockout in extra time: second half started 70 minutes ago, this extra-time period `periodMinutesAgo`.
+const et = (half: number, periods: number, phase: "first" | "second", periodMinutesAgo: number): Match => {
+  const m = match("second_half", 70);
+  return {
+    ...m,
+    stage: "round_of_16",
+    extraTime: {
+      match_id: m.id,
+      half_minutes: half,
+      periods,
+      phase,
+      phase_started_at: new Date(NOW - periodMinutesAgo * MIN).toISOString(),
+      second_half_started_at: m.period_started_at!,
+    },
+  };
+};
+
 // Clock states: what the scoreboard shows, and what a sheet can hold (stoppage up to 30 minutes).
 const CASES: { name: string; match: Match; clock: string; sheet: string }[] = [
   { name: "first half", match: match("first_half", 22.5), clock: "23'", sheet: "23+0" },
@@ -70,6 +87,12 @@ const CASES: { name: string; match: Match; clock: string; sheet: string }[] = [
   { name: "suspended in stoppage time", match: match("first_half", 70, { at_minute: 47 }), clock: "45+2'", sheet: "45+2" },
   { name: "suspended in the second half", match: match("second_half", 70, { at_minute: 61 }), clock: "61'", sheet: "61+0" },
   { name: "very long stoppage (sheet caps at 30)", match: match("second_half", 85.5), clock: "90+41'", sheet: "90+30" },
+  // Extra time, 2 x 10 (the second half started 70 minutes ago; extra-time periods from their own start).
+  { name: "extra time, first half", match: et(10, 2, "first", 6.5), clock: "97'", sheet: "97+0" },
+  { name: "extra time, first half stoppage", match: et(10, 2, "first", 11.2), clock: "100+2'", sheet: "100+2" },
+  { name: "extra time, second half", match: et(10, 2, "second", 3.4), clock: "104'", sheet: "104+0" },
+  { name: "extra time, second half stoppage", match: et(10, 2, "second", 12.1), clock: "110+3'", sheet: "110+3" },
+  { name: "extra time, one period of 15", match: et(15, 1, "first", 14.5), clock: "105'", sheet: "105+0" },
 ];
 
 const inputValue = (html: string, label: string) => {
@@ -90,7 +113,7 @@ async function main() {
   const { SubSheet } = await import("../src/components/admin/sub-sheet");
   const { matchClock } = await import("../src/lib/tournament");
 
-  const snapshotFor = (m: Match): Snapshot => ({ teams, matches: [m], events: [], players: [], substitutions: [], officials: [], staff: [], displayNames: [], resultHolds: [], kickoffChanges: [], notices: [], stoppages: [], kits: [] });
+  const snapshotFor = (m: Match): Snapshot => ({ teams, matches: [m], events: [], players: [], substitutions: [], officials: [], staff: [], displayNames: [], resultHolds: [], kickoffChanges: [], notices: [], stoppages: [], kits: [], extraTimes: [] });
   const render = (node: React.ReactNode, m: Match, renderedAt = NOW) =>
     renderToStaticMarkup(
       <TournamentProvider initial={snapshotFor(m)} renderedAt={renderedAt}>

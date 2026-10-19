@@ -1,6 +1,6 @@
 "use client";
 
-import { compareEventTime, eventsForMatch, isFinished, isWaterBreak, kitFor, subsForMatch, tieLabel, type Match, type Team } from "@/lib/tournament";
+import { compareEventTime, eventsForMatch, isFinished, isWaterBreak, kitFor, subsForMatch, tieLabel, wentToExtraTime, type Match, type Team } from "@/lib/tournament";
 import { StageLabel } from "../stage-label";
 import { KitIcon } from "../kit-icon";
 import { LatestSub, ScorerColumns } from "../event-list";
@@ -71,11 +71,7 @@ export function LiveHero({ match }: { match: Match }) {
           center={<Score home={match.home_score} away={match.away_score} />}
         />
 
-        {match.home_pens != null && match.away_pens != null && (
-          <p className="mt-1 text-center text-sm font-semibold text-muted tabular">
-            Penalties {match.home_pens}–{match.away_pens}
-          </p>
-        )}
+        {cardNote(match) && <p className="mt-1 text-center text-sm font-semibold text-muted tabular">{cardNote(match)}</p>}
 
         {(matchEvents.length > 0 || latestSub) && (
           <div className="mt-5 space-y-3 border-t border-border pt-4">
@@ -193,4 +189,13 @@ function Score({ home, away }: { home: number; away: number }) {
       <span key={`a${awayFlash}`} className={`rounded-lg px-1 ${awayFlash ? "score-flash" : ""}`}>{away}</span>
     </p>
   );
+}
+
+/** Under a knockout score: "After extra time", "Penalties 4–3", or both. */
+export function cardNote(match: Match): string | null {
+  const parts = [
+    wentToExtraTime(match) ? "After extra time" : null,
+    match.home_pens != null && match.away_pens != null ? `Penalties ${match.home_pens}–${match.away_pens}` : null,
+  ].filter(Boolean);
+  return parts.length ? parts.join(" · ") : null;
 }

@@ -17,7 +17,7 @@ import { useFlashOnChange } from "./use-flash";
 import { LivePill } from "./live-pill";
 import { teamShort, teamSub } from "@/data/team-names";
 import { isPostponed } from "@/lib/tournament";
-import { isAbandoned, stageShort, stoppageMinuteLabel } from "@/lib/tournament";
+import { isAbandoned, stageShort, stoppageMinuteLabel, wentToExtraTime } from "@/lib/tournament";
 import { continuesLabel } from "./stoppage-note";
 
 type Props = {
@@ -148,7 +148,9 @@ function TeamLine({
 /** Knockout matches: their stage as a short tag ("R16", "QF", "Final") under the time. Group rows have none. */
 function StageTagLine({ match }: { match: Match }) {
   const tag = stageShort(match);
-  return tag ? <span className="mt-0.5 block text-[11px] font-semibold text-muted">{tag}</span> : null;
+  const aet = wentToExtraTime(match) ? "a.e.t." : null;
+  const text = [tag, aet].filter(Boolean).join(" · ");
+  return text ? <span className="mt-0.5 block text-[11px] font-semibold text-muted">{text}</span> : null;
 }
 
 function StatusCell({ match }: { match: Match }) {
