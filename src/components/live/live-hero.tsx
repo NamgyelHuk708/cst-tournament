@@ -2,6 +2,7 @@
 
 import { compareEventTime, eventsForMatch, isFinished, isWaterBreak, kitFor, subsForMatch, tieLabel, wentToExtraTime, type Match, type Team } from "@/lib/tournament";
 import { StageLabel } from "../stage-label";
+import { ShootoutCircles } from "../shootout";
 import { KitIcon } from "../kit-icon";
 import { LatestSub, ScorerColumns } from "../event-list";
 import { GroupTag } from "../group-tag";
@@ -72,6 +73,7 @@ export function LiveHero({ match }: { match: Match }) {
         />
 
         {cardNote(match) && <p className="mt-1 text-center text-sm font-semibold text-muted tabular">{cardNote(match)}</p>}
+        <ShootoutCircles match={match} className="mx-auto mt-3 max-w-xs" />
 
         {(matchEvents.length > 0 || latestSub) && (
           <div className="mt-5 space-y-3 border-t border-border pt-4">

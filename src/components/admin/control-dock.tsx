@@ -1,5 +1,6 @@
 "use client";
 
+import { ShootoutPanel } from "./shootout-panel";
 import { isBallInPlay, isLive, type EventType, type Match, type StatusStep, type Team } from "@/lib/tournament";
 import { BallIcon, CardIcon } from "../icons";
 import { useServerNow } from "../tournament-provider";
@@ -140,7 +141,7 @@ export function ControlDock(props: Props) {
           ) : stopped ? (
             <StoppagePanel match={match} home={home} away={away} onChanged={props.onStoppageChanged} />
           ) : match.status === "penalties" ? (
-            <PenaltyControls match={match} home={home} away={away} busy={busy} onPens={props.onPens} />
+            <ShootoutPanel match={match} home={home} away={away} busy={busy} onPens={props.onPens} onChanged={props.onStoppageChanged} />
           ) : (
             <div className="grid grid-cols-2 gap-3">
               {[home, away].map((team, i) => (
@@ -224,58 +225,6 @@ export function ControlDock(props: Props) {
           )}
         </div>
       </div>
-    </div>
-  );
-}
-
-function PenaltyControls({
-  match,
-  home,
-  away,
-  busy,
-  onPens,
-}: {
-  match: Match;
-  home?: Team;
-  away?: Team;
-  busy: boolean;
-  onPens: (home: number, away: number) => void;
-}) {
-  const h = match.home_pens ?? 0;
-  const a = match.away_pens ?? 0;
-  const sides = [
-    { team: home, value: h, set: (v: number) => onPens(v, a) },
-    { team: away, value: a, set: (v: number) => onPens(h, v) },
-  ];
-  return (
-    <div className="grid grid-cols-2 gap-3">
-      {sides.map(({ team, value, set }, i) => (
-        <div key={team?.id ?? i} className="space-y-2 text-center">
-          <p className="flex h-10 items-center justify-center font-display text-base leading-tight font-bold text-balance break-words">{teamShort(team)}</p>
-          <p className="font-display text-4xl leading-none font-bold tabular" aria-label={`${team?.name ?? ""} penalties scored`}>
-            {value}
-          </p>
-          <div className="grid grid-cols-[3rem_1fr] gap-2">
-            <button
-              type="button"
-              disabled={busy || value === 0}
-              onClick={() => set(value - 1)}
-              aria-label={`Remove a penalty for ${team?.name ?? ""}`}
-              className="h-14 rounded-xl text-2xl font-bold ring-1 ring-border active:bg-bg disabled:opacity-40"
-            >
-              −
-            </button>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => set(value + 1)}
-              className="h-14 rounded-xl bg-win font-semibold text-white active:opacity-90 disabled:opacity-60"
-            >
-              Scored
-            </button>
-          </div>
-        </div>
-      ))}
     </div>
   );
 }

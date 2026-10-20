@@ -19,6 +19,7 @@ import { MatchTimeline, ScorerColumns } from "../event-list";
 import { GroupTag } from "../group-tag";
 import { cardNote, Matchup } from "../live/live-hero";
 import { StageLabel } from "../stage-label";
+import { ShootoutCircles, ShootoutKicks } from "../shootout";
 import { Sheet } from "../sheet";
 import { useServerNow, useTournament } from "../tournament-provider";
 import { useResolvedSides } from "../use-resolved-sides";
@@ -114,6 +115,7 @@ function MatchDetail({ match, onLeave }: { match: Match; onLeave: () => void }) 
         }
       />
       {cardNote(match) && <p className="mt-1 text-center text-sm font-semibold text-muted tabular">{cardNote(match)}</p>}
+      <ShootoutCircles match={match} className="mx-auto mt-3 max-w-xs" />
       <ScorerColumns events={eventsForMatch(match, events, playersById, teamsById)} className="mt-4" />
 
       <div role="tablist" aria-label="Match details" className="mt-5 grid grid-cols-2 gap-1 rounded-xl bg-bg p-1 ring-1 ring-border">
@@ -181,6 +183,7 @@ function SummaryPanel({ match }: { match: Match }) {
               : "Goals and cards will appear here once the match starts."}
         </p>
       )}
+      <ShootoutKicks match={match} />
       {officialGroups.length > 0 && (
         <section aria-labelledby="officials-title">
           <h3 id="officials-title" className="mb-2 px-1 text-xs font-bold text-muted">

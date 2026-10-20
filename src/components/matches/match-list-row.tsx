@@ -39,7 +39,8 @@ export function MatchListRow({ match, href, flags }: { match: Match; href?: stri
   const pens = match.home_pens != null && match.away_pens != null ? `${match.home_pens}–${match.away_pens}` : null;
   const day = relativeDay(match.kickoff_at, now);
   const time = formatTime(match.kickoff_at);
-  const clock = live ? (match.status === "half_time" ? "HT" : match.status === "penalties" ? "Pens" : matchClock(match, now).label) : null;
+  // Spoken in full ("half-time", "penalties"), never the compact HT or pens.
+  const clock = live ? (match.status === "half_time" ? "half-time" : match.status === "penalties" ? "penalties" : matchClock(match, now).label) : null;
 
   // Screen readers hear the official name.
   const name = (s: ResolvedSide) => s.team?.name ?? s.placeholder ?? "To be decided";

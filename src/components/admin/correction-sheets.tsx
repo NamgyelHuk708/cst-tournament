@@ -182,9 +182,9 @@ export function FinalScoreSheet({
         <div className="mt-4 rounded-xl bg-bg p-3">
           <p className="mb-2 text-sm font-semibold">Level, so enter the penalty score</p>
           <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-            <ScoreInput label={`${teamShort(home)} pens`} value={hp} onChange={setHp} small />
+            <ScoreInput label={`${teamShort(home)} penalties`} value={hp} onChange={setHp} small />
             <span className="pt-6 text-muted">–</span>
-            <ScoreInput label={`${teamShort(away)} pens`} value={ap} onChange={setAp} small />
+            <ScoreInput label={`${teamShort(away)} penalties`} value={ap} onChange={setAp} small />
           </div>
         </div>
       )}
@@ -201,7 +201,7 @@ export function FinalScoreSheet({
             can&apos;t go below {blocked.named.length}. Delete the ones that should go from the event log first.
           </p>
         ) : pensInvalid ? (
-          <p className="font-medium">A knockout can&apos;t end level on penalties. Enter the shoot-out winner.</p>
+          <p className="font-medium">A knockout can&apos;t end level on penalties. Enter the shootout winner.</p>
         ) : unchanged ? (
           <p className="text-muted">This is already the result.</p>
         ) : (

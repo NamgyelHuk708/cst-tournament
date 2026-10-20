@@ -25,8 +25,11 @@ import {
   type TeamKit,
   type TeamStaff,
   type MatchExtraTime,
+  type PenaltyKick,
+  type PenaltyShootout,
   withDisplayNames,
   withExtraTime,
+  withShootouts,
 } from "@/lib/tournament";
 
 export type ConnectionState = "connecting" | "live" | "reconnecting";
@@ -61,6 +64,10 @@ type TournamentContextValue = Snapshot & {
     removeStoppagesFor: (matchId: number) => void;
     /** A kit saved (row) or removed (null) for a team, usual (matchId null) or for one match. */
     setKit: (teamId: number, matchId: number | null, row: TeamKit | null) => void;
+    /** A shoot-out kick saved, or removed (null), and the match's shoot-out row. */
+    upsertKick: (row: PenaltyKick) => void;
+    removeKick: (id: number) => void;
+    setShootout: (row: PenaltyShootout) => void;
     /** A match's extra time saved (row) or removed (null). */
     setExtraTime: (matchId: number, row: MatchExtraTime | null) => void;
     refresh: () => Promise<void>;
@@ -102,6 +109,13 @@ function applyChange<T extends { id: unknown }>(list: T[], payload: RealtimePost
     return list.filter((r) => r.id !== id);
   }
   return upsert(list, payload.new as T);
+}
+
+/** penalty_shootouts is keyed by match_id, not id. */
+function applyShootoutChange(list: PenaltyShootout[], payload: RealtimePostgresChangesPayload<PenaltyShootout>): PenaltyShootout[] {
+  const key = payload.eventType === "DELETE" ? (payload.old as Partial<PenaltyShootout>).match_id : payload.new.match_id;
+  const rest = list.filter((r) => r.match_id !== key);
+  return payload.eventType === "DELETE" ? rest : [...rest, payload.new];
 }
 
 /** match_extra_time is keyed by match_id, not id. */
@@ -293,6 +307,12 @@ export function TournamentProvider({
         .on<MatchExtraTime>("postgres_changes", { event: "*", schema: "public", table: "match_extra_time" }, (p) =>
           apply((d) => ({ ...d, extraTimes: applyExtraTimeChange(d.extraTimes, p) }), p),
         )
+        .on<PenaltyShootout>("postgres_changes", { event: "*", schema: "public", table: "penalty_shootouts" }, (p) =>
+          apply((d) => ({ ...d, shootouts: applyShootoutChange(d.shootouts, p) }), p),
+        )
+        .on<PenaltyKick>("postgres_changes", { event: "*", schema: "public", table: "penalty_kicks" }, (p) =>
+          apply((d) => ({ ...d, kicks: applyChange(d.kicks, p) }), p),
+        )
         .on<ResultHold>("postgres_changes", { event: "*", schema: "public", table: "result_holds" }, (p) =>
           apply((d) => ({ ...d, resultHolds: applyHoldChange(d.resultHolds, p) }), p),
         )
@@ -421,6 +441,15 @@ export function TournamentProvider({
       removeStoppagesFor: (matchId) => setData((d) => ({ ...d, stoppages: d.stoppages.filter((x) => x.match_id !== matchId || x.outcome != null) })),
       removeNotice: (id) => setData((d) => ({ ...d, notices: d.notices.filter((n) => n.id !== id) })),
       upsertResultHold: (row) => setData((d) => ({ ...d, resultHolds: [...d.resultHolds.filter((h) => h.match_id !== row.match_id), row] })),
+      upsertKick: (row) => setData((d) => ({ ...d, kicks: upsert(d.kicks, row) })),
+      removeKick: (id) => setData((d) => ({ ...d, kicks: d.kicks.filter((k) => k.id !== id) })),
+      setShootout: (row) =>
+        setData((d) => ({
+          ...d,
+          shootouts: [...d.shootouts.filter((x) => x.match_id !== row.match_id), row],
+          // A new shoot-out starts with no kicks.
+          kicks: d.shootouts.some((x) => x.match_id === row.match_id) ? d.kicks : d.kicks.filter((k) => k.match_id !== row.match_id),
+        })),
       setExtraTime: (matchId, row) =>
         setData((d) => ({ ...d, extraTimes: [...d.extraTimes.filter((x) => x.match_id !== matchId), ...(row ? [row] : [])] })),
       setKit: (teamId, matchId, row) =>
@@ -437,7 +466,11 @@ export function TournamentProvider({
     const teams = withDisplayNames(data.teams, data.displayNames);
     // Matches carry their schedule state (postponed, rescheduled from), so every view can show it.
     // ...their open stoppage, and their extra time.
-    const matches = withExtraTime(withStoppages(withSchedule(data.matches, data.kickoffChanges), data.stoppages), data.extraTimes);
+    const matches = withShootouts(
+      withExtraTime(withStoppages(withSchedule(data.matches, data.kickoffChanges), data.stoppages), data.extraTimes),
+      data.shootouts,
+      data.kicks,
+    );
     return {
       ...data,
       teams,

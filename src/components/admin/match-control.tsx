@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { uuid } from "@/lib/uuid";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   canStartExtraTime,
   clockMinute,
@@ -33,6 +34,7 @@ import { shirtLabel } from "@/lib/tournament";
 import { useServerTime, useTournament } from "../tournament-provider";
 import { ControlDock } from "./control-dock";
 import { ExtraTimeSheet, extraTimeLength } from "./extra-time";
+import { ShootoutKickLog } from "./shootout-panel";
 import { ClockSheet, FinalScoreSheet, KickoffSheet, MoreSheet, ResetSheet, StatusSheet } from "./correction-sheets";
 import { TeamsSheet } from "./teams-sheet";
 import { useResolvedSides } from "../use-resolved-sides";
@@ -63,7 +65,9 @@ type LastAction =
   // Kick-off changes and postponements (kickoff_changes).
   | { source: "kickoff"; id: number; kind: "kickoff"; created_at: string }
   // Extra-time steps, length and clock corrections (extra_time_actions).
-  | { source: "et"; id: number; kind: "start" | "phase" | "end" | "length" | "clock"; created_at: string };
+  | { source: "et"; id: number; kind: "start" | "phase" | "end" | "length" | "clock"; created_at: string }
+  // Shoot-out kicks (shootout_actions).
+  | { source: "shootout"; id: number; kind: "kick_add" | "kick_edit" | "kick_delete"; created_at: string };
 
 const EVENT_NOUN: Record<EventType, string> = {
   goal: "Goal",
@@ -140,7 +144,7 @@ export function MatchControl({ matchId, back }: { matchId: number; back?: string
 
   // The newest open action across the undo histories: one Undo button reverses whichever is most recent.
   const loadLastAction = useCallback(async () => {
-    const [main, extra, clockRow, kickoffRow, etRow] = await Promise.all([
+    const [main, extra, clockRow, kickoffRow, etRow, kickRow] = await Promise.all([
       supabase
         .from("match_actions")
         .select("id, kind, event_id, new_status, created_at")
@@ -181,6 +185,15 @@ export function MatchControl({ matchId, back }: { matchId: number; back?: string
         .order("id", { ascending: false })
         .limit(1)
         .maybeSingle(),
+      // Untyped until the generated database types include the shoot-out tables.
+      (supabase as unknown as SupabaseClient)
+        .from("shootout_actions")
+        .select("id, kind, created_at")
+        .eq("match_id", matchId)
+        .is("undone_at", null)
+        .order("id", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
     ]);
     const candidates = [
       main.data ? ({ source: "match", ...main.data } as LastAction) : null,
@@ -188,6 +201,7 @@ export function MatchControl({ matchId, back }: { matchId: number; back?: string
       clockRow.data ? ({ source: "clock", kind: "clock", ...clockRow.data } as LastAction) : null,
       kickoffRow.data ? ({ source: "kickoff", kind: "kickoff", ...kickoffRow.data } as LastAction) : null,
       etRow.data ? ({ source: "et", ...etRow.data } as LastAction) : null,
+      kickRow.data ? ({ source: "shootout", ...kickRow.data } as LastAction) : null,
     ].filter((x): x is LastAction => x != null);
     setLastAction(candidates.reduce<LastAction | null>((best, x) => (!best || x.created_at > best.created_at ? x : best), null));
   }, [supabase, matchId]);
@@ -306,7 +320,9 @@ export function MatchControl({ matchId, back }: { matchId: number; back?: string
   const undo = () =>
     run(
       () =>
-        lastAction?.source === "et"
+        lastAction?.source === "shootout"
+          ? (supabase as unknown as SupabaseClient).rpc("admin_undo_shootout", { p_match: matchId })
+          : lastAction?.source === "et"
           ? supabase.rpc("admin_undo_extra_time", { p_match: matchId })
           : lastAction?.source === "extra"
           ? supabase.rpc("admin_undo_extra", { p_match: matchId })
@@ -364,6 +380,8 @@ export function MatchControl({ matchId, back }: { matchId: number; back?: string
       <OfficialsSection match={match} />
       <ManagersSection match={match} />
       <MatchKitsSection match={match} />
+
+      <ShootoutKickLog match={match} home={home} away={away} onChanged={loadLastAction} />
 
       <EventLog
         events={matchEvents}
@@ -589,7 +607,7 @@ export function MatchControl({ matchId, back }: { matchId: number; back?: string
             </p>
             <p className="mt-2 text-base">
               {match.status === "penalties"
-                ? "The shoot-out ends and this becomes the final result in the bracket; the winner goes through."
+                ? "The shootout ends and this becomes the final result in the bracket; the winner goes through."
                 : stepText(step, withScore).body}
             </p>
             <p className="mt-1 text-sm text-muted">You can undo this if it was a mistake.</p>
@@ -608,7 +626,7 @@ export function MatchControl({ matchId, back }: { matchId: number; back?: string
             }}
             className="h-14 rounded-xl bg-text font-semibold text-white active:opacity-90"
           >
-            {step?.to === "finished" && match.status === "penalties" ? "End shoot-out" : step ? stepText(step, withScore).action : "Confirm"}
+            {step?.to === "finished" && match.status === "penalties" ? "End shootout" : step ? stepText(step, withScore).action : "Confirm"}
           </button>
         </div>
       </Sheet>
@@ -677,7 +695,7 @@ const STATUS_CONFIRM: Record<MatchStatus, { title: string; body: string; action:
   },
   penalties: {
     title: "Go to penalties?",
-    body: "Level at full time: the match goes to a penalty shoot-out. The clock stops.",
+    body: "Level at full time: the match goes to a penalty shootout. The clock stops.",
     action: "Go to penalties",
   },
   finished: {
@@ -692,7 +710,7 @@ const STATUS_CONFIRM: Record<MatchStatus, { title: string; body: string; action:
 function stepText(step: NonNullable<StatusStep>, match: Match): { title: string; body: string; action: string } {
   if (step.to) {
     if (step.to === "penalties" && match.extraTime) {
-      return { title: "Start penalties?", body: "Level after extra time: the match goes to a penalty shoot-out.", action: "Start penalties" };
+      return { title: "Start penalties?", body: "Level after extra time: the match goes to a penalty shootout.", action: "Start penalties" };
     }
     return STATUS_CONFIRM[step.to];
   }
@@ -782,6 +800,7 @@ function describeUndo(action: LastAction | null, events: MatchEvent[], shortCode
   if (!action) return null;
   if (action.source === "clock") return "Undo clock correction";
   if (action.source === "kickoff") return "Undo kick-off change";
+  if (action.source === "shootout") return { kick_add: "Undo kick", kick_edit: "Undo kick change", kick_delete: "Undo deleting the kick" }[action.kind];
   if (action.source === "et") {
     return { start: "Undo extra-time start", phase: "Undo extra-time step", end: "Undo end of extra time", length: "Undo extra-time length", clock: "Undo clock correction" }[action.kind];
   }

@@ -13,7 +13,8 @@ const SHORTS = "M5.6 16.6h12.8l.8 8.6h-6l-1.2-4.6-1.2 4.6h-6Z";
 export function KitIcon({ kit, size = 24, className = "" }: { kit: Pick<TeamKit, "shirt" | "shirt2" | "pattern" | "shorts">; size?: number; className?: string }) {
   const clip = useId();
   const shirtLight = isLightColour(kit.shirt) || (kit.shirt2 != null && isLightColour(kit.shirt2));
-  const outline = (light: boolean) => (light ? { stroke: "var(--muted)", strokeOpacity: 0.6, strokeWidth: 0.9, strokeLinejoin: "round" as const } : {});
+  // The accent token: the site's colour for decorative outlines.
+  const outline = (light: boolean) => (light ? { stroke: "var(--accent)", strokeWidth: 0.9, strokeLinejoin: "round" as const } : {});
   return (
     <svg viewBox="0 0 24 28" width={(size * 24) / 28} height={size} role="img" aria-label={kitLabel(kit)} className={`shrink-0 ${className}`}>
       <defs>

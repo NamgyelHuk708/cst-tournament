@@ -62,7 +62,7 @@ export function KnockoutCard({ match, featured = false }: { match: Match; featur
       {outcome?.decidedOnPenalties && winnerTeam && hasPens ? (
         <p className="border-t border-border bg-bg/60 px-3.5 py-1.5 text-xs font-medium text-muted">
           {teamShort(winnerTeam)} win {Math.max(match.home_pens!, match.away_pens!)}–{Math.min(match.home_pens!, match.away_pens!)} on penalties
-          {wentToExtraTime(match) && " (a.e.t.)"}
+          {wentToExtraTime(match) && " after extra time"}
         </p>
       ) : (
         wentToExtraTime(match) &&

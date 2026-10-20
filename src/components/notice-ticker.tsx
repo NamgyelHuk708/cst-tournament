@@ -137,7 +137,7 @@ function TickerText({ notices }: { notices: Notice[] }) {
     return (
       <span aria-hidden="true" className="flex min-w-0 flex-1 items-center gap-3 px-3 text-sm font-medium">
         <span className="min-w-0 flex-1 truncate">{notices[0].message}</span>
-        {notices.length > 1 && <span className="shrink-0 text-xs text-white/80 tabular">1 of {notices.length}</span>}
+        {notices.length > 1 && <span className="shrink-0 text-xs text-white/75 tabular">1 of {notices.length}</span>}
       </span>
     );
   }
@@ -149,7 +149,7 @@ function TickerText({ notices }: { notices: Notice[] }) {
       {notices.map((n) => (
         <span key={n.id} className="flex items-center">
           <span className="whitespace-nowrap">{n.message}</span>
-          <span className="px-4 text-white/60">•</span>
+          <span className="px-4 text-white/75">•</span>
         </span>
       ))}
     </>

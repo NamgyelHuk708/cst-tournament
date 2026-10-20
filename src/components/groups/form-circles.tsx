@@ -63,7 +63,7 @@ export function FormCircles({ slots, size = 20 }: { slots: FormSlot[]; size?: nu
   );
 }
 
-function ResultSymbol({ result, size }: { result: "W" | "D" | "L"; size: number }) {
+export function ResultSymbol({ result, size }: { result: "W" | "D" | "L"; size: number }) {
   const path = result === "W" ? "M3.5 8.5 6.5 11.5 12.5 4.5" : result === "D" ? "M4 8h8" : "M4.5 4.5l7 7M11.5 4.5l-7 7";
   return (
     <svg viewBox="0 0 16 16" width={size} height={size} aria-hidden="true">

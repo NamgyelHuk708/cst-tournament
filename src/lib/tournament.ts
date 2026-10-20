@@ -17,7 +17,22 @@ export type Match = Tables["matches"]["Row"] & {
   stoppage?: MatchStoppage;
   /** Extra time of this second half (match_extra_time). Absent: none (or left over from before a reset). */
   extraTime?: MatchExtraTime;
+  /** The penalty shoot-out kick by kick (penalty_kicks), when its kicks add up to the penalty score. */
+  shootout?: { firstTeamId: number; kicks: PenaltyKick[] };
 };
+
+/** One kick of a penalty shoot-out. The shoot-out score itself stays in home_pens / away_pens. */
+export type PenaltyKick = {
+  id: number;
+  match_id: number;
+  team_id: number;
+  kick_no: number;
+  player_id: string | null;
+  taker_name: string | null;
+  taker_number: number | null;
+  scored: boolean;
+};
+export type PenaltyShootout = { match_id: number; first_team_id: number };
 
 /**
  * Extra time of a knockout match, length chosen by the admin. The match keeps status "second_half"
@@ -105,7 +120,42 @@ export type Snapshot = {
   stoppages: MatchStoppage[];
   kits: TeamKit[];
   extraTimes: MatchExtraTime[];
+  shootouts: PenaltyShootout[];
+  kicks: PenaltyKick[];
 };
+
+/**
+ * Matches with their shoot-out kicks attached, during or after penalties, only when the kicks add up
+ * to the penalty score (a score entered directly, or kicks left from an undone shoot-out, show no kicks).
+ */
+export function withShootouts(matches: Match[], shootouts: PenaltyShootout[], kicks: PenaltyKick[]): Match[] {
+  if (!shootouts.length) return matches;
+  const byMatch = new Map(shootouts.map((x) => [x.match_id, x]));
+  return matches.map((m) => {
+    const so = byMatch.get(m.id);
+    if (!so || (m.status !== "penalties" && m.status !== "finished") || m.home_pens == null || m.away_pens == null) return m;
+    const mine = kicks.filter((k) => k.match_id === m.id).sort((a, b) => a.kick_no - b.kick_no);
+    const scored = (team: number | null) => mine.filter((k) => k.team_id === team && k.scored).length;
+    if (scored(m.home_team_id) !== m.home_pens || scored(m.away_team_id) !== m.away_pens) return m;
+    return { ...m, shootout: { firstTeamId: so.first_team_id, kicks: mine } };
+  });
+}
+
+/** The team to take the next kick: teams alternate from the one that kicked first. */
+export function nextKickTeam(match: Pick<Match, "home_team_id" | "away_team_id" | "shootout">): number | null {
+  const so = match.shootout;
+  if (!so) return null;
+  const other = so.firstTeamId === match.home_team_id ? match.away_team_id : match.home_team_id;
+  return so.kicks.length % 2 === 0 ? so.firstTeamId : other;
+}
+
+/** "#10 Sonam Wangchuk", "Karma (7)" for a typed name, or "Taker not recorded". */
+export function kickTaker(kick: PenaltyKick, playersById: Map<string, Player>): string {
+  const p = kick.player_id ? playersById.get(kick.player_id) : undefined;
+  if (p) return `${p.shirt_number != null ? `#${shirtLabel(p.shirt_number)} ` : ""}${p.name}`;
+  if (kick.taker_name) return `${kick.taker_number != null ? `#${shirtLabel(kick.taker_number)} ` : ""}${kick.taker_name}`;
+  return "Taker not recorded";
+}
 
 /** Matches with their extra time attached, when it belongs to the second half that was played. */
 export function withExtraTime(matches: Match[], rows: MatchExtraTime[]): Match[] {
@@ -421,7 +471,7 @@ export function isKnockout(match: Pick<Match, "stage">): boolean {
 // ---------------------------------------------------------------------------
 
 export type MatchClock = {
-  /** Short label for display: 23', 45+2', HT, 90+3', Pens, FT. */
+  /** Short label for display: 23', 45+2', HT, 90+3', Penalties, FT; ET break, End of ET in extra time. */
   label: string;
   /** True while the clock is running (a half is in progress). */
   running: boolean;
@@ -441,13 +491,13 @@ export function matchClock(match: Pick<Match, "status" | "period_started_at" | "
     case "half_time":
       return { label: "HT", running: false };
     case "penalties":
-      return { label: "Pens", running: false };
+      return { label: "Penalties", running: false };
     case "finished":
       return { label: "FT", running: false };
   }
 
   if (match.status === "second_half" && match.extraTime?.phase === "break") return { label: "ET break", running: false };
-  if (match.status === "second_half" && match.extraTime?.phase === "over") return { label: "AET", running: false };
+  if (match.status === "second_half" && match.extraTime?.phase === "over") return { label: "End of ET", running: false };
   const running = runningMinute(match, now);
   if (!running) return { label: match.status === "first_half" ? "1st half" : "2nd half", running: true };
   // Always the actual added minutes ("45+2'", "90+17'"), the same form as event minutes elsewhere.
@@ -579,7 +629,7 @@ export function nextStatusStep(match: Match): StatusStep {
         : { to: "finished", label: "Full time", confirm: true };
     }
     case "penalties":
-      return { to: "finished", label: "End shoot-out", confirm: true };
+      return { to: "finished", label: "End shootout", confirm: true };
     case "finished":
       return null;
   }
