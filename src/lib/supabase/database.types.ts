@@ -607,6 +607,129 @@ export type Database = {
         }
         Relationships: []
       }
+      penalty_kicks: {
+        Row: {
+          client_id: string | null
+          created_at: string
+          id: number
+          is_demo: boolean
+          kick_no: number
+          match_id: number
+          player_id: string | null
+          scored: boolean
+          taker_name: string | null
+          taker_number: number | null
+          team_id: number
+          updated_at: string
+        }
+        Insert: {
+          client_id?: string | null
+          created_at?: string
+          id?: never
+          is_demo?: boolean
+          kick_no: number
+          match_id: number
+          player_id?: string | null
+          scored: boolean
+          taker_name?: string | null
+          taker_number?: number | null
+          team_id: number
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string | null
+          created_at?: string
+          id?: never
+          is_demo?: boolean
+          kick_no?: number
+          match_id?: number
+          player_id?: string | null
+          scored?: boolean
+          taker_name?: string | null
+          taker_number?: number | null
+          team_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "penalty_kicks_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "penalty_kicks_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "penalty_kicks_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "group_standings"
+            referencedColumns: ["team_id"]
+          },
+          {
+            foreignKeyName: "penalty_kicks_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      penalty_shootouts: {
+        Row: {
+          created_at: string
+          first_team_id: number
+          is_demo: boolean
+          match_id: number
+          penalties_action: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          first_team_id: number
+          is_demo?: boolean
+          match_id: number
+          penalties_action?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          first_team_id?: number
+          is_demo?: boolean
+          match_id?: number
+          penalties_action?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "penalty_shootouts_first_team_id_fkey"
+            columns: ["first_team_id"]
+            isOneToOne: false
+            referencedRelation: "group_standings"
+            referencedColumns: ["team_id"]
+          },
+          {
+            foreignKeyName: "penalty_shootouts_first_team_id_fkey"
+            columns: ["first_team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "penalty_shootouts_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: true
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       players: {
         Row: {
           created_at: string
@@ -676,6 +799,47 @@ export type Database = {
             foreignKeyName: "result_holds_match_id_fkey"
             columns: ["match_id"]
             isOneToOne: true
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shootout_actions: {
+        Row: {
+          created_at: string
+          id: number
+          is_demo: boolean
+          kind: string
+          match_id: number
+          new_kick: Json | null
+          prev_kick: Json | null
+          undone_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: never
+          is_demo?: boolean
+          kind: string
+          match_id: number
+          new_kick?: Json | null
+          prev_kick?: Json | null
+          undone_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: never
+          is_demo?: boolean
+          kind?: string
+          match_id?: number
+          new_kick?: Json | null
+          prev_kick?: Json | null
+          undone_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shootout_actions_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
             referencedRelation: "matches"
             referencedColumns: ["id"]
           },
@@ -1034,6 +1198,37 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      admin_add_kick: {
+        Args: {
+          p_client_id: string
+          p_match: number
+          p_name: string
+          p_number: number
+          p_player: string
+          p_scored: boolean
+          p_team: number
+        }
+        Returns: {
+          client_id: string | null
+          created_at: string
+          id: number
+          is_demo: boolean
+          kick_no: number
+          match_id: number
+          player_id: string | null
+          scored: boolean
+          taker_name: string | null
+          taker_number: number | null
+          team_id: number
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "penalty_kicks"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       admin_add_players: {
         Args: { p_players: Json; p_team: number }
         Returns: {
@@ -1195,6 +1390,7 @@ export type Database = {
         }
       }
       admin_delete_event: { Args: { p_event: number }; Returns: undefined }
+      admin_delete_kick: { Args: { p_kick: number }; Returns: undefined }
       admin_delete_notice: { Args: { p_id: number }; Returns: undefined }
       admin_delete_substitution: { Args: { p_sub: number }; Returns: undefined }
       admin_edit_player: {
@@ -1683,6 +1879,23 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      admin_start_shootout: {
+        Args: { p_first_team: number; p_match: number }
+        Returns: {
+          created_at: string
+          first_team_id: number
+          is_demo: boolean
+          match_id: number
+          penalties_action: number | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "penalty_shootouts"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       admin_suspend_play: {
         Args: { p_match: number; p_reason?: string }
         Returns: {
@@ -1780,6 +1993,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      admin_undo_shootout: { Args: { p_match: number }; Returns: undefined }
       admin_update_event: {
         Args: {
           p_added_time: number
@@ -1804,6 +2018,36 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "match_events"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      admin_update_kick: {
+        Args: {
+          p_kick: number
+          p_name: string
+          p_number: number
+          p_player: string
+          p_scored: boolean
+          p_team: number
+        }
+        Returns: {
+          client_id: string | null
+          created_at: string
+          id: number
+          is_demo: boolean
+          kick_no: number
+          match_id: number
+          player_id: string | null
+          scored: boolean
+          taker_name: string | null
+          taker_number: number | null
+          team_id: number
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "penalty_kicks"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -1858,6 +2102,15 @@ export type Database = {
       }
       apply_advancement: {
         Args: { p_match: number; p_old_loser: number; p_old_winner: number }
+        Returns: undefined
+      }
+      check_kick_taker: {
+        Args: {
+          p_name: string
+          p_number: number
+          p_player: string
+          p_team: number
+        }
         Returns: undefined
       }
       check_minute: {
@@ -1923,6 +2176,7 @@ export type Database = {
         }
         Returns: Record<string, unknown>
       }
+      current_penalties_action: { Args: { p_match: number }; Returns: number }
       demo_prepare_knockouts: { Args: never; Returns: number }
       demo_reset_knockouts: { Args: never; Returns: number }
       group_complete: { Args: { p_group: string }; Returns: boolean }
@@ -1970,12 +2224,78 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      lock_for_shootout: {
+        Args: { p_match: number }
+        Returns: {
+          away_pens: number | null
+          away_score: number
+          away_source: Database["public"]["Enums"]["slot_source"] | null
+          away_source_group: string | null
+          away_source_match: number | null
+          away_team_id: number | null
+          group_code: string | null
+          home_pens: number | null
+          home_score: number
+          home_source: Database["public"]["Enums"]["slot_source"] | null
+          home_source_group: string | null
+          home_source_match: number | null
+          home_team_id: number | null
+          id: number
+          is_demo: boolean
+          kickoff_at: string
+          notes: string | null
+          period_started_at: string | null
+          slot_label: string | null
+          stage: Database["public"]["Enums"]["match_stage"]
+          status: Database["public"]["Enums"]["match_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "matches"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       match_result_team: {
         Args: {
           m: Database["public"]["Tables"]["matches"]["Row"]
           p_want: string
         }
         Returns: number
+      }
+      recount_shootout: {
+        Args: { p_match: number }
+        Returns: {
+          away_pens: number | null
+          away_score: number
+          away_source: Database["public"]["Enums"]["slot_source"] | null
+          away_source_group: string | null
+          away_source_match: number | null
+          away_team_id: number | null
+          group_code: string | null
+          home_pens: number | null
+          home_score: number
+          home_source: Database["public"]["Enums"]["slot_source"] | null
+          home_source_group: string | null
+          home_source_match: number | null
+          home_team_id: number | null
+          id: number
+          is_demo: boolean
+          kickoff_at: string
+          notes: string | null
+          period_started_at: string | null
+          slot_label: string | null
+          stage: Database["public"]["Enums"]["match_stage"]
+          status: Database["public"]["Enums"]["match_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "matches"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       require_admin: { Args: never; Returns: undefined }
       restore_events: { Args: { p_rows: Json }; Returns: undefined }

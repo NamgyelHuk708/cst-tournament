@@ -22,7 +22,7 @@ const NO_TAKER: Taker = { playerId: null, name: "", number: "" };
 /** Calls to the shoot-out functions: saving state, plain error messages, then refresh and undo label. */
 function useShootoutCall(onChanged: () => void) {
   const { local } = useTournament();
-  // Shoot-out tables and functions, untyped until the generated database types include them.
+  // Untyped calls: nullable arguments (taker, name, number), which the generated types don't express.
   const db = useMemo(() => createClient() as unknown as SupabaseClient, []);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);

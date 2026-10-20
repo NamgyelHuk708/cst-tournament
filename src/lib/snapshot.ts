@@ -23,8 +23,8 @@ export async function fetchSnapshot(supabase: SupabaseClient<Database>): Promise
     // Extra time. Before its migration is applied the table doesn't exist: no extra time.
     supabase.from("match_extra_time").select("match_id, half_minutes, periods, phase, phase_started_at, second_half_started_at"),
     // Shoot-outs kick by kick. Before their migration is applied the tables don't exist: none.
-    (supabase as unknown as SupabaseClient).from("penalty_shootouts").select("match_id, first_team_id"),
-    (supabase as unknown as SupabaseClient).from("penalty_kicks").select("id, match_id, team_id, kick_no, player_id, taker_name, taker_number, scored"),
+    supabase.from("penalty_shootouts").select("match_id, first_team_id"),
+    supabase.from("penalty_kicks").select("id, match_id, team_id, kick_no, player_id, taker_name, taker_number, scored"),
   ]);
   const error =
     teams.error ?? matches.error ?? events.error ?? players.error ?? substitutions.error ?? officials.error ?? staff.error ?? displayNames.error ?? resultHolds.error ?? kickoffChanges.error ?? notices.error ?? stoppages.error;

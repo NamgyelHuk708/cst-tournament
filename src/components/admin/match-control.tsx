@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { uuid } from "@/lib/uuid";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   canStartExtraTime,
   clockMinute,
@@ -185,8 +184,7 @@ export function MatchControl({ matchId, back }: { matchId: number; back?: string
         .order("id", { ascending: false })
         .limit(1)
         .maybeSingle(),
-      // Untyped until the generated database types include the shoot-out tables.
-      (supabase as unknown as SupabaseClient)
+      supabase
         .from("shootout_actions")
         .select("id, kind, created_at")
         .eq("match_id", matchId)
@@ -321,7 +319,7 @@ export function MatchControl({ matchId, back }: { matchId: number; back?: string
     run(
       () =>
         lastAction?.source === "shootout"
-          ? (supabase as unknown as SupabaseClient).rpc("admin_undo_shootout", { p_match: matchId })
+          ? supabase.rpc("admin_undo_shootout", { p_match: matchId })
           : lastAction?.source === "et"
           ? supabase.rpc("admin_undo_extra_time", { p_match: matchId })
           : lastAction?.source === "extra"
