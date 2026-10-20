@@ -1321,3 +1321,154 @@ export function eventMinuteLabel(e: Pick<MatchEvent, "minute" | "added_time">): 
   if (e.minute == null) return "–";
   return e.added_time ? `${e.minute}+${e.added_time}'` : `${e.minute}'`;
 }
+
+// ---------------------------------------------------------------------------
+// Discipline: cards and suspensions (rules confirmed by the organisers)
+// ---------------------------------------------------------------------------
+
+/**
+ * The organisers' discipline rules, all in one place.
+ * - Two yellows in one match: sent off, banned for the team's next SECOND_YELLOW_BAN_MATCHES match(es).
+ * - A straight red: banned for the team's next RED_BAN_MATCHES match(es). Longer bans for serious red
+ *   cards are the organisers' decision (not built).
+ * - YELLOW_RULE "consecutive": a yellow in two of the team's consecutive matches (CONSECUTIVE_BY "team":
+ *   the team's matches, so a match in between without a yellow, or that the player missed, breaks the
+ *   run) bans the player for the team's next YELLOW_BAN_MATCHES match(es); after the ban the run starts
+ *   again from zero. Yellows in a match where the player was sent off don't count.
+ * - YELLOW_RESET_AFTER null: yellow cards never reset during the tournament.
+ * - A ban is served when the team's next match is finished; postponed or abandoned matches don't count.
+ */
+export const DISCIPLINE = {
+  SECOND_YELLOW_BAN_MATCHES: 1,
+  RED_BAN_MATCHES: 1,
+  YELLOW_RULE: "consecutive",
+  CONSECUTIVE_BY: "team",
+  YELLOW_BAN_MATCHES: 1,
+  YELLOW_RESET_AFTER: null,
+} as const;
+export const RED_BAN_MATCHES = DISCIPLINE.RED_BAN_MATCHES;
+
+export type BanKind = "red" | "second_yellow" | "yellows";
+export type Ban = {
+  playerId: string;
+  teamId: number;
+  kind: BanKind;
+  /** The match the ban came from. */
+  fromMatchId: number;
+  matches: number;
+};
+/** A player's cards in one match. */
+export type PlayerMatchCards = { matchId: number; teamId: number; yellows: number; red: boolean; sentOff: boolean };
+export type Discipline = {
+  /** Cards per player, match by match (kick-off order). */
+  cards: Map<string, PlayerMatchCards[]>;
+  /** Bans not yet (fully) served, with how many matches are left. */
+  pending: (Ban & { left: number })[];
+  /** Who was or is suspended for a match: match id -> player id -> the ban. */
+  suspendedIn: Map<number, Map<string, Ban>>;
+  /** Players with a counting yellow in their team's last finished match and no ban: one more yellow means a ban. */
+  oneYellowAway: Map<string, { teamId: number; matchId: number }>;
+  /** Cards recorded without a player: they can't count. */
+  unattributed: MatchEvent[];
+};
+
+/** Card events that are a player's second yellow in their match (shown as yellow-and-red). */
+export function secondYellowIds(events: Pick<MatchEvent, "id" | "match_id" | "type" | "player_id" | "minute" | "added_time">[]): Set<number> {
+  const seen = new Map<string, number>();
+  const ids = new Set<number>();
+  for (const e of events.filter((x) => x.type === "yellow_card" && x.player_id).sort(compareEventTime)) {
+    const key = `${e.match_id}:${e.player_id}`;
+    const n = (seen.get(key) ?? 0) + 1;
+    seen.set(key, n);
+    if (n === 2) ids.add(e.id);
+  }
+  return ids;
+}
+
+/**
+ * Applies the discipline rules to every team's finished matches in kick-off order: each finished
+ * match first serves the bans pending for that team's players, then its cards may start new bans or
+ * yellow runs. Pending bans then apply to the team's next matches not yet finished.
+ */
+export function computeDiscipline(matches: Match[], events: MatchEvent[]): Discipline {
+  const cards = new Map<string, PlayerMatchCards[]>();
+  const pendingByPlayer = new Map<string, Ban & { left: number }>();
+  const suspendedIn = new Map<number, Map<string, Ban>>();
+  const oneYellowAway = new Map<string, { teamId: number; matchId: number }>();
+  const lastYellow = new Map<string, number>(); // player -> index (in their team's finished matches) of a counting yellow
+  const cardEvents = events.filter((e) => e.type === "yellow_card" || e.type === "red_card");
+  const unattributed = cardEvents.filter((e) => !e.player_id);
+  const byMatch = new Map<number, MatchEvent[]>();
+  for (const e of cardEvents) if (e.player_id) byMatch.set(e.match_id, [...(byMatch.get(e.match_id) ?? []), e]);
+  const ordered = [...matches].sort((a, b) => a.kickoff_at.localeCompare(b.kickoff_at) || a.id - b.id);
+  const teamIds = new Set(ordered.flatMap((m) => [m.home_team_id, m.away_team_id]).filter((x): x is number => x != null));
+  const mark = (matchId: number, ban: Ban) => {
+    const map = suspendedIn.get(matchId) ?? new Map<string, Ban>();
+    map.set(ban.playerId, ban);
+    suspendedIn.set(matchId, map);
+  };
+
+  for (const teamId of teamIds) {
+    const teamMatches = ordered.filter((m) => m.home_team_id === teamId || m.away_team_id === teamId);
+    const finished = teamMatches.filter(isFinished);
+    finished.forEach((m, i) => {
+      // 1. This match being played serves the bans pending for this team's players.
+      for (const ban of [...pendingByPlayer.values()].filter((b) => b.teamId === teamId)) {
+        mark(m.id, ban);
+        ban.left -= 1;
+        if (ban.left <= 0) pendingByPlayer.delete(ban.playerId);
+      }
+      // 2. This match's cards, per player of this team.
+      const perPlayer = new Map<string, { yellows: number; red: boolean }>();
+      for (const e of byMatch.get(m.id) ?? []) {
+        if (e.team_id !== teamId) continue;
+        const c = perPlayer.get(e.player_id!) ?? { yellows: 0, red: false };
+        if (e.type === "yellow_card") c.yellows += 1;
+        else c.red = true;
+        perPlayer.set(e.player_id!, c);
+      }
+      for (const [playerId, c] of perPlayer) {
+        const sentOff = c.red || c.yellows >= 2;
+        cards.set(playerId, [...(cards.get(playerId) ?? []), { matchId: m.id, teamId, yellows: c.yellows, red: c.red, sentOff }]);
+        if (sentOff) {
+          const kind: BanKind = c.yellows >= 2 && !c.red ? "second_yellow" : "red";
+          const n = kind === "red" ? DISCIPLINE.RED_BAN_MATCHES : DISCIPLINE.SECOND_YELLOW_BAN_MATCHES;
+          pendingByPlayer.set(playerId, { playerId, teamId, kind, fromMatchId: m.id, matches: n, left: n });
+          // Yellows in a match where the player was sent off don't count, and the run is broken.
+          lastYellow.delete(playerId);
+        } else if (c.yellows === 1) {
+          if (lastYellow.get(playerId) === i - 1) {
+            const n = DISCIPLINE.YELLOW_BAN_MATCHES;
+            pendingByPlayer.set(playerId, { playerId, teamId, kind: "yellows", fromMatchId: m.id, matches: n, left: n });
+            lastYellow.delete(playerId); // the run starts again from zero after the ban
+          } else lastYellow.set(playerId, i);
+        }
+      }
+      // A team match without a counting yellow for a player breaks their run (handled by the index check).
+    });
+    // Players one yellow away: a counting yellow in the team's last finished match, no ban pending,
+    // and the team still has a match to play (knocked-out teams are left out).
+    const lastIndex = finished.length - 1;
+    const stillPlaying = teamMatches.some((m) => !isFinished(m));
+    for (const [playerId, idx] of lastYellow) {
+      if (stillPlaying && idx === lastIndex && lastIndex >= 0 && !pendingByPlayer.has(playerId)) {
+        const playedFor = cards.get(playerId)?.find((c) => c.matchId === finished[idx].id && c.teamId === teamId);
+        if (playedFor) oneYellowAway.set(playerId, { teamId, matchId: finished[idx].id });
+      }
+    }
+    // Pending bans apply to the team's next matches not yet finished (in kick-off order, postponed ones included).
+    const upcoming = teamMatches.filter((m) => !isFinished(m));
+    for (const ban of [...pendingByPlayer.values()].filter((b) => b.teamId === teamId)) {
+      upcoming.slice(0, ban.left).forEach((m) => mark(m.id, ban));
+    }
+  }
+  return { cards, pending: [...pendingByPlayer.values()], suspendedIn, oneYellowAway, unattributed };
+}
+
+/** "Sent off vs Zimdra FC, 19 Oct", "Second yellow vs Zimdra FC, 19 Oct", "Yellow cards in two consecutive matches". */
+export function banReason(ban: Ban, matchesById: Map<number, Match>, opponentName: (teamId: number | null) => string, day: (iso: string) => string): string {
+  const m = matchesById.get(ban.fromMatchId);
+  const vs = m ? ` vs ${opponentName(m.home_team_id === ban.teamId ? m.away_team_id : m.home_team_id)}, ${day(m.kickoff_at)}` : "";
+  if (ban.kind === "yellows") return "Yellow cards in two consecutive matches";
+  return `${ban.kind === "second_yellow" ? "Sent off (second yellow)" : "Sent off"}${vs}`;
+}

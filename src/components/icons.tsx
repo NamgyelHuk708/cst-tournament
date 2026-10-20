@@ -32,7 +32,16 @@ export function BallIcon({ className = "size-3.5" }: IconProps) {
 }
 
 /** A referee's card. Colour comes from the palette's card tokens. */
-export function CardIcon({ colour, className = "" }: { colour: "yellow" | "red"; className?: string }) {
+export function CardIcon({ colour, className = "" }: { colour: "yellow" | "red" | "second_yellow"; className?: string }) {
+  // A second yellow: the yellow card with the red card overlapping it (sent off).
+  if (colour === "second_yellow") {
+    return (
+      <span aria-hidden="true" className={`relative inline-block h-3.5 w-3.5 ${className}`}>
+        <span className="absolute top-0 left-0 h-3 w-2 rounded-[2px] bg-card-yellow" />
+        <span className="absolute right-0 bottom-0 h-3 w-2 rounded-[2px] bg-card-red ring-1 ring-card" />
+      </span>
+    );
+  }
   return (
     <span
       aria-hidden="true"

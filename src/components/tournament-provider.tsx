@@ -5,6 +5,8 @@ import type { RealtimeChannel, RealtimePostgresChangesPayload } from "@supabase/
 import { createClient } from "@/lib/supabase/client";
 import { fetchSnapshot } from "@/lib/snapshot";
 import {
+  computeDiscipline,
+  type Discipline,
   computeStandings,
   type GroupCode,
   type GroupStandings,
@@ -39,6 +41,7 @@ type TournamentContextValue = Snapshot & {
   matchesById: Map<number, Match>;
   playersById: Map<string, Player>;
   standings: Record<GroupCode, GroupStandings>;
+  discipline: Discipline;
   connection: ConnectionState;
   /** Server time minus device time, in ms. Null until measured. */
   clockOffset: number | null;
@@ -479,6 +482,8 @@ export function TournamentProvider({
       matchesById: new Map(matches.map((m) => [m.id, m])),
       playersById: new Map(data.players.map((p) => [p.id, p])),
       standings: computeStandings(teams, matches),
+      // Cards and suspensions under the organisers' rules (DISCIPLINE in tournament.ts).
+      discipline: computeDiscipline(matches, data.events),
       connection,
       clockOffset,
       renderedAt,

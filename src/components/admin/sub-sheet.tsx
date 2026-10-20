@@ -10,6 +10,7 @@ import { MinuteField, useMinuteInput } from "./minute-field";
 import { NEW_PLAYER as NEW, PlayerChips } from "./player-chips";
 import { teamShort } from "@/data/team-names";
 import { useSubWarnings } from "./sub-warnings";
+import { useDisciplineWarnings, useSuspended } from "./discipline-warnings";
 
 /**
  * Record or edit a substitution: player off, player on (from the team's players, or a new one with
@@ -108,11 +109,14 @@ export function SubSheet({
     onId: on === NEW ? null : on,
     label,
   });
-  const check = useSubWarnings(warnings, save);
+  // A suspended player coming on: warn, "Save anyway".
+  const disciplineWarnings = useDisciplineWarnings({ match, type: "sub", playerId: on === NEW ? null : on, label });
+  const suspended = new Set(useSuspended(match).keys());
+  const check = useSubWarnings([...warnings, ...disciplineWarnings], save);
   const { marks, off: offNow } = subMarks(teamPlayers, match.id, substitutions, at, sub?.id);
 
   const chips = (selected: string | null, pick: (id: string | null) => void, allowNew: boolean) => (
-    <PlayerChips teamPlayers={teamPlayers} selected={selected} onPick={pick} allowNew={allowNew} teamCode={teamShort(team)} marks={marks} off={offNow} />
+    <PlayerChips teamPlayers={teamPlayers} selected={selected} onPick={pick} allowNew={allowNew} teamCode={teamShort(team)} marks={marks} off={offNow} suspended={suspended} />
   );
 
   return (

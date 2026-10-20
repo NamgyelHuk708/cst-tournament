@@ -20,7 +20,8 @@ export function AdminTabs() {
       {/* Five tabs: each as wide as its label needs, so "Knockouts" fits at 375 px. */}
       <ul className="flex gap-1 rounded-xl bg-white/10 p-1">
         {TABS.map((t) => {
-          const active = t.href === "/admin" ? pathname === "/admin" : pathname.startsWith(t.href);
+          // The Discipline view belongs to Teams.
+          const active = t.href === "/admin" ? pathname === "/admin" : pathname.startsWith(t.href) || (t.href === "/admin/teams" && pathname.startsWith("/admin/discipline"));
           return (
             <li key={t.href} className="flex-auto">
               <Link

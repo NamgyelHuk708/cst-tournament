@@ -9,6 +9,7 @@ import { Sheet } from "../sheet";
 import { MinuteField, useMinuteInput } from "./minute-field";
 import { NEW_PLAYER, PlayerChips } from "./player-chips";
 import { useSubWarnings } from "./sub-warnings";
+import { useDisciplineWarnings, useSuspended } from "./discipline-warnings";
 import { teamShort } from "@/data/team-names";
 
 const TYPES: { type: EventType; label: string }[] = [
@@ -114,7 +115,19 @@ export function EventSheet({
       return p ? `${p.shirt_number != null ? `#${shirtLabel(p.shirt_number)} ` : ""}${p.name}` : "This player";
     },
   });
-  const check = useSubWarnings(subWarning ? [subWarning] : [], save);
+  // Discipline: a suspended player, a second yellow (sent off), a yellow after one in the previous match.
+  const disciplineWarnings = useDisciplineWarnings({
+    match,
+    type,
+    playerId: effectivePlayer && effectivePlayer !== NEW_PLAYER ? effectivePlayer : null,
+    exceptEventId: event?.id,
+    label: (id) => {
+      const p = teamPlayers.find((x) => x.id === id);
+      return p ? `${p.shirt_number != null ? `#${shirtLabel(p.shirt_number)} ` : ""}${p.name}` : "This player";
+    },
+  });
+  const suspended = new Set(useSuspended(match).keys());
+  const check = useSubWarnings([...(subWarning ? [subWarning] : []), ...disciplineWarnings], save);
   const subNotes = subMarks(teamPlayers, match.id, substitutions, eventMoment, undefined, true);
 
   async function save() {
@@ -222,6 +235,7 @@ export function EventSheet({
             teamCode={code(playerSide)}
             marks={subNotes.marks}
             off={subNotes.off}
+            suspended={suspended}
           />
           {effectivePlayer === NEW_PLAYER && (
             <div className="mt-2 grid grid-cols-[1fr_5.5rem] gap-2">

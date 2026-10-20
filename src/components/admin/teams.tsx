@@ -29,6 +29,7 @@ export function TeamList() {
   return (
     <main className="mx-auto max-w-xl space-y-5 px-4 pt-4 pb-10">
       <h1 className="sr-only">Teams</h1>
+      <DisciplineLink />
       {GROUP_CODES.map((g) => (
         <section key={g} aria-labelledby={`teams-${g}`}>
           <h2 id={`teams-${g}`} className="mb-2 flex items-center gap-2 px-1 text-sm font-semibold text-muted">
@@ -563,5 +564,23 @@ function SheetButtons({
         {saveLabel}
       </button>
     </div>
+  );
+}
+
+/** Link to the Discipline view, with how many players are suspended now. */
+function DisciplineLink() {
+  const { discipline } = useTournament();
+  const n = discipline.pending.length;
+  return (
+    <Link href="/admin/discipline" className="flex min-h-14 items-center gap-3 rounded-xl bg-card px-4 py-3 ring-1 ring-border/60 active:bg-bg">
+      <span className="min-w-0 flex-1">
+        <span className="block font-semibold">Discipline</span>
+        <span className="block text-sm text-muted">
+          Cards and suspensions{n ? ` · ${n} suspended now` : ""}
+          {discipline.unattributed.length ? ` · ${discipline.unattributed.length} without a player` : ""}
+        </span>
+      </span>
+      <ChevronIcon className="size-5 -rotate-90 text-muted" />
+    </Link>
   );
 }

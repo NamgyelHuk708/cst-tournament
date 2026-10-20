@@ -16,6 +16,7 @@ export function PlayerChips({
   teamCode,
   marks = {},
   off,
+  suspended,
 }: {
   teamPlayers: Player[];
   selected: string | null;
@@ -26,6 +27,8 @@ export function PlayerChips({
   marks?: Record<string, string>;
   /** Players substituted off (not back on): listed after the others, their chips muted. */
   off?: Set<string>;
+  /** Players suspended for this match: their chip says so (picking them asks "Save anyway"). */
+  suspended?: Set<string>;
 }) {
   const ordered = off?.size ? [...teamPlayers.filter((p) => !off.has(p.id)), ...teamPlayers.filter((p) => off.has(p.id))] : teamPlayers;
   return (
@@ -37,6 +40,7 @@ export function PlayerChips({
               {p.shirt_number != null && <span className="tabular opacity-60">#{shirtLabel(p.shirt_number)} </span>}
               {p.name}
               {marks[p.id] && <span className="ml-1.5 text-xs font-semibold tabular opacity-70">· {marks[p.id]}</span>}
+              {suspended?.has(p.id) && <span className="ml-1.5 text-xs font-semibold opacity-70">· Suspended</span>}
             </Chip>
           ))}
         </div>

@@ -7,7 +7,7 @@ import { TeamLogo } from "../team-logo";
 import { useTournament } from "../tournament-provider";
 import { teamShort } from "@/data/team-names";
 
-type Tally = { goals: number; ownGoals: number; yellow: number; red: number; on: boolean; off: boolean };
+type Tally = { goals: number; ownGoals: number; yellow: number; red: number; on: boolean; off: boolean; suspended: boolean };
 
 /**
  * Each team's players for the match sheet: shirt number and name, sorted by number, with small
@@ -15,12 +15,12 @@ type Tally = { goals: number; ownGoals: number; yellow: number; red: number; on:
  * not side by side, so names have the full width on a phone.
  */
 export function PlayersPanel({ match, home, away }: { match: Match; home?: Team; away?: Team }) {
-  const { players, events, substitutions } = useTournament();
+  const { players, events, substitutions, discipline } = useTournament();
 
   const tally = new Map<string, Tally>();
   const get = (id: string) => {
     let t = tally.get(id);
-    if (!t) tally.set(id, (t = { goals: 0, ownGoals: 0, yellow: 0, red: 0, on: false, off: false }));
+    if (!t) tally.set(id, (t = { goals: 0, ownGoals: 0, yellow: 0, red: 0, on: false, off: false, suspended: false }));
     return t;
   };
   for (const e of events) {
@@ -31,6 +31,8 @@ export function PlayersPanel({ match, home, away }: { match: Match; home?: Team;
     else if (e.type === "yellow_card") t.yellow++;
     else if (e.type === "red_card") t.red++;
   }
+  // Suspended for this match (DISCIPLINE rules).
+  for (const playerId of discipline.suspendedIn.get(match.id)?.keys() ?? []) get(playerId).suspended = true;
   for (const s of substitutions) {
     if (s.match_id !== match.id) continue;
     if (s.player_on) get(s.player_on).on = true;
@@ -98,8 +100,11 @@ function Marks({ t }: { t?: Tally }) {
   const said: string[] = [];
   if (t.goals) said.push(t.goals === 1 ? "scored" : `scored ${t.goals}`);
   if (t.ownGoals) said.push(t.ownGoals === 1 ? "own goal" : `${t.ownGoals} own goals`);
-  if (t.yellow) said.push(t.yellow === 1 ? "yellow card" : `${t.yellow} yellow cards`);
-  if (t.red) said.push("red card");
+  const secondYellow = t.yellow >= 2 && !t.red;
+  if (secondYellow) said.push("two yellow cards, sent off");
+  else if (t.yellow) said.push(t.yellow === 1 ? "yellow card" : `${t.yellow} yellow cards`);
+  if (t.red) said.push("red card, sent off");
+  if (t.suspended) said.push("suspended for this match");
   if (t.on) said.push("came on");
   if (t.off) said.push("went off");
   if (!said.length) return null;
@@ -114,8 +119,10 @@ function Marks({ t }: { t?: Tally }) {
             OG{t.ownGoals > 1 && <span className="tabular">×{t.ownGoals}</span>}
           </span>
         )}
-        {t.yellow > 0 && <Count n={t.yellow} icon={<CardIcon colour="yellow" />} />}
+        {secondYellow ? <CardIcon colour="second_yellow" /> : t.yellow > 0 && <Count n={t.yellow} icon={<CardIcon colour="yellow" />} />}
         {t.red > 0 && <CardIcon colour="red" />}
+        {(secondYellow || t.red > 0) && <span className="text-[11px] font-semibold text-muted">Sent off</span>}
+        {t.suspended && <span className="text-[11px] font-semibold text-muted">Suspended</span>}
         {t.on && <span className="w-3 text-center font-bold text-win-text">↑</span>}
         {t.off && <span className="w-3 text-center font-bold text-muted">↓</span>}
       </span>

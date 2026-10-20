@@ -1,8 +1,8 @@
-import { eventMinuteLabel, matchTimeline, scorerLines, type DisplayEvent, type DisplaySub, type Match, type ScorerLine, type Side, shirtLabel } from "@/lib/tournament";
+import { eventMinuteLabel, matchTimeline, scorerLines, secondYellowIds, type DisplayEvent, type DisplaySub, type Match, type ScorerLine, type Side, shirtLabel } from "@/lib/tournament";
 import { BallIcon, CardIcon } from "./icons";
 
-function EventIcon({ type, className = "" }: { type: DisplayEvent["type"]; className?: string }) {
-  if (type === "yellow_card") return <CardIcon colour="yellow" className={className} />;
+function EventIcon({ type, secondYellow = false, className = "" }: { type: DisplayEvent["type"]; secondYellow?: boolean; className?: string }) {
+  if (type === "yellow_card") return <CardIcon colour={secondYellow ? "second_yellow" : "yellow"} className={className} />;
   if (type === "red_card") return <CardIcon colour="red" className={className} />;
   return <BallIcon className={`size-3.5 ${type === "own_goal" ? "text-muted" : "text-text"} ${className}`} />;
 }
@@ -37,7 +37,9 @@ function minutesText(line: Pick<ScorerLine, "minutes" | "untimed">): string {
  */
 export function ScorerColumns({ events, className = "" }: { events: DisplayEvent[]; className?: string }) {
   const lines = scorerLines(events);
-  const reds = events.filter((e) => e.type === "red_card");
+  // Sent off: red cards and second yellows (shown as yellow-and-red).
+  const second = secondYellowIds(events);
+  const reds = events.filter((e) => e.type === "red_card" || second.has(e.id));
   if (lines.length === 0 && reds.length === 0) return null;
   const column = (side: Side) => (
     <ul className={`min-w-0 space-y-1 text-[13px] ${side === "away" ? "text-right" : ""}`} aria-label={side === "home" ? "Home team goals" : "Away team goals"}>
@@ -70,16 +72,16 @@ export function ScorerColumns({ events, className = "" }: { events: DisplayEvent
           <li key={e.id} className={`flex items-center gap-1.5 ${side === "away" ? "justify-end" : ""}`}>
             {side === "home" && (
               <span className="grid w-3.5 shrink-0 place-items-center">
-                <CardIcon colour="red" />
+                <CardIcon colour={second.has(e.id) ? "second_yellow" : "red"} />
               </span>
             )}
             <span className="min-w-0 truncate">
-              <PlayerLabel name={e.playerName ?? "Red card"} number={e.playerName ? e.playerNumber : null} />
+              <PlayerLabel name={e.playerName ?? (second.has(e.id) ? "Second yellow" : "Red card")} number={e.playerName ? e.playerNumber : null} />
             </span>
             {e.minute != null && <span className="shrink-0 font-medium text-muted tabular">{eventMinuteLabel(e)}</span>}
             {side === "away" && (
               <span className="grid w-3.5 shrink-0 place-items-center">
-                <CardIcon colour="red" />
+                <CardIcon colour={second.has(e.id) ? "second_yellow" : "red"} />
               </span>
             )}
           </li>
@@ -100,6 +102,7 @@ export function ScorerColumns({ events, className = "" }: { events: DisplayEvent
  */
 export function MatchTimeline({ match, events, subs = [] }: { match: Match; events: DisplayEvent[]; subs?: DisplaySub[] }) {
   const rows = matchTimeline(match, events, subs);
+  const second = secondYellowIds(events);
   if (rows.length === 0) return null;
   return (
     <ol className="text-[13px]" aria-label="Match timeline">
@@ -134,19 +137,21 @@ export function MatchTimeline({ match, events, subs = [] }: { match: Match; even
         const e = row.event;
         const away = e.side === "away";
         const name = e.playerName ?? FALLBACK[e.type];
+        const sentOffNote = second.has(e.id) ? " (second yellow, sent off)" : "";
         return (
           <li key={e.id} className={`flex min-h-8 items-center gap-2 ${away ? "flex-row-reverse text-right" : ""}`}>
             <span className="w-10 shrink-0 font-display text-sm font-bold text-muted tabular" style={{ textAlign: away ? "right" : "left" }}>
               {e.minute != null ? eventMinuteLabel(e) : ""}
             </span>
             <span className="grid w-3.5 shrink-0 place-items-center">
-              <EventIcon type={e.type} />
+              <EventIcon type={e.type} secondYellow={second.has(e.id)} />
             </span>
             <span className="min-w-0 truncate">
               <PlayerLabel name={name} number={e.playerName ? e.playerNumber : null} />
               {e.type === "own_goal" && e.playerTeamCode && <span className="text-muted"> ({e.playerTeamCode})</span>}
               {e.type === "own_goal" && e.playerName && <span className="text-muted"> (OG)</span>}
               {row.count != null && row.count > 1 && <span className="font-medium text-muted tabular"> ×{row.count}</span>}
+              {sentOffNote && <span className="text-muted">{sentOffNote}</span>}
             </span>
             {row.score && (
               <span className="shrink-0 font-display text-sm font-bold tabular">

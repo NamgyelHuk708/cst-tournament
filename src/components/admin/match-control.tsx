@@ -34,6 +34,7 @@ import { useServerTime, useTournament } from "../tournament-provider";
 import { ControlDock } from "./control-dock";
 import { ExtraTimeSheet, extraTimeLength } from "./extra-time";
 import { ShootoutKickLog } from "./shootout-panel";
+import { EligibilitySection } from "./eligibility";
 import { ClockSheet, FinalScoreSheet, KickoffSheet, MoreSheet, ResetSheet, StatusSheet } from "./correction-sheets";
 import { TeamsSheet } from "./teams-sheet";
 import { useResolvedSides } from "../use-resolved-sides";
@@ -375,6 +376,7 @@ export function MatchControl({ matchId, back }: { matchId: number; back?: string
 
       <Scoreboard match={match} home={home} away={away} score={score} />
 
+      <EligibilitySection match={match} />
       <OfficialsSection match={match} />
       <ManagersSection match={match} />
       <MatchKitsSection match={match} />

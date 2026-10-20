@@ -1,6 +1,6 @@
 "use client";
 
-import { compareEventTime, eventMinuteLabel, shirtLabel, type EventType, type Match, type MatchEvent, type Substitution } from "@/lib/tournament";
+import { compareEventTime, eventMinuteLabel, secondYellowIds, shirtLabel, type EventType, type Match, type MatchEvent, type Substitution } from "@/lib/tournament";
 import Link from "next/link";
 import { BallIcon, CardIcon } from "../icons";
 import { useTournament } from "../tournament-provider";
@@ -39,6 +39,8 @@ export function EventLog({
   onDelete: (e: MatchEvent) => void;
   onEditSub: (s: Substitution) => void;
 }) {
+  // A player's second yellow in this match: shown as yellow-and-red (sent off).
+  const secondYellow = secondYellowIds(events);
   const { teamsById, playersById } = useTournament();
   // Newest first; anything without a minute at the bottom.
   const time = (i: Item) => (i.kind === "event" ? i.e : i.s);
@@ -122,7 +124,7 @@ export function EventLog({
                   {e.minute == null ? <span aria-label="Minute not known">–</span> : eventMinuteLabel(e)}
                 </span>
                 <span className="grid w-4 shrink-0 place-items-center">
-                  {e.type === "yellow_card" ? <CardIcon colour="yellow" /> : e.type === "red_card" ? <CardIcon colour="red" /> : <BallIcon />}
+                  {e.type === "yellow_card" ? <CardIcon colour={secondYellow.has(e.id) ? "second_yellow" : "yellow"} /> : e.type === "red_card" ? <CardIcon colour="red" /> : <BallIcon />}
                 </span>
                 {e.type === "own_goal" ? (
                   // Own goals read the way a score keeper says them: who put it in, then who benefits.
