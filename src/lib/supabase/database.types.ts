@@ -149,6 +149,50 @@ export type Database = {
           },
         ]
       }
+      extra_time_breaks: {
+        Row: {
+          half_minutes: number
+          id: number
+          is_demo: boolean
+          match_id: number
+          periods: number
+          second_half_started_at: string
+          started_at: string
+          undone_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          half_minutes: number
+          id?: never
+          is_demo?: boolean
+          match_id: number
+          periods: number
+          second_half_started_at: string
+          started_at?: string
+          undone_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          half_minutes?: number
+          id?: never
+          is_demo?: boolean
+          match_id?: number
+          periods?: number
+          second_half_started_at?: string
+          started_at?: string
+          undone_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "extra_time_breaks_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       kickoff_changes: {
         Row: {
           created_at: string
@@ -186,6 +230,68 @@ export type Database = {
             columns: ["match_id"]
             isOneToOne: false
             referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      man_of_the_match: {
+        Row: {
+          created_at: string
+          is_demo: boolean
+          match_id: number
+          name: string
+          player_id: string | null
+          shirt_number: number | null
+          team_id: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          is_demo?: boolean
+          match_id: number
+          name: string
+          player_id?: string | null
+          shirt_number?: number | null
+          team_id: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          is_demo?: boolean
+          match_id?: number
+          name?: string
+          player_id?: string | null
+          shirt_number?: number | null
+          team_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "man_of_the_match_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: true
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "man_of_the_match_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "man_of_the_match_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "group_standings"
+            referencedColumns: ["team_id"]
+          },
+          {
+            foreignKeyName: "man_of_the_match_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
             referencedColumns: ["id"]
           },
         ]
@@ -1277,6 +1383,26 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      admin_break_before_extra_time: {
+        Args: { p_half_minutes: number; p_match: number; p_periods: number }
+        Returns: {
+          half_minutes: number
+          id: number
+          is_demo: boolean
+          match_id: number
+          periods: number
+          second_half_started_at: string
+          started_at: string
+          undone_at: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "extra_time_breaks"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       admin_cancel_suspension: { Args: { p_match: number }; Returns: undefined }
       admin_change_kickoff: {
         Args: { p_match: number; p_new: string; p_reason?: string }
@@ -1296,6 +1422,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      admin_clear_man_of_the_match: {
+        Args: { p_match: number }
+        Returns: undefined
       }
       admin_clear_qualifier_order: {
         Args: { p_group: string }
@@ -1684,6 +1814,31 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      admin_set_man_of_the_match: {
+        Args: {
+          p_match: number
+          p_name: string
+          p_number: number
+          p_player: string
+          p_team: number
+        }
+        Returns: {
+          created_at: string
+          is_demo: boolean
+          match_id: number
+          name: string
+          player_id: string | null
+          shirt_number: number | null
+          team_id: number
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "man_of_the_match"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       admin_set_officials: {
         Args: { p_match: number; p_officials: Json }
         Returns: {
@@ -1974,6 +2129,26 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      admin_undo_extra_time_break: {
+        Args: { p_match: number }
+        Returns: {
+          half_minutes: number
+          id: number
+          is_demo: boolean
+          match_id: number
+          periods: number
+          second_half_started_at: string
+          started_at: string
+          undone_at: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "extra_time_breaks"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       admin_undo_kickoff: {
         Args: { p_match: number }
         Returns: {
@@ -2165,6 +2340,26 @@ export type Database = {
         SetofOptions: {
           from: "matches"
           to: "match_extra_time"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      current_extra_time_break: {
+        Args: { m: Database["public"]["Tables"]["matches"]["Row"] }
+        Returns: {
+          half_minutes: number
+          id: number
+          is_demo: boolean
+          match_id: number
+          periods: number
+          second_half_started_at: string
+          started_at: string
+          undone_at: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "matches"
+          to: "extra_time_breaks"
           isOneToOne: true
           isSetofReturn: false
         }

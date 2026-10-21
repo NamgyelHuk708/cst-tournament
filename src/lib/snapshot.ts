@@ -26,8 +26,8 @@ export async function fetchSnapshot(supabase: SupabaseClient<Database>): Promise
     supabase.from("penalty_shootouts").select("match_id, first_team_id"),
     supabase.from("penalty_kicks").select("id, match_id, team_id, kick_no, player_id, taker_name, taker_number, scored"),
     // Breaks before extra time (open ones only) and Man of the Match. Before their migrations: none.
-    (supabase as unknown as SupabaseClient).from("extra_time_breaks").select("id, match_id, half_minutes, periods, second_half_started_at, started_at, undone_at").is("undone_at", null),
-    (supabase as unknown as SupabaseClient).from("man_of_the_match").select("match_id, team_id, player_id, name, shirt_number"),
+    supabase.from("extra_time_breaks").select("id, match_id, half_minutes, periods, second_half_started_at, started_at, undone_at").is("undone_at", null),
+    supabase.from("man_of_the_match").select("match_id, team_id, player_id, name, shirt_number"),
   ]);
   const error =
     teams.error ?? matches.error ?? events.error ?? players.error ?? substitutions.error ?? officials.error ?? staff.error ?? displayNames.error ?? resultHolds.error ?? kickoffChanges.error ?? notices.error ?? stoppages.error;

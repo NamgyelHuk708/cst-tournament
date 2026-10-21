@@ -1,6 +1,5 @@
 "use client";
 
-import type { SupabaseClient } from "@supabase/supabase-js";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
@@ -200,14 +199,14 @@ export function MatchControl({ matchId, back }: { matchId: number; back?: string
         .limit(1)
         .maybeSingle(),
       inBreak
-        ? (supabase as unknown as SupabaseClient)
+        ? supabase
             .from("extra_time_breaks")
             .select("id, started_at")
             .eq("match_id", matchId)
             .is("undone_at", null)
             .order("id", { ascending: false })
             .limit(1)
-            .maybeSingle<{ id: number; started_at: string }>()
+            .maybeSingle()
         : { data: null },
     ]);
     const candidates = [
@@ -341,7 +340,7 @@ export function MatchControl({ matchId, back }: { matchId: number; back?: string
     run(
       () =>
         lastAction?.source === "etbreak"
-          ? (supabase as unknown as SupabaseClient).rpc("admin_undo_extra_time_break", { p_match: matchId })
+          ? supabase.rpc("admin_undo_extra_time_break", { p_match: matchId })
           : lastAction?.source === "shootout"
           ? supabase.rpc("admin_undo_shootout", { p_match: matchId })
           : lastAction?.source === "et"
@@ -472,7 +471,7 @@ export function MatchControl({ matchId, back }: { matchId: number; back?: string
           onSubmit={(half, periods) =>
             // Going into the break before extra time, or changing its length during that break.
             tool === "et-start" || match.extraTime?.phase === "pre"
-              ? runTool(() => (supabase as unknown as SupabaseClient).rpc("admin_break_before_extra_time", { p_match: matchId, p_half_minutes: half, p_periods: periods }))
+              ? runTool(() => supabase.rpc("admin_break_before_extra_time", { p_match: matchId, p_half_minutes: half, p_periods: periods }))
               : runTool(() => supabase.rpc("admin_set_extra_time_length", { p_match: matchId, p_half_minutes: half, p_periods: periods }))
           }
         />
