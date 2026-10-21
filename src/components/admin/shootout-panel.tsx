@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { uuid } from "@/lib/uuid";
 import { byShirtOrder, kickTaker, nextKickTeam, shirtLabel, type Match, type PenaltyKick, type PenaltyShootout, type Team } from "@/lib/tournament";
 import { Sheet } from "../sheet";
-import { ShootoutCircles } from "../shootout";
+import { KickCircle, ShootoutCircles } from "../shootout";
 import { useTournament } from "../tournament-provider";
 
 const BTN_SECONDARY = "h-14 rounded-xl font-semibold ring-1 ring-border active:bg-bg disabled:opacity-40";
@@ -263,6 +263,7 @@ function KickRow({ n, kick, team, onEdit, onDelete }: { n: number; kick: Penalty
   return (
     <li className="flex items-center gap-2 py-1 pr-1 pl-3">
       <span className="w-5 shrink-0 text-right text-xs text-muted tabular">{n}</span>
+      <KickCircle kick={kick} size={18} />
       <span className="min-w-0 flex-1">
         <span className="block truncate font-medium">{kickTaker(kick, playersById)}</span>
         <span className="block truncate text-xs text-muted">

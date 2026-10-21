@@ -6,8 +6,9 @@ import { TeamLink } from "../team-link";
 import { TeamLogo } from "../team-logo";
 import { useTournament } from "../tournament-provider";
 import { teamShort } from "@/data/team-names";
+import { shownManOfTheMatch, StarBadge } from "../man-of-the-match";
 
-type Tally = { goals: number; ownGoals: number; yellow: number; red: number; on: boolean; off: boolean; suspended: boolean };
+type Tally = { goals: number; ownGoals: number; yellow: number; red: number; on: boolean; off: boolean; suspended: boolean; motm: boolean };
 
 /**
  * Each team's players for the match sheet: shirt number and name, sorted by number, with small
@@ -20,7 +21,7 @@ export function PlayersPanel({ match, home, away }: { match: Match; home?: Team;
   const tally = new Map<string, Tally>();
   const get = (id: string) => {
     let t = tally.get(id);
-    if (!t) tally.set(id, (t = { goals: 0, ownGoals: 0, yellow: 0, red: 0, on: false, off: false, suspended: false }));
+    if (!t) tally.set(id, (t = { goals: 0, ownGoals: 0, yellow: 0, red: 0, on: false, off: false, suspended: false, motm: false }));
     return t;
   };
   for (const e of events) {
@@ -31,6 +32,9 @@ export function PlayersPanel({ match, home, away }: { match: Match; home?: Team;
     else if (e.type === "yellow_card") t.yellow++;
     else if (e.type === "red_card") t.red++;
   }
+  // Man of the Match (a squad player; shown to fans after full time).
+  const motm = shownManOfTheMatch(match);
+  if (motm?.player_id) get(motm.player_id).motm = true;
   // Suspended for this match (DISCIPLINE rules).
   for (const playerId of discipline.suspendedIn.get(match.id)?.keys() ?? []) get(playerId).suspended = true;
   for (const s of substitutions) {
@@ -98,6 +102,7 @@ function TeamPlayers({ team, players, tally }: { team: Team; players: Player[]; 
 function Marks({ t }: { t?: Tally }) {
   if (!t) return null;
   const said: string[] = [];
+  if (t.motm) said.push("Man of the Match");
   if (t.goals) said.push(t.goals === 1 ? "scored" : `scored ${t.goals}`);
   if (t.ownGoals) said.push(t.ownGoals === 1 ? "own goal" : `${t.ownGoals} own goals`);
   const secondYellow = t.yellow >= 2 && !t.red;
@@ -112,6 +117,7 @@ function Marks({ t }: { t?: Tally }) {
     <span className="flex shrink-0 items-center gap-1.5">
       <span className="sr-only">{said.join(", ")}</span>
       <span aria-hidden="true" className="flex items-center gap-1.5">
+        {t.motm && <StarBadge size={16} />}
         {t.goals > 0 && <Count n={t.goals} icon={<BallIcon className="size-3.5 text-text" />} />}
         {t.ownGoals > 0 && (
           <span className="flex items-center gap-0.5 text-[11px] font-semibold text-muted">

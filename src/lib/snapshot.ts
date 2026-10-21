@@ -1,10 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "./supabase/database.types";
-import type { KickoffChange, MatchExtraTime, PenaltyKick, PenaltyShootout, MatchStoppage, Notice, Official, ResultHold, Snapshot, TeamKit, TeamStaff } from "./tournament";
+import type { ExtraTimeBreak, KickoffChange, ManOfTheMatch, MatchExtraTime, PenaltyKick, PenaltyShootout, MatchStoppage, Notice, Official, ResultHold, Snapshot, TeamKit, TeamStaff } from "./tournament";
 
 /** Everything the public pages need, in twelve small queries. Works with the server or browser client. */
 export async function fetchSnapshot(supabase: SupabaseClient<Database>): Promise<Snapshot> {
-  const [teams, matches, events, players, substitutions, officials, staff, displayNames, resultHolds, kickoffChanges, notices, stoppages, kits, extraTimes, shootouts, kicks] = await Promise.all([
+  const [teams, matches, events, players, substitutions, officials, staff, displayNames, resultHolds, kickoffChanges, notices, stoppages, kits, extraTimes, shootouts, kicks, etBreaks, motms] = await Promise.all([
     supabase.from("teams").select("id, slot, group_code, short_code, name, tiebreak_rank").order("slot"),
     supabase.from("matches").select("*").order("kickoff_at").order("id"),
     supabase.from("match_events").select("id, match_id, type, team_id, player_id, minute, added_time, client_id"),
@@ -25,6 +25,9 @@ export async function fetchSnapshot(supabase: SupabaseClient<Database>): Promise
     // Shoot-outs kick by kick. Before their migration is applied the tables don't exist: none.
     supabase.from("penalty_shootouts").select("match_id, first_team_id"),
     supabase.from("penalty_kicks").select("id, match_id, team_id, kick_no, player_id, taker_name, taker_number, scored"),
+    // Breaks before extra time (open ones only) and Man of the Match. Before their migrations: none.
+    (supabase as unknown as SupabaseClient).from("extra_time_breaks").select("id, match_id, half_minutes, periods, second_half_started_at, started_at, undone_at").is("undone_at", null),
+    (supabase as unknown as SupabaseClient).from("man_of_the_match").select("match_id, team_id, player_id, name, shirt_number"),
   ]);
   const error =
     teams.error ?? matches.error ?? events.error ?? players.error ?? substitutions.error ?? officials.error ?? staff.error ?? displayNames.error ?? resultHolds.error ?? kickoffChanges.error ?? notices.error ?? stoppages.error;
@@ -37,5 +40,7 @@ export async function fetchSnapshot(supabase: SupabaseClient<Database>): Promise
     extraTimes: extraTimes.error ? [] : (extraTimes.data as MatchExtraTime[]),
     shootouts: shootouts.error ? [] : (shootouts.data as PenaltyShootout[]),
     kicks: kicks.error ? [] : (kicks.data as PenaltyKick[]),
+    etBreaks: etBreaks.error ? [] : (etBreaks.data as ExtraTimeBreak[]),
+    motms: motms.error ? [] : (motms.data as ManOfTheMatch[]),
   };
 }

@@ -53,9 +53,9 @@ PAIRS = [
     (WHITE, "win", 4.5, "white on green (Q badge, form win)"),
     ("win-text", "card", 4.5, "green text (Qualify)"),
     (WHITE, "form-draw", 4.5, "white on grey (form draw)"),
-    (WHITE, "card-red", 4.5, "white on red (form loss)"),
+    (WHITE, "card-red", 4.5, "white on red (form loss, missed penalty)"),
     ("win", "card", 3.0, "form win circle against the card"),
-    ("card-red", "card", 3.0, "form loss circle against the card"),
+    ("card-red", "card", 3.0, "form loss / missed penalty circle against the card"),
     ("form-draw", "card", 3.0, "form draw circle against the card"),
     ("live", "card", 2.0, "live dot (always with text)"),
 ]

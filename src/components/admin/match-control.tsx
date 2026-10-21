@@ -1,5 +1,6 @@
 "use client";
 
+import type { SupabaseClient } from "@supabase/supabase-js";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
@@ -35,6 +36,7 @@ import { ControlDock } from "./control-dock";
 import { ExtraTimeSheet, extraTimeLength } from "./extra-time";
 import { ShootoutKickLog } from "./shootout-panel";
 import { EligibilitySection } from "./eligibility";
+import { ManOfTheMatchAdmin } from "./man-of-the-match";
 import { ClockSheet, FinalScoreSheet, KickoffSheet, MoreSheet, ResetSheet, StatusSheet } from "./correction-sheets";
 import { TeamsSheet } from "./teams-sheet";
 import { useResolvedSides } from "../use-resolved-sides";
@@ -67,7 +69,9 @@ type LastAction =
   // Extra-time steps, length and clock corrections (extra_time_actions).
   | { source: "et"; id: number; kind: "start" | "phase" | "end" | "length" | "clock"; created_at: string }
   // Shoot-out kicks (shootout_actions).
-  | { source: "shootout"; id: number; kind: "kick_add" | "kick_edit" | "kick_delete"; created_at: string };
+  | { source: "shootout"; id: number; kind: "kick_add" | "kick_edit" | "kick_delete"; created_at: string }
+  // The break before extra time (extra_time_breaks is its own history), while the match is in it.
+  | { source: "etbreak"; id: number; kind: "break"; created_at: string };
 
 const EVENT_NOUN: Record<EventType, string> = {
   goal: "Goal",
@@ -96,6 +100,8 @@ export function MatchControl({ matchId, back }: { matchId: number; back?: string
   const supabase = useMemo(() => createClient(), []);
   const serverTime = useServerTime();
   const match = matchesById.get(matchId);
+  // In the break before extra time: its row is an undo candidate.
+  const inBreak = match?.extraTime?.phase === "pre";
 
   const [pending, setPending] = useState<PendingTap[]>([]);
   const [failed, setFailed] = useState<{ tap: PendingTap; message: string } | null>(null);
@@ -144,7 +150,7 @@ export function MatchControl({ matchId, back }: { matchId: number; back?: string
 
   // The newest open action across the undo histories: one Undo button reverses whichever is most recent.
   const loadLastAction = useCallback(async () => {
-    const [main, extra, clockRow, kickoffRow, etRow, kickRow] = await Promise.all([
+    const [main, extra, clockRow, kickoffRow, etRow, kickRow, breakRow] = await Promise.all([
       supabase
         .from("match_actions")
         .select("id, kind, event_id, new_status, created_at")
@@ -193,6 +199,16 @@ export function MatchControl({ matchId, back }: { matchId: number; back?: string
         .order("id", { ascending: false })
         .limit(1)
         .maybeSingle(),
+      inBreak
+        ? (supabase as unknown as SupabaseClient)
+            .from("extra_time_breaks")
+            .select("id, started_at")
+            .eq("match_id", matchId)
+            .is("undone_at", null)
+            .order("id", { ascending: false })
+            .limit(1)
+            .maybeSingle<{ id: number; started_at: string }>()
+        : { data: null },
     ]);
     const candidates = [
       main.data ? ({ source: "match", ...main.data } as LastAction) : null,
@@ -201,9 +217,10 @@ export function MatchControl({ matchId, back }: { matchId: number; back?: string
       kickoffRow.data ? ({ source: "kickoff", kind: "kickoff", ...kickoffRow.data } as LastAction) : null,
       etRow.data ? ({ source: "et", ...etRow.data } as LastAction) : null,
       kickRow.data ? ({ source: "shootout", ...kickRow.data } as LastAction) : null,
+      breakRow.data ? ({ source: "etbreak", kind: "break", id: breakRow.data.id, created_at: breakRow.data.started_at } as LastAction) : null,
     ].filter((x): x is LastAction => x != null);
     setLastAction(candidates.reduce<LastAction | null>((best, x) => (!best || x.created_at > best.created_at ? x : best), null));
-  }, [supabase, matchId]);
+  }, [supabase, matchId, inBreak]);
 
   // Refresh the undo label whenever the match changes (here or on another device).
   useEffect(() => {
@@ -231,7 +248,8 @@ export function MatchControl({ matchId, back }: { matchId: number; back?: string
     setPending((p) => [...p.filter((x) => x.clientId !== tap.clientId), tap]);
     // In extra time the database's own minute doesn't know extra time: send the scoreboard's minute
     // (server time) with the event instead. Same idempotency by client_id, same undo.
-    const etMinute = match && isExtraTimeInPlay(match) ? clockMinute(match, serverTime()) : null;
+    // In the break before extra time, the minute the clock stopped at (90+3').
+    const etMinute = match && (isExtraTimeInPlay(match) || match.extraTime?.phase === "pre") ? clockMinute(match, serverTime()) : null;
     const { data, error } = etMinute
       ? await supabase.rpc("admin_add_event_at", {
           p_match: tap.matchId,
@@ -285,10 +303,13 @@ export function MatchControl({ matchId, back }: { matchId: number; back?: string
       (m) => m && local.upsertMatch(m),
     );
 
-  // Extra-time step (break, second half, end); the end may also finish the match.
+  // Extra-time step (start from the break before it, break, second half, end); the end may also finish the match.
   const setExtraTimeStep = (to: ExtraTimeStepTo) =>
     run(
-      () => supabase.rpc("admin_extra_time_step", { p_match: matchId, p_to: to }),
+      () =>
+        to === "start"
+          ? supabase.rpc("admin_start_extra_time", { p_match: matchId, p_half_minutes: match!.extraTime!.half_minutes, p_periods: match!.extraTime!.periods })
+          : supabase.rpc("admin_extra_time_step", { p_match: matchId, p_to: to }),
       (row) => {
         local.setExtraTime(matchId, row as MatchExtraTime);
         if (to === "over") local.refresh();
@@ -319,7 +340,9 @@ export function MatchControl({ matchId, back }: { matchId: number; back?: string
   const undo = () =>
     run(
       () =>
-        lastAction?.source === "shootout"
+        lastAction?.source === "etbreak"
+          ? (supabase as unknown as SupabaseClient).rpc("admin_undo_extra_time_break", { p_match: matchId })
+          : lastAction?.source === "shootout"
           ? supabase.rpc("admin_undo_shootout", { p_match: matchId })
           : lastAction?.source === "et"
           ? supabase.rpc("admin_undo_extra_time", { p_match: matchId })
@@ -376,6 +399,8 @@ export function MatchControl({ matchId, back }: { matchId: number; back?: string
 
       <Scoreboard match={match} home={home} away={away} score={score} />
 
+      <ManOfTheMatchAdmin match={match} />
+
       <EligibilitySection match={match} />
       <OfficialsSection match={match} />
       <ManagersSection match={match} />
@@ -419,7 +444,8 @@ export function MatchControl({ matchId, back }: { matchId: number; back?: string
           (lastAction?.source === "match" && lastAction.kind === "status") ||
           lastAction?.source === "clock" ||
           lastAction?.source === "kickoff" ||
-          lastAction?.source === "et"
+          lastAction?.source === "et" ||
+          lastAction?.source === "etbreak"
             ? setConfirmUndo(true)
             : undo()
         }
@@ -444,8 +470,9 @@ export function MatchControl({ matchId, back }: { matchId: number; back?: string
           error={toolError}
           onClose={() => setTool(null)}
           onSubmit={(half, periods) =>
-            tool === "et-start"
-              ? runTool(() => supabase.rpc("admin_start_extra_time", { p_match: matchId, p_half_minutes: half, p_periods: periods }))
+            // Going into the break before extra time, or changing its length during that break.
+            tool === "et-start" || match.extraTime?.phase === "pre"
+              ? runTool(() => (supabase as unknown as SupabaseClient).rpc("admin_break_before_extra_time", { p_match: matchId, p_half_minutes: half, p_periods: periods }))
               : runTool(() => supabase.rpc("admin_set_extra_time_length", { p_match: matchId, p_half_minutes: half, p_periods: periods }))
           }
         />
@@ -717,6 +744,15 @@ function stepText(step: NonNullable<StatusStep>, match: Match): { title: string;
   const et = match.extraTime;
   const breakAt = et ? 90 + et.half_minutes : 0;
   switch (step.et) {
+    case "start": {
+      const length = et ? extraTimeLength(et.half_minutes, et.periods) : "";
+      const end = et ? 90 + et.half_minutes * et.periods : 0;
+      return {
+        title: `Start extra time: ${length}?`,
+        body: `The clock starts at 91' now and runs to ${end}'${et?.periods === 2 ? `, with a break at ${breakAt}'` : ""}. Goals and cards count as usual. If it's still level after extra time, penalties follow.`,
+        action: "Start extra time",
+      };
+    }
     case "break":
       return { title: "Extra-time break?", body: `The first half of extra time ends and the clock stops at ${breakAt}'. Start the second half of extra time when play resumes.`, action: "Extra-time break" };
     case "second":
@@ -732,6 +768,13 @@ function stepText(step: NonNullable<StatusStep>, match: Match): { title: string;
 
 /** The stronger warning before undoing a status change: what happens to the clock and the match. */
 function undoStatusText(action: LastAction | null): { title: string; body: string; action: string } {
+  if (action?.source === "etbreak") {
+    return {
+      title: "Undo the break before extra time?",
+      body: "The match goes back to the second half, live, for everyone watching: the clock carries on from the second-half kick-off as if normal time hadn't ended.",
+      action: "Undo break before extra time",
+    };
+  }
   if (action?.source === "et") {
     return {
       start: { title: "Undo the start of extra time?", body: "The match goes back to the end of the second half, before extra time, for everyone watching.", action: "Undo extra-time start" },
@@ -800,6 +843,7 @@ function describeUndo(action: LastAction | null, events: MatchEvent[], shortCode
   if (!action) return null;
   if (action.source === "clock") return "Undo clock correction";
   if (action.source === "kickoff") return "Undo kick-off change";
+  if (action.source === "etbreak") return "Undo break before extra time";
   if (action.source === "shootout") return { kick_add: "Undo kick", kick_edit: "Undo kick change", kick_delete: "Undo deleting the kick" }[action.kind];
   if (action.source === "et") {
     return { start: "Undo extra-time start", phase: "Undo extra-time step", end: "Undo end of extra time", length: "Undo extra-time length", clock: "Undo clock correction" }[action.kind];

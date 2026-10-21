@@ -5,12 +5,12 @@ import { kickTaker, type Match, type PenaltyKick } from "@/lib/tournament";
 import { ResultSymbol } from "./groups/form-circles";
 import { useTournament } from "./tournament-provider";
 
-/** One kick as a circle: ✓ scored (green), ✕ missed (grey; red is only for red cards and losses). */
-function KickCircle({ kick, size = 20 }: { kick: PenaltyKick; size?: number }) {
+/** One kick as a circle: ✓ scored (turf green), ✕ missed (red-card red, always with its ✕), as the organisers asked. */
+export function KickCircle({ kick, size = 20 }: { kick: Pick<PenaltyKick, "scored">; size?: number }) {
   return (
     <span
       style={{ width: size, height: size }}
-      className={`grid shrink-0 place-items-center rounded-full text-white ${kick.scored ? "bg-win" : "bg-form-draw"}`}
+      className={`grid shrink-0 place-items-center rounded-full text-white ${kick.scored ? "bg-win" : "bg-card-red"}`}
     >
       <ResultSymbol result={kick.scored ? "W" : "L"} size={Math.round(size * 0.6)} />
     </span>

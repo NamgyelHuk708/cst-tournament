@@ -77,6 +77,24 @@ const et = (half: number, periods: number, phase: "first" | "second", periodMinu
   };
 };
 
+// The break before extra time: the second half started 70 minutes ago, the break began `breakMinutesAgo`.
+const etNext = (breakMinutesAgo: number): Match => {
+  const m = match("second_half", 70);
+  return {
+    ...m,
+    stage: "round_of_16",
+    extraTime: {
+      match_id: m.id,
+      half_minutes: 15,
+      periods: 2,
+      phase: "pre",
+      phase_started_at: null,
+      second_half_started_at: m.period_started_at!,
+      break_started_at: new Date(NOW - breakMinutesAgo * MIN).toISOString(),
+    },
+  };
+};
+
 // Clock states: what the scoreboard shows, and what a sheet can hold (stoppage up to 30 minutes).
 const CASES: { name: string; match: Match; clock: string; sheet: string }[] = [
   { name: "first half", match: match("first_half", 22.5), clock: "23'", sheet: "23+0" },
@@ -93,6 +111,8 @@ const CASES: { name: string; match: Match; clock: string; sheet: string }[] = [
   { name: "extra time, second half", match: et(10, 2, "second", 3.4), clock: "104'", sheet: "104+0" },
   { name: "extra time, second half stoppage", match: et(10, 2, "second", 12.1), clock: "110+3'", sheet: "110+3" },
   { name: "extra time, one period of 15", match: et(15, 1, "first", 14.5), clock: "105'", sheet: "105+0" },
+  // Break before extra time, begun 21.5 minutes ago (at 90+4'): the clock stays stopped there.
+  { name: "break before extra time (clock stopped at 90+4')", match: etNext(21.5), clock: "Extra time next", sheet: "90+4" },
 ];
 
 const inputValue = (html: string, label: string) => {

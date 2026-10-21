@@ -1,8 +1,9 @@
 "use client";
 
-import { compareEventTime, eventsForMatch, isFinished, isWaterBreak, kitFor, subsForMatch, tieLabel, wentToExtraTime, type Match, type Team } from "@/lib/tournament";
+import { compareEventTime, eventsForMatch, isExtraTimeNext, isFinished, isWaterBreak, kitFor, subsForMatch, tieLabel, wentToExtraTime, type Match, type Team } from "@/lib/tournament";
 import { StageLabel } from "../stage-label";
 import { ShootoutCircles } from "../shootout";
+import { ManOfTheMatchLine } from "../man-of-the-match";
 import { KitIcon } from "../kit-icon";
 import { LatestSub, ScorerColumns } from "../event-list";
 import { GroupTag } from "../group-tag";
@@ -58,6 +59,7 @@ export function LiveHero({ match }: { match: Match }) {
             )}
           </span>
         </div>
+        {isExtraTimeNext(match) && <p className="mt-1.5 text-center text-sm font-medium text-muted">Extra time to follow</p>}
         {match.stoppage && (
           <p className="mt-1.5 text-center text-sm font-medium text-muted">
             {isWaterBreak(match) ? "Short water break · play resumes shortly" : `Play suspended${match.stoppage.reason ? `: ${match.stoppage.reason}` : ""}`}
@@ -81,6 +83,8 @@ export function LiveHero({ match }: { match: Match }) {
             {latestSub && !finished && <LatestSub sub={latestSub} team={teamsById.get(latestSub.team_id) ? teamShort(teamsById.get(latestSub.team_id)!) : ""} />}
           </div>
         )}
+        {/* Knockouts, after full time: the Man of the Match as the card's last line. */}
+        <ManOfTheMatchLine match={match} className="mt-4 border-t border-border pt-3" />
       </div>
       <MatchDetailsHint />
       <OpenMatchOverlay matchId={match.id} label={`Match details: ${home?.name ?? "TBD"} v ${away?.name ?? "TBD"}`} />

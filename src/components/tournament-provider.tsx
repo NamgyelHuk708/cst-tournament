@@ -28,6 +28,9 @@ import {
   type TeamStaff,
   type MatchExtraTime,
   type PenaltyKick,
+  type ExtraTimeBreak,
+  type ManOfTheMatch,
+  withManOfTheMatch,
   type PenaltyShootout,
   withDisplayNames,
   withExtraTime,
@@ -73,6 +76,10 @@ type TournamentContextValue = Snapshot & {
     setShootout: (row: PenaltyShootout) => void;
     /** A match's extra time saved (row) or removed (null). */
     setExtraTime: (matchId: number, row: MatchExtraTime | null) => void;
+    /** A break before extra time saved, changed or undone (undone_at set). */
+    upsertEtBreak: (row: ExtraTimeBreak) => void;
+    /** A match's Man of the Match saved (row) or removed (null). */
+    setManOfTheMatch: (matchId: number, row: ManOfTheMatch | null) => void;
     refresh: () => Promise<void>;
   };
 };
@@ -117,6 +124,13 @@ function applyChange<T extends { id: unknown }>(list: T[], payload: RealtimePost
 /** penalty_shootouts is keyed by match_id, not id. */
 function applyShootoutChange(list: PenaltyShootout[], payload: RealtimePostgresChangesPayload<PenaltyShootout>): PenaltyShootout[] {
   const key = payload.eventType === "DELETE" ? (payload.old as Partial<PenaltyShootout>).match_id : payload.new.match_id;
+  const rest = list.filter((r) => r.match_id !== key);
+  return payload.eventType === "DELETE" ? rest : [...rest, payload.new];
+}
+
+/** man_of_the_match is keyed by match_id, not id. */
+function applyMotmChange(list: ManOfTheMatch[], payload: RealtimePostgresChangesPayload<ManOfTheMatch>): ManOfTheMatch[] {
+  const key = payload.eventType === "DELETE" ? (payload.old as Partial<ManOfTheMatch>).match_id : payload.new.match_id;
   const rest = list.filter((r) => r.match_id !== key);
   return payload.eventType === "DELETE" ? rest : [...rest, payload.new];
 }
@@ -316,6 +330,12 @@ export function TournamentProvider({
         .on<PenaltyKick>("postgres_changes", { event: "*", schema: "public", table: "penalty_kicks" }, (p) =>
           apply((d) => ({ ...d, kicks: applyChange(d.kicks, p) }), p),
         )
+        .on<ExtraTimeBreak>("postgres_changes", { event: "*", schema: "public", table: "extra_time_breaks" }, (p) =>
+          apply((d) => ({ ...d, etBreaks: applyChange(d.etBreaks ?? [], p) }), p),
+        )
+        .on<ManOfTheMatch>("postgres_changes", { event: "*", schema: "public", table: "man_of_the_match" }, (p) =>
+          apply((d) => ({ ...d, motms: applyMotmChange(d.motms ?? [], p) }), p),
+        )
         .on<ResultHold>("postgres_changes", { event: "*", schema: "public", table: "result_holds" }, (p) =>
           apply((d) => ({ ...d, resultHolds: applyHoldChange(d.resultHolds, p) }), p),
         )
@@ -455,6 +475,9 @@ export function TournamentProvider({
         })),
       setExtraTime: (matchId, row) =>
         setData((d) => ({ ...d, extraTimes: [...d.extraTimes.filter((x) => x.match_id !== matchId), ...(row ? [row] : [])] })),
+      upsertEtBreak: (row) => setData((d) => ({ ...d, etBreaks: upsert(d.etBreaks ?? [], row) })),
+      setManOfTheMatch: (matchId, row) =>
+        setData((d) => ({ ...d, motms: [...(d.motms ?? []).filter((x) => x.match_id !== matchId), ...(row ? [row] : [])] })),
       setKit: (teamId, matchId, row) =>
         setData((d) => ({ ...d, kits: [...d.kits.filter((k) => !(k.team_id === teamId && k.match_id === matchId)), ...(row ? [row] : [])] })),
       refresh: async () => {
@@ -468,11 +491,14 @@ export function TournamentProvider({
     // Teams carry the admin's display names, so every view (tables, rows, search) uses them.
     const teams = withDisplayNames(data.teams, data.displayNames);
     // Matches carry their schedule state (postponed, rescheduled from), so every view can show it.
-    // ...their open stoppage, and their extra time.
-    const matches = withShootouts(
-      withExtraTime(withStoppages(withSchedule(data.matches, data.kickoffChanges), data.stoppages), data.extraTimes),
-      data.shootouts,
-      data.kicks,
+    // ...their open stoppage, extra time (or the break before it), shoot-out and Man of the Match.
+    const matches = withManOfTheMatch(
+      withShootouts(
+        withExtraTime(withStoppages(withSchedule(data.matches, data.kickoffChanges), data.stoppages), data.extraTimes, data.etBreaks),
+        data.shootouts,
+        data.kicks,
+      ),
+      data.motms ?? [],
     );
     return {
       ...data,

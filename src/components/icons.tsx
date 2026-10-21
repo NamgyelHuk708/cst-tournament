@@ -115,6 +115,14 @@ export function TrophyIcon({ className = "size-5" }: IconProps) {
   );
 }
 
+export function StarIcon({ className = "size-3.5" }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
+      <path d="m12 2.8 2.8 5.8 6.3.9-4.6 4.4 1.1 6.3L12 17.2l-5.6 3 1.1-6.3-4.6-4.4 6.3-.9z" fill="currentColor" />
+    </svg>
+  );
+}
+
 export function MatchesIcon({ className = "size-6" }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" className={className} aria-hidden="true">

@@ -14,8 +14,9 @@ export function extraTimeLength(half: number, periods: number): string {
 }
 
 /**
- * Start extra time, or correct its length: the length of each half (5, 10, 15 or another 1-30) and
- * two halves or one period, then a confirm step naming the choice.
+ * End normal time with extra time next (the break before extra time), or correct its length (in that
+ * break or while extra time is played): the length of each half (5, 10, 15 or another 1-30) and two
+ * halves or one period, then a confirm step naming the choice.
  */
 export function ExtraTimeSheet({
   current,
@@ -24,7 +25,7 @@ export function ExtraTimeSheet({
   onClose,
   onSubmit,
 }: {
-  /** Correcting: the extra time being played. Absent: starting it. */
+  /** Correcting: the extra time being played, or the break before it (phase "pre"). Absent: going into that break. */
   current?: MatchExtraTime | null;
   busy: boolean;
   error: string | null;
@@ -39,17 +40,20 @@ export function ExtraTimeSheet({
   const minutes = usingOther ? Number(other) : half;
   const valid = Number.isInteger(minutes) && minutes >= 1 && minutes <= 30;
   // Once the second half of extra time is reached it can't become one period.
-  const onePeriodAllowed = !current || current.phase === "first";
+  const onePeriodAllowed = !current || current.phase === "pre" || current.phase === "first";
+  const inBreak = current?.phase === "pre";
   const end = HALF_LENGTH_MINUTES * 2 + minutes * periods;
   const length = extraTimeLength(minutes, periods);
 
   if (confirming) {
     return (
-      <Sheet open onClose={onClose} title={current ? `Change extra time to ${length}?` : `Start extra time: ${length}?`}>
+      <Sheet open onClose={onClose} title={current ? `Change extra time to ${length}?` : `Full time: extra time next (${length})?`}>
         <p className="text-base">
-          {current
-            ? `Extra time becomes ${length}: it ends at ${end}'. The clock keeps running; you can undo this.`
-            : `The clock starts at 91' now and runs to ${end}'${periods === 2 ? `, with a break at ${HALF_LENGTH_MINUTES * 2 + minutes}'` : ""}. Goals and cards count as usual. If it's still level after extra time, penalties follow. You can undo this.`}
+          {inBreak
+            ? `Extra time will be ${length}: 91' to ${end}'.`
+            : current
+              ? `Extra time becomes ${length}: it ends at ${end}'. The clock keeps running; you can undo this.`
+              : `Normal time ends: the clock stops and fans see "Extra time next". When play resumes, tap Start extra time: the clock then starts at 91' and runs to ${end}'${periods === 2 ? `, with a break at ${HALF_LENGTH_MINUTES * 2 + minutes}'` : ""}. You can undo this.`}
         </p>
         {error && (
           <p role="alert" className="mt-3 rounded-xl border-l-4 border-text bg-card px-4 py-3 text-sm font-medium ring-1 ring-border">
@@ -61,7 +65,7 @@ export function ExtraTimeSheet({
             Back
           </button>
           <button type="button" disabled={busy} onClick={() => onSubmit(minutes, periods)} className={BTN_PRIMARY}>
-            {busy ? "Saving…" : current ? "Change length" : "Start extra time"}
+            {busy ? "Saving…" : current ? "Change length" : "End normal time"}
           </button>
         </div>
       </Sheet>
@@ -69,8 +73,8 @@ export function ExtraTimeSheet({
   }
 
   return (
-    <Sheet open onClose={onClose} title={current ? "Correct extra-time length" : "Start extra time"}>
-      {!current && <p className="text-base">Level at full time. Choose how long extra time is, as the referee announced.</p>}
+    <Sheet open onClose={onClose} title={current ? "Correct extra-time length" : "Extra time next"}>
+      {!current && <p className="text-base">Level at the end of normal time. Choose how long extra time is, as the referee announced.</p>}
       <fieldset className="mt-4">
         <legend className="mb-2 text-sm font-semibold text-muted">Length of each half</legend>
         <div className="grid grid-cols-4 gap-2">
@@ -145,7 +149,7 @@ export function ExtraTimeSheet({
           Cancel
         </button>
         <button type="button" disabled={!valid} onClick={() => setConfirming(true)} className={BTN_PRIMARY}>
-          {current ? "Continue" : `Start ${periods === 2 ? `2 × ${valid ? minutes : "…"}` : "extra time"}`}
+          Continue
         </button>
       </div>
     </Sheet>

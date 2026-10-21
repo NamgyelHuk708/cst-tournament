@@ -26,7 +26,7 @@ type Props = {
   onAddScorer: () => void;
   onUndo: () => void;
   onStep: () => void;
-  /** A knockout level at the end of the second half: offer extra time (the step then goes straight to penalties). */
+  /** A knockout level at the end of the second half: offer the break before extra time (the step then goes straight to penalties). */
   onStartExtraTime?: () => void;
   onPens: (home: number, away: number) => void;
   onAddEvent: () => void;
@@ -194,7 +194,7 @@ export function ControlDock(props: Props) {
 
           {props.onStartExtraTime && !stopped && (
             <button type="button" onClick={props.onStartExtraTime} disabled={busy} className="mt-3 h-13 w-full rounded-xl bg-text text-base font-semibold text-white active:opacity-90 disabled:opacity-50">
-              Start extra time
+              Full time: extra time next
             </button>
           )}
           {match.status === "scheduled" || match.status === "finished" || stopped ? null : step ? (
@@ -219,6 +219,9 @@ export function ControlDock(props: Props) {
           {inPlay && !stopped && !match.extraTime && <SuspendButton match={match} disabled={busy} onChanged={props.onStoppageChanged} />}
           {match.status === "half_time" && (
             <p className="mt-2 text-center text-xs text-muted">Goals can be recorded once play restarts.</p>
+          )}
+          {match.status === "second_half" && match.extraTime?.phase === "pre" && (
+            <p className="mt-2 text-center text-xs text-muted">Break before extra time. Goals can be recorded once extra time starts.</p>
           )}
           {match.status === "scheduled" && !teamsSet && (
             <p className="mt-2 text-center text-xs text-muted">Choose both teams before entering a result.</p>

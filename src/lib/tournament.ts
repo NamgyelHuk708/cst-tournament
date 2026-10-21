@@ -19,7 +19,36 @@ export type Match = Tables["matches"]["Row"] & {
   extraTime?: MatchExtraTime;
   /** The penalty shoot-out kick by kick (penalty_kicks), when its kicks add up to the penalty score. */
   shootout?: { firstTeamId: number; kicks: PenaltyKick[] };
+  /** Man of the Match (knockout matches; man_of_the_match). Absent: not chosen. */
+  manOfTheMatch?: ManOfTheMatch;
 };
+
+/**
+ * Man of the Match of a knockout match: a squad player (player_id), or a typed name. The name and
+ * number are stored with it either way, for when the player is no longer in the squad.
+ */
+export type ManOfTheMatch = {
+  match_id: number;
+  team_id: number;
+  player_id: string | null;
+  name: string;
+  shirt_number: number | null;
+};
+
+/** Matches with their Man of the Match attached. */
+export function withManOfTheMatch(matches: Match[], rows: ManOfTheMatch[]): Match[] {
+  if (!rows.length) return matches;
+  const byMatch = new Map(rows.map((r) => [r.match_id, r]));
+  return matches.map((m) => (byMatch.has(m.id) ? { ...m, manOfTheMatch: byMatch.get(m.id) } : m));
+}
+
+/** "#10 Sonam Wangchuk": the squad's current name and number while the player exists, else as stored. */
+export function manOfTheMatchName(motm: ManOfTheMatch, playersById: Map<string, Player>): string {
+  const p = motm.player_id ? playersById.get(motm.player_id) : undefined;
+  const name = p?.name ?? motm.name;
+  const number = p ? p.shirt_number : motm.shirt_number;
+  return `${number != null ? `#${shirtLabel(number)} ` : ""}${name}`;
+}
 
 /** One kick of a penalty shoot-out. The shoot-out score itself stays in home_pens / away_pens. */
 export type PenaltyKick = {
@@ -36,16 +65,29 @@ export type PenaltyShootout = { match_id: number; first_team_id: number };
 
 /**
  * Extra time of a knockout match, length chosen by the admin. The match keeps status "second_half"
- * during extra time; phase: first (or only) period, break, second period, over (finished or level
- * and going to penalties).
+ * during extra time; phase: pre (the break before extra time, from extra_time_breaks: the clock
+ * stopped at the end of normal time), first (or only) period, break, second period, over (finished or
+ * level and going to penalties).
  */
 export type MatchExtraTime = {
   match_id: number;
   half_minutes: number;
   periods: number;
-  phase: "first" | "break" | "second" | "over";
+  phase: "pre" | "first" | "break" | "second" | "over";
   phase_started_at: string | null;
   second_half_started_at: string;
+  /** Phase "pre" only: when the break began (the clock shows the minute reached then). */
+  break_started_at?: string;
+};
+/** A break before extra time (extra_time_breaks); its own undo history (undone_at). */
+export type ExtraTimeBreak = {
+  id: number;
+  match_id: number;
+  half_minutes: number;
+  periods: number;
+  second_half_started_at: string;
+  started_at: string;
+  undone_at: string | null;
 };
 export type MatchStoppage = {
   id: number;
@@ -122,6 +164,9 @@ export type Snapshot = {
   extraTimes: MatchExtraTime[];
   shootouts: PenaltyShootout[];
   kicks: PenaltyKick[];
+  /** Optional: a snapshot cached before these tables existed has neither. */
+  etBreaks?: ExtraTimeBreak[];
+  motms?: ManOfTheMatch[];
 };
 
 /**
@@ -157,15 +202,39 @@ export function kickTaker(kick: PenaltyKick, playersById: Map<string, Player>): 
   return "Taker not recorded";
 }
 
-/** Matches with their extra time attached, when it belongs to the second half that was played. */
-export function withExtraTime(matches: Match[], rows: MatchExtraTime[]): Match[] {
-  if (!rows.length) return matches;
+/**
+ * Matches with their extra time attached, when it belongs to the second half that was played. With
+ * no extra time yet, an open break before extra time of this second half shows as phase "pre".
+ */
+export function withExtraTime(matches: Match[], rows: MatchExtraTime[], breaks: ExtraTimeBreak[] = []): Match[] {
+  if (!rows.length && !breaks.length) return matches;
   const byMatch = new Map(rows.map((r) => [r.match_id, r]));
   return matches.map((m) => {
+    if (!["second_half", "penalties", "finished"].includes(m.status) || !m.period_started_at) return m;
+    const sameHalf = (at: string) => Date.parse(at) === Date.parse(m.period_started_at!);
     const et = byMatch.get(m.id);
-    if (!et || !["second_half", "penalties", "finished"].includes(m.status) || !m.period_started_at) return m;
-    return Date.parse(et.second_half_started_at) === Date.parse(m.period_started_at) ? { ...m, extraTime: et } : m;
+    if (et && sameHalf(et.second_half_started_at)) return { ...m, extraTime: et };
+    if (m.status !== "second_half") return m;
+    const open = breaks.filter((b) => b.match_id === m.id && !b.undone_at && sameHalf(b.second_half_started_at)).sort((a, b) => b.id - a.id)[0];
+    if (!open) return m;
+    return {
+      ...m,
+      extraTime: {
+        match_id: m.id,
+        half_minutes: open.half_minutes,
+        periods: open.periods,
+        phase: "pre",
+        phase_started_at: null,
+        second_half_started_at: open.second_half_started_at,
+        break_started_at: open.started_at,
+      },
+    };
   });
+}
+
+/** In the break before extra time: normal time is over, extra time is next. */
+export function isExtraTimeNext(match: Pick<Match, "status" | "extraTime">): boolean {
+  return match.status === "second_half" && match.extraTime?.phase === "pre";
 }
 
 /** A period of extra time is being played (the clock runs from 91'). */
@@ -173,7 +242,7 @@ export function isExtraTimeInPlay(match: Pick<Match, "status" | "extraTime">): b
   return match.status === "second_half" && (match.extraTime?.phase === "first" || match.extraTime?.phase === "second");
 }
 
-/** In extra time (being played, at the break, or just finished and level), not yet at penalties. */
+/** In extra time (the break before it, being played, at its break, or just finished and level), not yet at penalties. */
 export function isInExtraTime(match: Pick<Match, "status" | "extraTime">): boolean {
   return match.status === "second_half" && !!match.extraTime;
 }
@@ -496,6 +565,7 @@ export function matchClock(match: Pick<Match, "status" | "period_started_at" | "
       return { label: "FT", running: false };
   }
 
+  if (match.status === "second_half" && match.extraTime?.phase === "pre") return { label: "Extra time next", running: false };
   if (match.status === "second_half" && match.extraTime?.phase === "break") return { label: "ET break", running: false };
   if (match.status === "second_half" && match.extraTime?.phase === "over") return { label: "End of ET", running: false };
   const running = runningMinute(match, now);
@@ -507,6 +577,13 @@ export function matchClock(match: Pick<Match, "status" | "period_started_at" | "
 /** The running clock of the half in play as minute + actual stoppage (45 + 2), or null. Shared by the scoreboard and the sheets. */
 function runningMinute(match: Pick<Match, "status" | "period_started_at" | "extraTime">, now: number | null): { minute: number; added: number } | null {
   const et = match.status === "second_half" ? match.extraTime : undefined;
+  if (et?.phase === "pre") {
+    // The break before extra time: the second-half clock stopped when the break began (90+3').
+    if (!et.break_started_at || !match.period_started_at) return null;
+    const full = HALF_LENGTH_MINUTES * 2;
+    const minute = HALF_LENGTH_MINUTES + Math.max(0, Math.floor((Date.parse(et.break_started_at) - Date.parse(match.period_started_at)) / 60_000)) + 1;
+    return minute > full ? { minute: full, added: minute - full } : { minute, added: 0 };
+  }
   if (et) {
     // Extra time continues from 90': with 2 x 10, 91'-100' (then 100+1') and 101'-110' (110+2').
     if ((et.phase !== "first" && et.phase !== "second") || !et.phase_started_at || now == null) return null;
@@ -600,7 +677,7 @@ export function scoreFromEvents(
   return { home, away };
 }
 
-export type ExtraTimeStepTo = "break" | "second" | "over";
+export type ExtraTimeStepTo = "start" | "break" | "second" | "over";
 export type StatusStep =
   | { to: MatchStatus; et?: undefined; label: string; confirm: boolean }
   | { et: ExtraTimeStepTo; to?: undefined; label: string; confirm: true }
@@ -619,6 +696,7 @@ export function nextStatusStep(match: Match): StatusStep {
     case "second_half": {
       const et = match.extraTime;
       if (et) {
+        if (et.phase === "pre") return { et: "start", label: "Start extra time", confirm: true };
         if (et.phase === "first") return et.periods === 2 ? { et: "break", label: "Extra-time break", confirm: true } : { et: "over", label: "End extra time", confirm: true };
         if (et.phase === "break") return { et: "second", label: "Start second half of extra time", confirm: true };
         if (et.phase === "second") return { et: "over", label: "End extra time", confirm: true };

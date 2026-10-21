@@ -20,6 +20,7 @@ import { GroupTag } from "../group-tag";
 import { cardNote, Matchup } from "../live/live-hero";
 import { StageLabel } from "../stage-label";
 import { ShootoutCircles, ShootoutKicks } from "../shootout";
+import { ManOfTheMatchSection } from "../man-of-the-match";
 import { Sheet } from "../sheet";
 import { useServerNow, useTournament } from "../tournament-provider";
 import { useResolvedSides } from "../use-resolved-sides";
@@ -172,6 +173,7 @@ function SummaryPanel({ match }: { match: Match }) {
 
   return (
     <div className="space-y-4">
+      <ManOfTheMatchSection match={match} />
       {matchEvents.length > 0 || matchSubs.length > 0 ? (
         <MatchTimeline match={match} events={matchEvents} subs={matchSubs} />
       ) : (

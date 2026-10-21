@@ -1,6 +1,6 @@
 "use client";
 
-import { isBallInPlay, isExtraTimeInPlay, isWaterBreak, matchClock, type Match, type Team } from "@/lib/tournament";
+import { isBallInPlay, isExtraTimeInPlay, isExtraTimeNext, isWaterBreak, matchClock, type Match, type Team } from "@/lib/tournament";
 import { useServerNow } from "./tournament-provider";
 
 /** Height, padding and text size per place. The width follows the text (see the sizer below). */
@@ -74,11 +74,13 @@ export function LivePill({
   );
 }
 
-function statusWord(match: Match): "Half-time" | "Penalties" | "Live" | "Suspended" | "Water break" | "ET" | "ET break" | "End of ET" {
+function statusWord(match: Match): "Half-time" | "Penalties" | "Live" | "Suspended" | "Water break" | "Extra time next" | "ET" | "ET break" | "End of ET" {
   // A water break reads calmly (no underline, like half-time); any other stoppage is "Suspended".
   if (isWaterBreak(match)) return "Water break";
   if (match.stoppage) return "Suspended";
   // Extra time: "ET 97'" while a period is played, "ET break" between, "End of ET" before penalties.
+  // The break before extra time: still, no minute (the clock stopped at the end of normal time).
+  if (isExtraTimeNext(match)) return "Extra time next";
   if (isExtraTimeInPlay(match)) return "ET";
   if (match.status === "second_half" && match.extraTime?.phase === "break") return "ET break";
   if (match.status === "second_half" && match.extraTime?.phase === "over") return "End of ET";
